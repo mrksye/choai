@@ -111,14 +111,26 @@ export interface RunningTotal {
   readonly id: "gross-profit" | "operating-income" | "ordinary-income" | "pre-tax-income" | "net-income"
   readonly adds: readonly IncomeSection[]
   readonly subtracts: readonly IncomeSection[]
+  /**
+   * The heading it is drawn under.
+   *
+   * The last one that goes into it, which is where a Japanese income statement
+   * prints it. Here rather than on the screen, so that the shape of the
+   * statement is one thing in one file and a screen only has to draw it.
+   */
+  readonly after: IncomeSection
 }
 
 export const RUNNING_TOTALS: readonly RunningTotal[] = [
-  { id: "gross-profit", adds: ["revenue"], subtracts: ["cost-of-sales"] },
-  { id: "operating-income", adds: [], subtracts: ["sga"] },
-  { id: "ordinary-income", adds: ["non-operating-income"], subtracts: ["non-operating-expenses"] },
-  { id: "pre-tax-income", adds: ["extraordinary-income"], subtracts: ["extraordinary-losses"] },
-  { id: "net-income", adds: [], subtracts: ["income-taxes"] },
+  { id: "gross-profit", adds: ["revenue"], subtracts: ["cost-of-sales"], after: "cost-of-sales" },
+  { id: "operating-income", adds: [], subtracts: ["sga"], after: "sga" },
+  { id: "ordinary-income", adds: ["non-operating-income"], subtracts: ["non-operating-expenses"], after: "non-operating-expenses" },
+  { id: "pre-tax-income", adds: ["extraordinary-income"], subtracts: ["extraordinary-losses"], after: "extraordinary-losses" },
+  { id: "net-income", adds: [], subtracts: ["income-taxes"], after: "income-taxes" },
 ]
+
+/** The running figures drawn under one heading, in the order they are read. */
+export const runningAfter = (section: IncomeSection): readonly RunningTotalId[] =>
+  RUNNING_TOTALS.filter((one) => one.after === section).map((one) => one.id)
 
 export type RunningTotalId = RunningTotal["id"]
