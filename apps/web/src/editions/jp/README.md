@@ -49,7 +49,9 @@ becoming a filing tool and hledger is not becoming one either.
 ```
 editions/jp/
 ├── naming.ts          the addresses and names this edition claims. No imports.
-├── words.ts           its own dictionary, keyed by locale
+├── words.ts           its own dictionary, keyed by locale — for the screens
+├── guidance.ts        how these books are kept, said to a model — composed from
+│                      the same constants the code reads
 ├── tags.ts            reading what a journal was marked with
 ├── money.ts           exact arithmetic on figures hledger has no report for
 ├── rules/             every number that changes with the law. Data, with sources
@@ -85,6 +87,16 @@ changed with the interface language would not answer the same question twice.
 The last two are read by parsing the journal's own text, because hledger sends
 neither: the wire answers what kind each account is and nothing further. That is
 not a second source of truth — it is a second reader of the only one.
+
+**A model is told all of this**, through `guidance.ts` and the third field of the
+edition contract. Without it a model writes entries with nothing for
+`jp.consumptionTax` to count, and is then shown its own entries in the list of
+ones nobody has classified. The text is composed from the constants above rather
+than typed out beside them, so a category added to `TAX_CATEGORIES` reaches the
+model without anybody remembering to come back — a text that has fallen behind
+the code is worse than no text, because the model follows it and what it writes
+is wrong in a way that looks deliberate. `tests/jp.test.ts` holds the two
+together and `e2e/jp.spec.ts` watches it actually reach a provider.
 
 ## Depreciation
 
