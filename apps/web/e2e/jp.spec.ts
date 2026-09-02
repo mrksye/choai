@@ -313,8 +313,8 @@ test("a register written beside the journal is declared by it and still there af
   })
 })
 
-test("depreciation comes back as figures, and says so rather than writing them", async ({ page }) => {
-  await openTheDemo(page)
+/** Register one asset through the screen a person would use. */
+const registerAnAsset = async (page: Page, inService: string): Promise<void> => {
   await page.goto("/jp/fixed-assets")
   await page.getByRole("button", { name: /Register an asset|資産を登録/ }).click()
   await page.getByLabel(/^Id$|^資産番号$/).fill("PC-2026-001")
@@ -323,15 +323,85 @@ test("depreciation comes back as figures, and says so rather than writing them",
   await page.getByLabel(/^Cost$|^取得価額$/).fill("300000")
   await page.getByLabel(/^Useful life$|^耐用年数$/).fill("4")
   await page.getByLabel(/^Acquired$|^取得日$/).fill("2026-04-01")
-  await page.getByLabel(/^In service$|^事業供用日$/).fill("2026-07-10")
+  await page.getByLabel(/^In service$|^事業供用日$/).fill(inService)
+  await page.getByRole("button", { name: /Add to the register|台帳に追加/ }).click()
+
+  await expect
+    .poll(async () => {
+      const after = await page.evaluate(() => window.choai.call("jp.fixedAssets", {}))
+      return after.ok ? (after.value as { assets: readonly unknown[] }).assets.length : 0
+    })
+    .toBe(1)
+}
+
+const registerText = async (page: Page): Promise<string> => {
+  const file = await page.evaluate(() => window.choai.journal.text({ path: "fixed-assets.jsonl" }))
+  return file.ok ? file.value.text : ""
+}
+
+test("a correction is a new line, and the line that was wrong stays where it is", async ({ page }) => {
+  await openTheDemo(page)
+  await registerAnAsset(page, "2026-04-10")
+
+  const before = await registerText(page)
+  expect(before.trim().split("\n").length).toBe(1)
+
+  await page.getByRole("button", { name: /^Correct$|^訂正$/ }).click()
+  await page.getByLabel(/^Noticed on$|^訂正日$/).fill("2026-05-02")
+  await page.getByLabel(/^Why$|^理由$/).fill("耐用年数の誤り")
+  await page.getByLabel(/^Useful life$|^耐用年数$/).last().fill("5")
+  await page.getByRole("button", { name: /Add to the register|台帳に追加/ }).click()
+
+  await expect
+    .poll(async () => {
+      const after = await page.evaluate(() => window.choai.call("jp.fixedAssets", {}))
+      return after.ok
+        ? (after.value as { assets: readonly { usefulLife: number }[] }).assets[0]?.usefulLife
+        : 0
+    })
+    .toBe(5)
+
+  const after = await registerText(page)
+  // Added to, never edited: the first line is still exactly what it was.
+  expect(after.startsWith(before)).toBe(true)
+  expect(after.trim().split("\n").length).toBe(2)
+
+  // The name and the cost were not mentioned, so they stand.
+  const assets = await page.evaluate(() => window.choai.call("jp.fixedAssets", {}))
+  expect(assets.ok && (assets.value as { assets: readonly { name: string; cost: string }[] }).assets[0]).toMatchObject({
+    name: "a laptop",
+    cost: "300000",
+  })
+})
+
+test("a disposal stops the year being worked out, and says why", async ({ page }) => {
+  await openTheDemo(page)
+  await registerAnAsset(page, "2026-04-10")
+
+  await page.getByRole("button", { name: /^Dispose$|^除却$/ }).click()
+  await page.getByLabel(/^Retired$|^除却日$/).fill("2026-09-30")
   await page.getByRole("button", { name: /Add to the register|台帳に追加/ }).click()
 
   await expect
     .poll(async () => {
       const answer = await page.evaluate(() => window.choai.call("jp.depreciation", { year: 2026 }))
-      return answer.ok ? (answer.value as { charges: readonly unknown[] }).charges.length : 0
+      return answer.ok
+        ? (answer.value as { notWorkedOut: readonly { why: string }[] }).notWorkedOut.map((one) => one.why)
+        : []
     })
-    .toBe(1)
+    .toEqual(["retired-during-the-year"])
+
+  // How the year of a disposal is treated is the reader's decision, so the
+  // screen says so rather than offering a figure.
+  await expect(page.getByText(/your decision|会社の判断/)).toBeVisible()
+
+  // And there is nothing left to dispose of a second time.
+  await expect(page.getByRole("button", { name: /^Dispose$|^除却$/ })).toBeHidden()
+})
+
+test("depreciation comes back as figures, and says so rather than writing them", async ({ page }) => {
+  await openTheDemo(page)
+  await registerAnAsset(page, "2026-07-10")
 
   const answer = await page.evaluate(() => window.choai.call("jp.depreciation", { year: 2026 }))
   if (!answer.ok) return

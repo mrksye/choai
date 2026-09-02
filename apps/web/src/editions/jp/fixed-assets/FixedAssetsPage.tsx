@@ -13,6 +13,7 @@ import { accountsNow, commodityNow, readingNow, registerNow } from "../ui/books"
 import { recordAssetEvents } from "../ui/writing"
 import { filled, words } from "../words"
 import type { AssetEvent } from "./events"
+import { RecordEvent, type Recording } from "./RecordEvent"
 import { REGISTER, type FixedAsset } from "./register"
 import { writeDecimal } from "../money"
 import type { Quantity } from "~/core/hledger/wire"
@@ -37,14 +38,25 @@ export function FixedAssetsPage(): JSX.Element {
   const [busy, setBusy] = createSignal(false)
   const [trouble, setTrouble] = createSignal<Trouble | undefined>(undefined)
   const [adding, setAdding] = createSignal(false)
+  const [recording, setRecording] = createSignal<Recording | undefined>(undefined)
+
+  /** The asset a line is being written about, if one is. */
+  const beingRecorded = (): FixedAsset | undefined => {
+    const asked = recording()
+    return asked === undefined
+      ? undefined
+      : register().assets.find((one) => one.id === asked.id)
+  }
 
   const record = async (events: readonly AssetEvent[]): Promise<void> => {
     setBusy(true)
     setTrouble(undefined)
     const done = await recordAssetEvents(events)
     setBusy(false)
-    if (done.ok) setAdding(false)
-    else setTrouble(done.error)
+    if (done.ok) {
+      setAdding(false)
+      setRecording(undefined)
+    } else setTrouble(done.error)
   }
 
   const writtenOff = writtenOffSoFar(() => fiscalYear().from)
@@ -80,6 +92,7 @@ export function FixedAssetsPage(): JSX.Element {
                     <th class={`${HEAD} text-right`}>{words().assets.usefulLife}</th>
                     <th class={HEAD}>{words().assets.method}</th>
                     <th class={HEAD}>{words().assets.inService}</th>
+                    <th class={HEAD} />
                   </tr>
                 </thead>
                 <tbody>
@@ -106,6 +119,27 @@ export function FixedAssetsPage(): JSX.Element {
                             )}
                           </Show>
                         </td>
+                        <td class={`${CELL} whitespace-nowrap text-right`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setRecording({ id: asset.id, what: "correct" })}
+                          >
+                            {words().assets.correct}
+                          </Button>
+                          {/* An asset already disposed of has nothing left to
+                              dispose of, and a second line saying so would only
+                              move the date the first one set. */}
+                          <Show when={asset.retiredAt === undefined}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setRecording({ id: asset.id, what: "retire" })}
+                            >
+                              {words().assets.retire}
+                            </Button>
+                          </Show>
+                        </td>
                       </tr>
                     )}
                   </For>
@@ -120,6 +154,17 @@ export function FixedAssetsPage(): JSX.Element {
             </div>
             <Show when={adding()}>
               <AddAsset busy={busy()} onRecord={(event) => void record([event])} />
+            </Show>
+            <Show when={beingRecorded()}>
+              {(asset) => (
+                <RecordEvent
+                  asset={asset()}
+                  what={recording()?.what ?? "correct"}
+                  busy={busy()}
+                  onRecord={(event) => void record([event])}
+                  onCancel={() => setRecording(undefined)}
+                />
+              )}
             </Show>
             <Show when={trouble()}>{(why) => <TroubleNote trouble={why()} />}</Show>
           </div>
