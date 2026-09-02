@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import { amountExample } from "~/compose/hint"
-import { emptyDraft, isWritable, whatIsMissing } from "~/compose/draft"
+import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/compose/draft"
 import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/lib/monad/shape"
 import { looksTabular, rowsOf } from "~/lib/csv"
 import { textOf } from "~/lib/text"
@@ -40,6 +40,40 @@ describe("what a draft still needs", () => {
   test("one account is not enough", () => {
     const draft = { ...emptyDraft("2026-08-16"), payee: "Shop" }
     expect(whatIsMissing(draft)).toEqual(["postings"])
+  })
+})
+
+describe("the text a draft becomes", () => {
+  const draft = {
+    date: "2026-08-16",
+    payee: "Shop",
+    note: "",
+    tags: [
+      { name: "receipt", value: "r-1" },
+      { name: "needs-checking", value: "" },
+    ],
+    postings: [
+      { account: "expenses:food", amount: "$12.00", tags: [{ name: "why", value: "a guess" }] },
+      { account: "assets:cash", amount: "", tags: [] },
+    ],
+  }
+
+  test("tags are written as hledger writes them — one line each after the first", () => {
+    expect(draftToJournal(draft)).toBe(
+      [
+        "2026-08-16 Shop  ; receipt:r-1",
+        "    ; needs-checking:",
+        "    expenses:food  $12.00  ; why:a guess",
+        "    assets:cash",
+        "",
+      ].join("\n"),
+    )
+  })
+
+  test("no tags leaves no comment behind", () => {
+    expect(draftToJournal({ ...draft, tags: [], postings: draft.postings.map((p) => ({ ...p, tags: [] })) })).toBe(
+      "2026-08-16 Shop\n    expenses:food  $12.00\n    assets:cash\n",
+    )
   })
 })
 

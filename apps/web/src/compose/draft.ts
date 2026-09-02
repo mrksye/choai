@@ -89,12 +89,31 @@ const describe = (draft: Draft): string =>
     ? draft.payee.trim()
     : `${draft.payee.trim()} | ${draft.note.trim()}`
 
-/** Tags live in a comment, which is where hledger reads them from. */
-const comment = (tags: readonly Tag[]): string => {
-  const named = tags.filter((tag) => tag.name.trim() !== "")
-  return named.length === 0
-    ? ""
-    : `  ; ${named.map((tag) => `${tag.name.trim()}:${tag.value.trim()}`).join(", ")}`
+/**
+ * A posting's own indent, and the indent a comment line carries under whatever
+ * it belongs to — an entry's comment and a posting's alike.
+ */
+const INDENT = "    "
+
+/** A tag as it reads in a comment. */
+const shown = (tag: Tag): string => `${tag.name.trim()}:${tag.value.trim()}`
+
+/**
+ * A line with its tags written the way hledger writes them.
+ *
+ * The first goes behind the line itself after two spaces, and every one after
+ * it takes a comment line of its own, indented. That is `renderCommentLines` in
+ * hledger's `Hledger.Data.Posting`, followed here so that what this app appends
+ * and what `hledger print` would have written are the same text — and an
+ * indented comment line belongs to the line above it either way, so hledger
+ * reads back the same tags it would have read off one long comment.
+ */
+const withTags = (line: string, tags: readonly Tag[]): readonly string[] => {
+  const [first, ...rest] = tags.filter((tag) => tag.name.trim() !== "").map(shown)
+  return [
+    first === undefined ? line : `${line}  ; ${first}`,
+    ...rest.map((tag) => `${INDENT}; ${tag}`),
+  ]
 }
 
 /**
@@ -104,11 +123,13 @@ const comment = (tags: readonly Tag[]): string => {
  * journal says "work this one out from the others".
  */
 export const draftToJournal = (draft: Draft): string =>
-  [`${draft.date.trim()} ${describe(draft)}${comment(draft.tags)}`, ...written(draft).map(postingLine)].join("\n") +
-  "\n"
+  [
+    ...withTags(`${draft.date.trim()} ${describe(draft)}`, draft.tags),
+    ...written(draft).flatMap(postingLines),
+  ].join("\n") + "\n"
 
-const postingLine = (posting: DraftPosting): string =>
-  `    ${posting.account.trim()}${amountPart(posting)}${comment(posting.tags)}`
+const postingLines = (posting: DraftPosting): readonly string[] =>
+  withTags(`${INDENT}${posting.account.trim()}${amountPart(posting)}`, posting.tags)
 
 const amountPart = (posting: DraftPosting): string =>
   posting.amount.trim() === "" ? "" : `  ${posting.amount.trim()}`
