@@ -42,6 +42,13 @@ import {
   type Accrual,
   type Adjustment,
 } from "~/editions/jp/closing/adjustments"
+import {
+  checkChart,
+  checkConsumptionTax,
+  checkRegister,
+  errorsAmong,
+  warningsAmong,
+} from "~/editions/jp/check/findings"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -994,5 +1001,124 @@ describe("the rules, against what was published", () => {
   test("it says where its numbers came from", () => {
     expect(RULES.sources.length).toBeGreaterThan(0)
     expect(RULES.named).toBe("2026")
+  })
+})
+
+describe("what is worth saying about a set of books, and how loudly", () => {
+  const rules = RULES
+
+  test("a line that cannot be read is an error; a method that cannot be worked out is not", () => {
+    const reading = readEvents(
+      [
+        "{ not json",
+        JSON.stringify({
+          event: "acquired",
+          id: "A",
+          at: "2026-04-01",
+          name: "車",
+          account: "資産:車両",
+          cost: "1000000",
+          commodity: "$",
+          method: "declining-balance",
+          usefulLife: 6,
+          inService: "2026-03-01",
+        }),
+      ].join("\n"),
+    )
+    const register = registerFrom(reading.events)
+    const found = checkRegister(reading, register, rules, ["資産:車両"], "¥")
+
+    expect(errorsAmong(found).map((one) => one.is)).toEqual(["register-line"])
+    expect(warningsAmong(found).map((one) => one.is).sort()).toEqual([
+      "asset-commodity",
+      "asset-in-service-early",
+      "asset-method",
+    ])
+  })
+
+  test("an asset pointing at an account the books do not have is an error", () => {
+    const reading = readEvents(
+      JSON.stringify({
+        event: "acquired",
+        id: "A",
+        at: "2026-04-01",
+        name: "PC",
+        account: "資産:ない科目",
+        cost: "300000",
+        commodity: "¥",
+        method: "straight-line",
+        usefulLife: 4,
+        inService: "2026-04-01",
+      }),
+    )
+    const found = checkRegister(reading, registerFrom(reading.events), rules, ["資産:工具器具備品"], "¥")
+    expect(errorsAmong(found).map((one) => one.is)).toEqual(["asset-account-unknown"])
+  })
+
+  test("a marking nobody recognises is an error; one nobody wrote is a warning", () => {
+    const types = { "費用:消耗品費": "Expense", "資産:現金": "Asset" } as const
+    const books = normalize([
+      entry(1, "打ち間違い", [
+        posting("費用:消耗品費", yen(300), [["tax", "taxable-purchse-10"]]),
+        posting("資産:現金", yen(-300)),
+      ]),
+      entry(2, "何も書いてない", [
+        posting("費用:消耗品費", yen(500)),
+        posting("資産:現金", yen(-500)),
+      ]),
+    ])
+    const found = checkConsumptionTax(books, summarizeConsumptionTax(books, rules, types))
+    expect(errorsAmong(found).map((one) => one.is)).toEqual(["tax-unrecognised"])
+    expect(warningsAmong(found).map((one) => one.is)).toEqual(["tax-unmarked"])
+  })
+
+  test("a taxable purchase with nothing said about the paper is a warning, never an error", () => {
+    const books = normalize([
+      entry(1, "何か", [
+        posting("費用:消耗品費", yen(1100), [["tax", "taxable-purchase-10"]]),
+        posting("資産:現金", yen(-1100)),
+      ]),
+    ])
+    const found = checkConsumptionTax(books, summarizeConsumptionTax(books, rules))
+    expect(found).toEqual([
+      { severity: "warning", is: "invoice-unstated", index: 1, description: "何か" },
+    ])
+  })
+
+  test("a registration number that is not shaped like one is pointed out", () => {
+    const books = normalize([
+      entry(1, "何か", [posting("費用:消耗品費", yen(1100)), posting("資産:現金", yen(-1100))], [
+        ["invoice-number", "T123"],
+      ]),
+    ])
+    const found = checkConsumptionTax(books, summarizeConsumptionTax(books, rules))
+    expect(found.map((one) => one.is)).toEqual(["invoice-number-shape"])
+  })
+
+  test("an account with nowhere to go is a warning, and an assumed heading is not one at all", () => {
+    const declared = declaredAcross({ "main.journal": "account 資産:雑  ; type:A, jp:nowhere" })
+    const found = checkChart(
+      ["資産:雑", "資産:現金", "なにか:へん"],
+      declared,
+      { "資産:現金": "Asset" },
+    )
+    expect(found.map((one) => [one.is, one.severity])).toEqual([
+      ["account-heading", "warning"],
+      ["account-unplaced", "warning"],
+    ])
+  })
+
+  test("nothing here is an error over a question a person has to answer", () => {
+    const books = normalize([
+      entry(1, "何か", [
+        posting("費用:消耗品費", yen(1100), [["tax", "taxable-purchase-10"]]),
+        posting("資産:現金", yen(-1100)),
+      ]),
+    ])
+    const judgements = [
+      ...checkConsumptionTax(books, summarizeConsumptionTax(books, rules)),
+      ...checkChart(["なにか:へん"], new Map(), {}),
+    ]
+    expect(errorsAmong(judgements)).toEqual([])
   })
 })
