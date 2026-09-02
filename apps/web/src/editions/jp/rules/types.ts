@@ -66,16 +66,44 @@ export interface Band {
  */
 export type AccountingMethod = "tax-included" | "tax-excluded"
 
-/**
- * How an asset's cost is spread, as the journal records the method.
- *
- * Only the straight-line method is worked out. The declining-balance method
- * needs three tables rather than one — a rate, a revised rate and a guarantee
- * rate, with a rule for when the second replaces the first — and shipping it
- * half-transcribed would be worse than not shipping it: a figure that is nearly
- * right is filed as though it were right.
- */
+/** How an asset's cost is spread, as the journal records the method. */
 export type DepreciationMethod = "straight-line" | "declining-balance"
+
+/**
+ * One useful life under the declining-balance method.
+ *
+ * Three numbers rather than one, because the method changes partway through. It
+ * takes a proportion of what is left each year, which never reaches zero, so at
+ * the point where a year's proportion falls below the guaranteed amount it stops
+ * being a proportion: what is left at that moment becomes a fixed base and the
+ * revised rate spreads it evenly over the years remaining.
+ */
+export interface DecliningRate {
+  /** 償却率 — the proportion of the opening book value taken each year. */
+  readonly rate: Fraction
+  /**
+   * 改定償却率 — what replaces the rate once the switch happens.
+   *
+   * Absent for a two-year life, which the table writes as a dash: the rate is
+   * one, so the whole cost goes in the first year and there is nothing to
+   * switch to.
+   */
+  readonly revised?: Fraction
+  /** 保証率 — of the original cost, the amount a year must reach to go on as a proportion. */
+  readonly guarantee?: Fraction
+}
+
+export interface DecliningBalance {
+  /**
+   * The date this table applies from.
+   *
+   * Assets bought before it were written off under earlier tables with different
+   * numbers in them, and those are not here. An asset acquired before this is
+   * declined by name rather than run through the wrong table.
+   */
+  readonly from: string
+  readonly table: Readonly<Record<number, DecliningRate>>
+}
 
 export interface JapaneseTaxRules {
   /** Which set this is, so a figure can say what decided it. */
@@ -107,6 +135,15 @@ export interface JapaneseTaxRules {
    * transcribed is what was published.
    */
   readonly straightLine: Readonly<Record<number, Fraction>>
+  /**
+   * The declining-balance rates, by useful life.
+   *
+   * Only the rate itself agrees with an arithmetic — twice one divided by the
+   * years — so only that one can be checked against anything. The revised rate
+   * and the guarantee rate are the statute and nothing else, which is exactly
+   * why they are transcribed one line per year in the order it lists them.
+   */
+  readonly decliningBalance: DecliningBalance
   /** How the fraction left over is dealt with when a rate is applied. */
   readonly rounding: Rounding
 }

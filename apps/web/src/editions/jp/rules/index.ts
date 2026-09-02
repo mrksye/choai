@@ -20,7 +20,7 @@ import type { JapaneseTaxCategory } from "../consumption-tax/category"
 export const RULES: JapaneseTaxRules = japaneseTaxRules2026
 
 export type { Band, Fraction, JapaneseTaxRules, Rounding, Side } from "./types"
-export type { AccountingMethod, DepreciationMethod } from "./types"
+export type { AccountingMethod, DecliningBalance, DecliningRate, DepreciationMethod } from "./types"
 
 /** What a category is, under these rules. Absent where the rules have no such band. */
 export const bandFor = (
