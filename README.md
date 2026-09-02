@@ -172,12 +172,27 @@ some to carry. A `CHOAI_EDITION` it does not recognise stops the build rather
 than falling back, because the fallback would be a global build published at a
 name that promised something else.
 
-The Japan edition adds nothing yet, and that is the point: what has been built
-is the boundary, not what will stand inside it. Consumption tax, qualified
-invoices, a fixed asset register, the adjustments a corporate return is made of,
-an e-Tax export — each goes in a directory of its own under
-`apps/web/src/editions/jp/`, reaching core the way any code here does and
-reaching the app only through those two tables.
+The Japan edition adds five screens and five capabilities, and every one of them
+follows one division: what the books say, and what Japanese tax makes of it. A
+date, a debit and an amount are the same in every country and are core's. A
+consumption tax band, a useful life, the heading an account prints under — each
+follows the rules of a year and the practice of a company, can change without a
+single entry changing, and is written into the journal as a tag rather than
+inferred from an account's name. Every screen there draws that line across the
+middle of itself, so a figure says which of the two it came from.
+
+Nothing it adds writes an accounting entry. Depreciation and the year-end
+adjustments come out as proposals — read by hledger, shown as the text they would
+become, kept only when somebody presses core's own button. What it does write is
+ordinary hledger: `account` directives, and a plain text asset register beside
+the journal that the journal itself declares.
+
+What it deliberately does not work out — the taxable base, the tax payable, the
+simplified basis, how the year of a disposal is treated — is listed in
+[`apps/web/src/editions/jp/README.md`](apps/web/src/editions/jp/README.md), with
+why. Each is a decision a company makes and can be wrong about, and a figure
+worked out silently would look filed-in without being it. Corporate tax returns
+and e-Tax are not built; e-Tax is a submission protocol and stays one.
 
 Which edition you have open is on the manifest — `describe().edition` — and on
 the one line the app writes to the console.

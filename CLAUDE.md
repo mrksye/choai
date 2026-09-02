@@ -58,6 +58,7 @@ bun run dev:jp   # the same as the Japan edition       bun run build:jp
 bunx tsc -b      # typecheck alone: src, vite.config, tests and e2e
 bun run test     # bun test over tests/ — the pure functions only
 bun run e2e      # playwright over e2e/ — drives window.choai, not the screen
+bun run e2e:jp   # the Japan edition's own, against a jp build
 bun scripts/vendor-ui.mjs <name>...    # re-fetch a solid-ui component
 ```
 
@@ -146,12 +147,31 @@ three tsconfigs agree on where the seam resolves.
   the roll of the two and is plain data with no imports, because the build reads
   it as well as the app does. Japanese tax work goes under `editions/jp/`, one
   directory per subject, and nothing in core ever imports it.
+- **`editions/jp/` is the Japan edition**, and its `README.md` is its constitution:
+  what the books say versus what Japanese tax makes of it, one division that every
+  module and every screen follows. Nothing there writes an accounting entry —
+  depreciation and the year-end adjustments go through `propose()` like anything
+  else. Numbers from the law are data in `rules/`, with the page they were read
+  off named beside them, and anything needing a judgement declines by name rather
+  than guessing. Its pure modules import no screens, because `bun test` has no JSX
+  runtime and the reasoning has to stay testable.
 - **`app/views.ts` is every screen there is**, and both the rail and the router
   are read off it — written as two lists, a page could be reachable from the
   rail without being routed, or routed with nothing leading to it, and neither
   shows up until somebody presses the thing. A view carries its own label as a
   function rather than a dictionary key, so an edition can bring words the
-  dictionary has never heard of and still follow the language being switched.
+  dictionary has never heard of and still follow the language being switched —
+  and `reached: { from: "rail", group }` puts a run of them under one heading, so
+  an edition bringing five screens does not silently make the rail nine of equal
+  standing.
+- **`core/journal/companions.ts` is how a non-journal file travels with a book.**
+  A line reading `; choai-file: fixed-assets.jsonl` is a comment to hledger and a
+  declaration to this app, written under the title so a rename cannot overwrite
+  it. Push already sent every file the book had; `take()` in `github/sync.ts`
+  fetches the declared ones after the includes, because hledger never asks for a
+  file it does not `include` and a companion pushed and never returned is lost.
+  `store.putFiles` is the one write that does not refuse an unknown path, and
+  takes several at once so making the file and declaring it are one act.
 - **The worker holds the journal.** `core/hledger/worker.ts` keeps one reactor
   instance alive across calls — parsing costs ~290 ms, queries 10–25 ms. Files go
   into a WASI `PreopenDirectory` rather than as strings, because hledger's text
@@ -245,6 +265,12 @@ three tsconfigs agree on where the seam resolves.
   only splits what is on the page, by sign alone: an overdrawn asset is a credit
   balance, and placing it by account type would hide the thing the report is run
   to find.
+- **Tags come over on their own.** `ptags` and `ttags` are on the wire because
+  hledger has always sent them — `postingKV` writes one by hand and the generic
+  instance carries the other — and `api/answered.ts` republishes them named
+  rather than as aeson's pairs. Posting-level tags are writable through
+  `transaction.propose` as well as through the composer. A tag is how an edition
+  says anything about an entry without core knowing what it means.
 - **`core/hledger/wire.ts` mirrors `Bindings.hs`** — `Request`, `Answer`, `Trouble`
   against its `Request` parser and `Failure` type. A new report means editing
   both. Shapes are hledger's own `ToJSON`, so they follow upstream.
