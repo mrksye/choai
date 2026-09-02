@@ -123,6 +123,41 @@ writable from the screen.
 depreciation postings, which the journal has, and a second copy kept here would
 be a second copy to disagree with.
 
+## What to do next
+
+This works as it stands. What follows is not a list of holes — it is where the
+next hour would go furthest, with the reason, so that whoever picks it up does
+not have to rediscover why.
+
+**1. A band's entries, from the band.** The consumption tax screen shows what
+each band came to and the hledger query that selects it. Pressing the band should
+show those entries. Everything needed is already there — `queryFor` gives the
+query and `core/journal/query.ts` already carries one between screens — so this
+is a screen's worth of work and no new thinking. It is first because it is the
+continuation of the one idea the whole edition rests on: a figure somebody can
+look through is a figure somebody can disagree with, and a total that cannot be
+opened has to be taken on trust.
+
+**2. Tax-exclusive accounting** (税抜経理). The other half of `AccountingMethod`,
+which is a union with the unsupported case already in it, and every function that
+would answer differently already switches on it exhaustively. With the tax posted
+separately there is nothing inside a figure to find: the answer is the balance of
+the tax accounts rather than a fraction of anything, so `taxWithin` stops being a
+division and starts being a lookup. Which method a company uses would have to be
+said somewhere, and the journal is the only honest place — another tag.
+
+**3. The 250% declining-balance table**, for assets bought between 2007-04-01 and
+2012-03-31. It is the three columns beside the ones already transcribed, on the
+same published page, and `decliningBalance.from` is already the thing that
+decides which applies. Assets that old are getting rare, which is why it is
+third and not second: the refusal by name is a correct answer today.
+
+**Outside this boundary** is the right-hand branch of the diagram at the top —
+corporate tax adjustments, and the exporter that would take the statements and
+the tax summary to an NTA CSV. Both are named there and neither is started
+without a conversation first, because the line between "supports a filing" and
+"is a filing tool" is the line this whole edition is arranged around.
+
 ## What is deliberately not built
 
 Not "not yet" in every case. Some of these are things this app should not do.
