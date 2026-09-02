@@ -99,11 +99,31 @@ export interface Page<T> {
   readonly total: number
 }
 
+/**
+ * The commodity a figure written without one is in — the `D` directive.
+ *
+ * Where the symbol goes is part of it. `D 1000.00 EUR` and `D $1,000.00` are
+ * both defaults, and a symbol put on the wrong side of a figure is a different
+ * commodity again rather than the same one written oddly.
+ */
+export interface DefaultCommodity {
+  readonly symbol: string
+  readonly side: "left" | "right"
+  /** Whether a space stands between the symbol and the figure. */
+  readonly spaced: boolean
+}
+
 export interface JournalSummary {
   readonly transactions: number
   readonly accounts: readonly string[]
   /** The symbols this journal keeps its books in, as hledger found them. */
   readonly commodities: readonly string[]
+  /**
+   * Absent when the journal declares no default, which is not an empty symbol:
+   * with nothing declared, a figure written without a symbol is a commodity of
+   * its own, and there is no symbol anything may add to it.
+   */
+  readonly defaultCommodity?: DefaultCommodity
 }
 
 export type Request =

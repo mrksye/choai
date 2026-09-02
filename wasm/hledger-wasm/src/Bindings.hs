@@ -109,13 +109,42 @@ readAndKeep path = do
 -- what the books are kept in. A bare number is a commodity of its own to
 -- hledger, so someone typing one into yen books would quietly start a second
 -- one, and nothing but the journal itself knows which symbol is meant.
+--
+-- The default commodity is the @D@ directive, and it is the one case where a
+-- bare number is not a commodity of its own: hledger reads it as this one. A
+-- form that writes the symbol out in full therefore changes nothing about what
+-- the entry means, only about what the file says, which is the difference
+-- between a journal that can be read by hand and one that cannot. Left out
+-- when the journal declares no default, because then there is no symbol that
+-- could be added without deciding something on the writer's behalf.
 summarise :: Journal -> A.Value
 summarise journal =
   A.object
-    [ "transactions" .= length (jtxns journal)
-    , "accounts" .= journalAccountNames journal
-    , "commodities" .= journalCommoditiesUsed journal
+    ( [ "transactions" .= length (jtxns journal)
+      , "accounts" .= journalAccountNames journal
+      , "commodities" .= journalCommoditiesUsed journal
+      ]
+        <> maybe [] (\declared -> ["defaultCommodity" .= defaultCommodityJson declared]) (jparsedefaultcommodity journal)
+    )
+
+-- | The @D@ directive as somebody writing an amount needs it.
+--
+-- Where the symbol goes is part of the answer and not a detail: @D 1000.00 EUR@
+-- and @D $1,000.00@ are both defaults, and putting either on the wrong side of
+-- the figure writes an amount hledger reads as a different commodity again.
+-- The rest of the style — digit groups, decimal mark, precision — is how
+-- hledger displays a figure, which is hledger's to do and not a form's.
+defaultCommodityJson :: (CommoditySymbol, AmountStyle) -> A.Value
+defaultCommodityJson (symbol, style) =
+  A.object
+    [ "symbol" .= symbol
+    , "side" .= sideName (ascommodityside style)
+    , "spaced" .= ascommodityspaced style
     ]
+
+sideName :: Side -> Text
+sideName L = "left"
+sideName R = "right"
 
 jsQuery :: JSString -> IO JSString
 jsQuery raw = respond (runRequest (decodeRequest (fromJSString raw)))
