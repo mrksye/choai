@@ -4,6 +4,7 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount, Posting, Tag, Transaction } from "~/core/hledger/wire"
 import { RULES, bandFor } from "~/editions/jp/rules"
 import { japaneseGuidance } from "~/editions/jp/guidance"
+import { CAPABILITY } from "~/editions/jp/naming"
 import { japaneseTaxRules2026 } from "~/editions/jp/rules/2026"
 import { asFigure, includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
 import { said, toldOf } from "~/editions/jp/tags"
@@ -1331,7 +1332,18 @@ describe("what a model is told about how these books are kept", () => {
     expect(said).toContain("confidence below 1")
   })
 
-  test("it tells the model not to write the tags the screens write", () => {
-    expect(said).toContain("Do not write either")
+  test("it tells the model not to put a register's own tags on an entry itself", () => {
+    expect(said).toContain("Do not put either on an entry yourself")
+  })
+
+  test("it points at the act that classifies an entry already written", () => {
+    // Rather than at removing it and writing it again, which loses whatever a
+    // Draft cannot hold. The whole reason `tag` exists.
+    expect(said).toContain("tag argument of transaction.propose")
+    expect(said).toContain("Do not remove an entry and write it again")
+  })
+
+  test("it names the capability that offers an asset, by the name that capability has", () => {
+    expect(said).toContain(CAPABILITY.recordAssets)
   })
 })

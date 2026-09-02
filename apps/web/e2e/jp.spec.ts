@@ -106,7 +106,8 @@ test("this is the Japan edition, and it answers to its own names", async ({ page
   // None of what this edition adds changes the journal or leaves the device.
   const mine = Object.entries(manifest.capabilities).filter(([name]) => name.startsWith("jp."))
   expect(mine.every(([, told]) => !told.writes && !told.leaves)).toBe(true)
-  expect(mine.length).toBe(5)
+  expect(names).toContain("jp.recordAssets")
+  expect(mine.length).toBe(6)
 })
 
 test("a posting's tax tag survives being written to a journal and read back out", async ({ page }) => {
@@ -609,4 +610,163 @@ test("a figure this edition worked out crosses as a figure, not as a string of o
 
   expect(charge?.amounts[0]).toEqual({ commodity: "$", mantissa: 56250, places: 0, rendered: "$56250" })
   expect(charge?.rendered).toBe("$56250")
+})
+
+/**
+ * An entry with everything a `Draft` cannot hold: a status mark, a balance
+ * assertion, a posting's own comment, and a comment line of its own.
+ *
+ * Written through the source editor rather than composed, because composing it
+ * is exactly what cannot express it.
+ */
+const RICH = [
+  "",
+  "2026-06-02 * a supplier  ; receipt:r-1",
+  "    ; a note somebody wrote",
+  "    expenses:supplies   $1100.00 = $1100.00  ; what it was for",
+  "    assets:cash        $-1100.00",
+  "",
+].join("\n")
+
+const writeRichEntry = async (page: Page): Promise<void> => {
+  const path = await page.evaluate(async () => {
+    const open = await window.choai.journal.summary({})
+    return open.ok ? open.value.files[0] : undefined
+  })
+  expect(typeof path).toBe("string")
+
+  await page.goto("/source")
+  const box = page.getByRole("textbox").first()
+  await box.fill((await box.inputValue()) + RICH)
+  await page.getByRole("button", { name: /^Save$|^保存$/ }).first().click()
+
+  await expect
+    .poll(async () => {
+      const open = await page.evaluate(() => window.choai.journal.summary({}))
+      return open.ok ? open.value.transactions : 0
+    })
+    .toBe(10)
+}
+
+test("classifying an entry keeps everything a draft could not have held", async ({ page }) => {
+  await openTheDemo(page)
+  await writeRichEntry(page)
+
+  const found = await page.evaluate(() => window.choai.report.entries({ query: "desc:supplier" }))
+  expect(found.ok).toBe(true)
+  if (!found.ok) return
+  const index = found.value.items.find((one) => one.description === "a supplier")?.index ?? -1
+  expect(index).toBeGreaterThan(0)
+
+  const offered = await page.evaluate(
+    (at) =>
+      window.choai.transaction.propose({
+        tag: [
+          {
+            index: at,
+            tags: [{ name: "invoice", value: "qualified" }],
+            postings: [{ at: 0, tags: [{ name: "tax", value: "taxable-purchase-10" }] }],
+          },
+        ],
+      } as never),
+    index,
+  )
+  expect(offered.ok).toBe(true)
+  if (!offered.ok) return
+  expect(offered.value.items[0]?.is).toBe("rewrite")
+  expect(offered.value.reads).toBe(true)
+
+  await page.evaluate((id) => window.choai.proposal.apply({ id } as never), offered.value.id)
+
+  const text = await page.evaluate(() => window.choai.journal.text({}))
+  expect(text.ok).toBe(true)
+  if (!text.ok) return
+
+  // The tags arrived.
+  expect(text.value.text).toContain("; receipt:r-1, invoice:qualified")
+  expect(text.value.text).toContain("; what it was for, tax:taxable-purchase-10")
+
+  // And nothing else moved: the status mark, the assertion, the comment line and
+  // the alignment are all exactly as somebody wrote them. This is the whole
+  // point — a remove-and-re-add would have lost every one of them.
+  expect(text.value.text).toContain("2026-06-02 * a supplier")
+  expect(text.value.text).toContain("$1100.00 = $1100.00")
+  expect(text.value.text).toContain("    ; a note somebody wrote")
+  expect(text.value.text).toContain("    assets:cash        $-1100.00")
+
+  // Still ten entries: nothing was taken out and put back.
+  const open = await page.evaluate(() => window.choai.journal.summary({}))
+  expect(open.ok && open.value.transactions).toBe(10)
+})
+
+test("an asset is offered for the register, and the register is not written until it is kept", async ({ page }) => {
+  await openTheDemo(page)
+
+  const offered = await page.evaluate(() =>
+    window.choai.call("jp.recordAssets", {
+      assets: [
+        {
+          id: "PC-2026-001",
+          name: "a laptop",
+          account: "assets:equipment",
+          acquiredAt: "2026-04-01",
+          inService: "2026-04-10",
+          cost: "300000",
+          usefulLife: 4,
+          confidence: 0.5,
+          why: "the useful life is a statutory class, not something I can read off a receipt",
+        },
+      ],
+    }),
+  )
+  expect(offered.ok).toBe(true)
+  if (!offered.ok) return
+
+  const made = offered.value as { id: string; items: readonly { is: string }[]; reads: boolean }
+  // Two: the register line, and the journal saying the file belongs with it.
+  expect(made.items.map((one) => one.is)).toEqual(["append", "append"])
+  expect(made.reads).toBe(true)
+
+  // Offering is not keeping.
+  const before = await page.evaluate(() => window.choai.call("jp.fixedAssets", {}))
+  expect(before.ok && (before.value as { assets: readonly unknown[] }).assets).toEqual([])
+
+  await page.evaluate((id) => window.choai.proposal.apply({ id } as never), made.id)
+
+  await expect
+    .poll(async () => {
+      const after = await page.evaluate(() => window.choai.call("jp.fixedAssets", {}))
+      return after.ok ? (after.value as { assets: readonly { id: string }[] }).assets.length : 0
+    })
+    .toBe(1)
+
+  // The file is there, declared, and one JSON object on one line.
+  const journal = await page.evaluate(() => window.choai.journal.text({}))
+  expect(journal.ok && journal.value.text).toContain("; choai-file: fixed-assets.jsonl")
+
+  const register = await page.evaluate(() =>
+    window.choai.journal.text({ path: "fixed-assets.jsonl" }),
+  )
+  expect(register.ok).toBe(true)
+  if (!register.ok) return
+  expect(register.value.text.trim().split("\n").length).toBe(1)
+  expect(JSON.parse(register.value.text.trim())).toMatchObject({ event: "acquired", id: "PC-2026-001" })
+
+  // Offering the same asset again adds nothing rather than a second line.
+  const again = await page.evaluate(() =>
+    window.choai.call("jp.recordAssets", {
+      assets: [
+        {
+          id: "PC-2026-001",
+          name: "a laptop",
+          account: "assets:equipment",
+          acquiredAt: "2026-04-01",
+          inService: "2026-04-10",
+          cost: "300000",
+          usefulLife: 4,
+        },
+      ],
+    }),
+  )
+  expect(again.ok).toBe(false)
 })

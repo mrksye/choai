@@ -30,6 +30,7 @@ export const CAPABILITY = {
   fixedAssets: "jp.fixedAssets",
   depreciation: "jp.depreciation",
   check: "jp.check",
+  recordAssets: "jp.recordAssets",
 } as const
 
 /** The prefix every address of this edition's begins with. */

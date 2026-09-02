@@ -5,7 +5,7 @@ import { fromHledger, type Hitch } from "~/core/api/hitch"
 import { figureOf, type Figure } from "~/core/api/answered"
 import { ask } from "~/core/hledger/client"
 import { askTrialBalance } from "~/core/reports/ask"
-import { Err, Ok, digits, fields, nothing, spare, type Result } from "~/core/lib/monad"
+import { Err, Ok, digits, fields, listOf, nothing, spare, text, type Result } from "~/core/lib/monad"
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
@@ -13,6 +13,11 @@ import { summarizeConsumptionTax } from "./consumption-tax/summarize"
 import { depreciationFor } from "./fixed-assets/depreciation"
 import { readEvents } from "./fixed-assets/events"
 import { ASSET, REGISTER, registerFrom, type FixedAsset } from "./fixed-assets/register"
+import { asLine } from "./fixed-assets/events"
+import { COMPANION, companionsIn } from "~/core/journal/companions"
+import { propose } from "~/core/journal/proposals"
+import { shapeOf, type OfferedAll } from "~/core/api/capabilities/transaction"
+import { fromRefusal } from "~/core/api/hitch"
 import { writtenOffIn } from "./fixed-assets/written-off"
 import { asFigure, whole } from "./money"
 import { CAPABILITY } from "./naming"
@@ -383,6 +388,78 @@ const check = (args: {
     })
   })
 
+/**
+ * Assets offered for the register, never written to it.
+ *
+ * The register is a file beside the journal, and the rule that nothing is kept
+ * until somebody has seen it is a rule about this app rather than about the
+ * journal — so this goes through the same proposal a transaction does: the lines
+ * are shown as the lines they would be, and a person presses.
+ *
+ * The declaration goes in the same proposal where the journal does not carry one
+ * yet. A register written and undeclared is a file the repository will take and
+ * never give back, and the two must not be able to happen separately.
+ */
+const recordAssets = (args: {
+  readonly assets: readonly {
+    readonly id: string
+    readonly name: string
+    readonly account: string
+    readonly acquiredAt: string
+    readonly inService: string
+    readonly cost: string
+    readonly usefulLife: number
+    readonly method?: string
+    readonly confidence?: number
+    readonly why?: string
+  }[]
+}): Promise<Result<OfferedAll, Hitch>> =>
+  withJournal(async (open) => {
+    const entry = open.source.entry.replace(/^\//, "")
+    const journal = open.source.files[entry] ?? ""
+    const known = new Set(registerIn(open.source.files).register.assets.map((one) => one.id))
+
+    const lines = args.assets
+      .filter((one) => !known.has(one.id.trim()))
+      .map((one) => ({
+        line: asLine({
+          event: "acquired",
+          id: one.id.trim(),
+          at: one.acquiredAt,
+          name: one.name,
+          account: one.account,
+          cost: one.cost,
+          commodity: open.summary.defaultCommodity?.symbol ?? "",
+          method: one.method ?? "straight-line",
+          usefulLife: one.usefulLife,
+          inService: one.inService,
+        }),
+        confidence: one.confidence ?? 1,
+        ...(one.why === undefined ? {} : { why: one.why }),
+      }))
+
+    if (lines.length === 0) return Err({ at: "nothing-proposed" })
+
+    const declaring = companionsIn(journal).includes(REGISTER)
+      ? []
+      : [
+          {
+            is: "append" as const,
+            path: entry,
+            text: `\n; ${COMPANION}: ${REGISTER}`,
+            confidence: 1,
+          },
+        ]
+
+    const made = await propose([
+      ...lines.map((one) => ({ is: "append" as const, path: REGISTER, ...one, text: one.line })),
+      ...declaring,
+    ])
+    return made.ok
+      ? Ok(shapeOf(made.value, open.summary.defaultCommodity))
+      : Err(fromRefusal(made.error))
+  })
+
 export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
   [CAPABILITY.consumptionTax]: {
     summary:
@@ -426,6 +503,33 @@ export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
     leaves: false,
     offered: true,
     run: depreciation,
+  },
+
+  [CAPABILITY.recordAssets]: {
+    summary:
+      "Offer fixed assets for the register kept beside the journal — never write them. What comes back is a proposal, shown as the lines it would add and kept only when a person presses, exactly as a transaction is. Give what you read off the purchase: an id somebody will recognise, what it is, the account it sits in, what it cost, when it was bought and when it was put to use. A useful life is a statutory class rather than a guess, so unless the reader gave you one, say so and put the confidence below 1. An id already in the register is left alone rather than added twice.",
+    takes: fields({
+      assets: listOf(
+        "The assets to offer.",
+        fields({
+          id: text("An id somebody will recognise, unique in the register."),
+          name: text("What it is."),
+          account: text("The account it sits in, spelled as journal.summary spells it."),
+          acquiredAt: text("The day it was bought, as YYYY-MM-DD."),
+          inService: text("The day it was put to use, as YYYY-MM-DD. Writing it off starts here."),
+          cost: text("What it cost, as a plain figure with no symbol."),
+          usefulLife: digits("In years, as the statutory tables count them."),
+          method: spare(text("straight-line or declining-balance. Straight line if left out.")),
+          confidence: spare(digits("How sure you are, from 0 to 1.")),
+          why: spare(text("Why these details, in a phrase.")),
+        }),
+      ),
+    }),
+    writes: false,
+    needsJournal: true,
+    leaves: false,
+    offered: true,
+    run: recordAssets,
   },
 
   [CAPABILITY.check]: {

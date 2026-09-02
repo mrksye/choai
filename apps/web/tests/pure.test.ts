@@ -15,6 +15,7 @@ import { capabilitiesWith, viewsWith, type View } from "~/edition/types"
 import { GlobalEdition } from "~/editions/global"
 import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
 import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
+import { withTag, withTags } from "~/core/journal/tagging"
 
 /**
  * The parts that are only functions, checked as functions.
@@ -495,6 +496,56 @@ describe("the files a journal says belong beside it", () => {
 
   test("a journal that says nothing about itself still gets the line", () => {
     expect(declaringCompanion("D $1,000.00\n", "a.jsonl")).toBe("; choai-file: a.jsonl\n\nD $1,000.00\n")
+  })
+})
+
+describe("putting a tag on an entry already written", () => {
+  const ENTRY = [
+    "2026-06-02 * a supplier  ; receipt:r-1",
+    "    ; a note about it",
+    "    expenses:supplies  $1100.00 = $1100.00  ; what it was for",
+    "    assets:cash",
+  ].join("\n")
+
+  test("a posting keeps its assertion, its comment and the status mark", () => {
+    const out = withTag(ENTRY, { on: "posting", at: 0 }, { name: "tax", value: "taxable-purchase-10" })
+    expect(out?.split("\n")[2]).toBe(
+      "    expenses:supplies  $1100.00 = $1100.00  ; what it was for, tax:taxable-purchase-10",
+    )
+    expect(out?.split("\n")[0]).toBe(ENTRY.split("\n")[0])
+  })
+  test("a posting with no comment gets one", () => {
+    const out = withTag(ENTRY, { on: "posting", at: 1 }, { name: "tax", value: "out-of-scope" })
+    expect(out?.split("\n")[3]).toBe("    assets:cash  ; tax:out-of-scope")
+  })
+  test("the entry's own line, past its comment continuation", () => {
+    const out = withTag(ENTRY, { on: "entry" }, { name: "invoice", value: "qualified" })
+    expect(out?.split("\n")[0]).toBe("2026-06-02 * a supplier  ; receipt:r-1, invoice:qualified")
+  })
+  test("a tag already there is given its new value, not written twice", () => {
+    const out = withTag(ENTRY, { on: "entry" }, { name: "receipt", value: "r-2" })
+    expect(out?.split("\n")[0]).toBe("2026-06-02 * a supplier  ; receipt:r-2")
+  })
+  test("one hiding on a continuation line is found there", () => {
+    const with2 = withTag(ENTRY, { on: "entry" }, { name: "partner", value: "Old" }) ?? ""
+    const moved = with2.replace("  ; receipt:r-1, partner:Old", "  ; receipt:r-1").replace(
+      "    ; a note about it",
+      "    ; a note about it, partner:Old",
+    )
+    const out = withTag(moved, { on: "entry" }, { name: "partner", value: "New" })
+    expect(out).toContain("; a note about it, partner:New")
+    expect(out?.match(/partner:/g)?.length).toBe(1)
+  })
+  test("a posting that is not there is nothing, not the next line", () => {
+    expect(withTag(ENTRY, { on: "posting", at: 9 }, { name: "tax", value: "x" })).toBeUndefined()
+  })
+  test("several at once", () => {
+    const out = withTags(ENTRY, [
+      { where: { on: "posting", at: 0 }, tag: { name: "tax", value: "taxable-purchase-10" } },
+      { where: { on: "entry" }, tag: { name: "invoice", value: "qualified" } },
+    ])
+    expect(out).toContain("tax:taxable-purchase-10")
+    expect(out).toContain("invoice:qualified")
   })
 })
 
