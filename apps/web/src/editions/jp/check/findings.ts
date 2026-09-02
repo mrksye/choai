@@ -6,7 +6,9 @@ import { looksLikeRegistration, saysSomething } from "../invoice/note"
 import type { Reading } from "../fixed-assets/events"
 import type { Register } from "../fixed-assets/register"
 import { readDecimal } from "../money"
-import type { JapaneseTaxRules } from "../rules"
+import type { DepreciationMethod, JapaneseTaxRules } from "../rules"
+import type { Depreciation } from "../fixed-assets/depreciation"
+import { writeDecimal } from "../money"
 
 /**
  * What is worth saying about a set of books, and how loudly.
@@ -50,6 +52,20 @@ export type Particulars =
   | { readonly is: "asset-commodity"; readonly id: string; readonly said: string; readonly declared: string }
   /** A method that cannot be worked out here, so its charge has to be entered by hand. */
   | { readonly is: "asset-method"; readonly id: string; readonly said: string }
+  /**
+   * The journal and the schedule disagree about what has been written off.
+   *
+   * Almost always a year nobody posted. A warning rather than an error, because
+   * a company may lawfully write off less than it is allowed to — but it is the
+   * kind of thing that is invisible until somebody looks, and the figure for the
+   * year after depends on it.
+   */
+  | {
+      readonly is: "asset-behind-schedule"
+      readonly id: string
+      readonly writtenOff: string
+      readonly scheduled: string
+    }
   /** A `tax:` tag that is not one of the categories. */
   | { readonly is: "tax-unrecognised"; readonly index: number; readonly account: string; readonly said: string }
   /** Something that came in or went out with nothing said about its treatment. */
@@ -64,6 +80,9 @@ export type Particulars =
   | { readonly is: "account-heading"; readonly account: string; readonly said: string }
 
 export type Finding = { readonly severity: Severity } & Particulars
+
+/** The methods these rules hold a table for. Anything else is entered by hand. */
+const WORKED_OUT: readonly DepreciationMethod[] = ["straight-line", "declining-balance"]
 
 const error = (what: Particulars): Finding => ({ severity: "error", ...what })
 const warning = (what: Particulars): Finding => ({ severity: "warning", ...what })
@@ -118,7 +137,9 @@ export const checkRegister = (
       ...(declaredCommodity !== undefined && asset.commodity !== declaredCommodity
         ? [warning({ is: "asset-commodity", id: asset.id, said: asset.commodity, declared: declaredCommodity })]
         : []),
-      ...(asset.method === "straight-line"
+      // Only a method the rules have no table for at all. A declining balance is
+      // worked out now, and saying otherwise would be an alarm about nothing.
+      ...(WORKED_OUT.some((known) => known === asset.method)
         ? []
         : [warning({ is: "asset-method", id: asset.id, said: asset.method })]),
     ]
@@ -166,6 +187,29 @@ export const checkConsumptionTax = (
     ]
   }),
 ]
+
+/**
+ * Where the journal and the schedule have parted company.
+ *
+ * The schedule says what the rules allow year by year; the journal says what was
+ * actually posted. They agree wherever each year went in at the amount allowed,
+ * which is the ordinary case — and where they do not, the commonest reason by
+ * far is that a year was never posted at all. Reconciling them quietly would
+ * hide that inside a figure that looks fine.
+ */
+export const checkDepreciation = (charges: readonly Depreciation[]): readonly Finding[] =>
+  charges.flatMap((charge) =>
+    charge.agreesWithJournal
+      ? []
+      : [
+          warning({
+            is: "asset-behind-schedule",
+            id: charge.assetId,
+            writtenOff: writeDecimal(charge.writtenOffBefore),
+            scheduled: writeDecimal(charge.scheduledBefore),
+          }),
+        ],
+  )
 
 /**
  * Accounts with nowhere on a Japanese statement to go.

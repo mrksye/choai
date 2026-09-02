@@ -257,9 +257,15 @@ export interface Charge {
   readonly account: string
   readonly commodity: string
   readonly months: number
+  /** Whether this year is worked out on a fixed base rather than a proportion. */
+  readonly switched: boolean
   /** The charge as a plain figure, in the commodity the register records. */
   readonly charge: string
   readonly remaining: string
+  /** What the schedule had written off before this year, and what the journal says. */
+  readonly scheduledBefore: string
+  readonly writtenOffBefore: string
+  readonly agreesWithJournal: boolean
   readonly rules: string
 }
 
@@ -313,8 +319,12 @@ const depreciation = (args: {
                 account: asset.account,
                 commodity: asset.commodity,
                 months: out.value.months,
+                switched: out.value.switched,
                 charge: writeDecimal(out.value.charge),
                 remaining: writeDecimal(out.value.remaining),
+                scheduledBefore: writeDecimal(out.value.scheduledBefore),
+                writtenOffBefore: writeDecimal(out.value.writtenOffBefore),
+                agreesWithJournal: out.value.agreesWithJournal,
                 rules: out.value.rules,
               },
             ]
@@ -401,7 +411,7 @@ export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
 
   [CAPABILITY.depreciation]: {
     summary:
-      "What may be written off each fixed asset in a financial year, under the straight-line method. Returns figures, never entries: to put them in the journal, offer them through transaction.propose so a person sees them first. Assets it will not work out — a declining-balance method, a useful life outside the published table, an asset disposed of mid-year — come back under `notWorkedOut` with the reason, and must be entered by hand rather than guessed at.",
+      "What may be written off each fixed asset in a financial year, straight line or declining balance. The answer is the statutory schedule replayed from the year the asset went into use, so it says what the rules allow rather than what was posted; `writtenOffBefore` is what the journal actually holds and `agreesWithJournal` says whether the two match. Where they do not, a year was probably never posted — say so rather than presenting the charge as settled. Returns figures, never entries: to put them in the journal, offer them through transaction.propose so a person sees them first. Assets it will not work out — a useful life outside the published table, an asset bought before the rates these rules hold, one disposed of mid-year — come back under `notWorkedOut` with the reason, and must be entered by hand rather than guessed at.",
     takes: fields(YEAR),
     writes: false,
     needsJournal: true,

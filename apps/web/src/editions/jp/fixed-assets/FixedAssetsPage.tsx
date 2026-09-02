@@ -3,7 +3,7 @@ import { For, Show, createMemo, createSignal, type JSX } from "solid-js"
 import { Button } from "~/core/components/ui/button"
 import { TroubleNote } from "~/core/components/trouble-note"
 import type { Trouble } from "~/core/hledger/wire"
-import { checkRegister } from "../check/findings"
+import { checkDepreciation, checkRegister } from "../check/findings"
 import { RULES } from "../rules"
 import { Findings } from "../ui/Findings"
 import { CELL, Figures, HEAD, Layers } from "../ui/Layers"
@@ -48,6 +48,14 @@ export function FixedAssetsPage(): JSX.Element {
   }
 
   const writtenOff = writtenOffSoFar(() => fiscalYear().from)
+
+  /** This year's charge for each asset, for the ones there is one for. */
+  const charges = createMemo(() =>
+    register().assets.flatMap((asset) => {
+      const worked = depreciationFor(asset, fiscalYear(), RULES, writtenOff(asset.id))
+      return worked.ok ? [worked.value] : []
+    }),
+  )
 
   return (
     <div class="flex flex-col gap-4">
@@ -140,13 +148,10 @@ export function FixedAssetsPage(): JSX.Element {
             </Figures>
 
             <Findings
-              findings={checkRegister(
-                readingNow(),
-                register(),
-                RULES,
-                accountsNow(),
-                commodityNow(),
-              )}
+              findings={[
+                ...checkRegister(readingNow(), register(), RULES, accountsNow(), commodityNow()),
+                ...checkDepreciation(charges()),
+              ]}
             />
           </div>
         }
@@ -187,6 +192,14 @@ function Charge(props: { readonly asset: FixedAsset; readonly writtenOff: Quanti
       {(found) => (
         <span class="font-mono tabular-nums">
           {writeDecimal(found().charge)} {props.asset.commodity}
+          {/* Once the proportion would no longer finish the job it stops being a
+              proportion, and a reader comparing this against last year should be
+              told rather than left to work out why the pattern broke. */}
+          <Show when={found().switched}>
+            <span class="pl-2 font-sans text-xs text-muted-foreground">
+              {words().assets.switched}
+            </span>
+          </Show>
         </span>
       )}
     </Show>

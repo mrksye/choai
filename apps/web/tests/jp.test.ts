@@ -29,7 +29,8 @@ import { during, fiscalYearFrom, lastDayOf, upTo } from "~/editions/jp/statement
 import { balanceSheetFrom, incomeStatementFrom } from "~/editions/jp/statements/layout"
 import { appended, asLine, readEvents } from "~/editions/jp/fixed-assets/events"
 import { inUseAt, registerFrom, type FixedAsset } from "~/editions/jp/fixed-assets/register"
-import { depreciationFor, monthsInService } from "~/editions/jp/fixed-assets/depreciation"
+import { depreciationFor, monthsInService, type Depreciation } from "~/editions/jp/fixed-assets/depreciation"
+import { scheduleThrough } from "~/editions/jp/fixed-assets/schedule"
 import { depreciationDraft, depreciationItems } from "~/editions/jp/fixed-assets/proposal"
 import { draftToJournal } from "~/core/compose/draft"
 import {
@@ -783,32 +784,35 @@ describe("what one asset may be written off this year", () => {
     expect(first.ok && first.value.rate).toEqual({ over: 250, under: 1000 })
   })
 
-  test("a middle year is the whole rate, and what is left comes down by it", () => {
-    const second = charge(asset, 2027, 56250)
+  test("a later year is worked out from the years before it, not from a running total", () => {
+    // Nothing is passed in about what has been written off; the schedule knows.
+    const second = charge(asset, 2027)
     expect(second.ok && second.value.months).toBe(12)
+    expect(second.ok && writeDecimal(second.value.opening)).toBe("243750")
     expect(second.ok && writeDecimal(second.value.charge)).toBe("75000")
     expect(second.ok && writeDecimal(second.value.remaining)).toBe("168750")
   })
 
   test("one yen stays behind, and the last year is that cap rather than a special case", () => {
-    // Written off to within ¥40,000 of the cost: only ¥39,999 may go.
-    const last = charge(asset, 2030, 260000)
-    expect(last.ok && writeDecimal(last.value.charge)).toBe("39999")
+    const last = charge(asset, 2030)
+    expect(last.ok && writeDecimal(last.value.opening)).toBe("18750")
+    expect(last.ok && writeDecimal(last.value.charge)).toBe("18749")
     expect(last.ok && writeDecimal(last.value.remaining)).toBe("1")
   })
 
   test("nothing left but the memorandum value is not a charge of nothing, it is a refusal", () => {
-    expect(charge(asset, 2031, 299999)).toEqual({
-      ok: false,
-      error: { why: "fully-written-off" },
-    })
+    expect(charge(asset, 2031)).toEqual({ ok: false, error: { why: "fully-written-off" } })
   })
 
-  test("a method it cannot calculate declines by name, and the register stays true", () => {
-    expect(charge({ ...asset, method: "declining-balance" }, 2026)).toEqual({
-      ok: false,
-      error: { why: "method", said: "declining-balance" },
-    })
+  test("what the schedule says and what the journal says are both carried, and compared", () => {
+    const second = charge(asset, 2027, 56250)
+    expect(second.ok && writeDecimal(second.value.scheduledBefore)).toBe("56250")
+    expect(second.ok && second.value.agreesWithJournal).toBe(true)
+
+    // A year nobody posted shows up as the two disagreeing, not as a changed figure.
+    const behind = charge(asset, 2027, 0)
+    expect(behind.ok && writeDecimal(behind.value.charge)).toBe("75000")
+    expect(behind.ok && behind.value.agreesWithJournal).toBe(false)
   })
 
   test("a useful life the published table does not reach is not extrapolated", () => {
@@ -847,17 +851,103 @@ describe("what one asset may be written off this year", () => {
   })
 })
 
+describe("an asset written off by a proportion of what is left", () => {
+  /** A million yen over five years, put to use on the first day of the year. */
+  const asset: FixedAsset = {
+    id: "SRV-2026-002",
+    name: "サーバ",
+    account: "資産:工具器具備品",
+    cost: "1000000",
+    commodity: "¥",
+    method: "declining-balance",
+    usefulLife: 5,
+    inService: "2026-04-01",
+    acquiredAt: "2026-04-01",
+  }
+  const schedule = scheduleThrough(asset, RULES, fiscalYearFrom(2031, 4))
+
+  test("it takes a proportion until a proportion would not finish the job", () => {
+    expect(schedule.ok).toBe(true)
+    if (!schedule.ok) return
+
+    // 0.400 of what is left, until 0.400 of it falls below the guaranteed
+    // 108,000 — at which point what is left becomes a fixed base spread by the
+    // revised rate, and one yen stays behind at the end.
+    expect(schedule.value.map((one) => writeDecimal(one.charge))).toEqual([
+      "400000",
+      "240000",
+      "144000",
+      "108000",
+      "107999",
+    ])
+    expect(schedule.value.map((one) => writeDecimal(one.closing))).toEqual([
+      "600000",
+      "360000",
+      "216000",
+      "108000",
+      "1",
+    ])
+  })
+
+  test("the year it changes says so, and the years after it say so too", () => {
+    if (!schedule.ok) return
+    expect(schedule.value.map((one) => one.switched)).toEqual([false, false, false, true, true])
+    // Once switched it is the revised rate on a base fixed at that year's opening
+    // value, not a proportion of a shrinking one.
+    expect(schedule.value[3]?.rate).toEqual({ over: 500, under: 1000 })
+    // The same base at the same rate gives the same full year twice; only the
+    // memorandum value makes the second one smaller than the first.
+    expect(schedule.value[4]?.annual).toEqual(schedule.value[3]?.annual ?? whole(-1))
+  })
+
+  test("a year of it is the same year of the schedule", () => {
+    const fourth = depreciationFor(asset, fiscalYearFrom(2029, 4), RULES, whole(784000))
+    expect(fourth.ok && writeDecimal(fourth.value.charge)).toBe("108000")
+    expect(fourth.ok && fourth.value.switched).toBe(true)
+    expect(fourth.ok && fourth.value.agreesWithJournal).toBe(true)
+  })
+
+  test("bought before the rates these rules hold, it is refused rather than run through them", () => {
+    const older = { ...asset, acquiredAt: "2011-04-01", inService: "2011-04-01" }
+    expect(depreciationFor(older, fiscalYearFrom(2011, 4), RULES, whole(0))).toEqual({
+      ok: false,
+      error: { why: "acquired-before", from: "2012-04-01", acquired: "2011-04-01" },
+    })
+  })
+
+  test("a two-year life takes the whole cost at once and never switches", () => {
+    const quick = { ...asset, usefulLife: 2, cost: "100000" }
+    const walked = scheduleThrough(quick, RULES, fiscalYearFrom(2028, 4))
+    expect(walked.ok).toBe(true)
+    if (!walked.ok) return
+    expect(walked.value.map((one) => writeDecimal(one.charge))).toEqual(["99999"])
+    expect(walked.value[0]?.switched).toBe(false)
+  })
+
+  test("the first year is apportioned by months, the same as any other method", () => {
+    const late = { ...asset, inService: "2026-10-01" }
+    const walked = scheduleThrough(late, RULES, fiscalYearFrom(2026, 4))
+    expect(walked.ok && walked.value[0]?.months).toBe(6)
+    // Half of a full year's 400,000.
+    expect(walked.ok && writeDecimal(walked.value[0]?.charge ?? whole(0))).toBe("200000")
+  })
+})
+
 describe("a year's depreciation, offered rather than written", () => {
-  const charge = {
+  const charge: Depreciation = {
     assetId: "PC-2026-001",
     account: "資産:工具器具備品",
     commodity: "¥",
     rate: { over: 250, under: 1000 },
+    switched: false,
     months: 9,
+    opening: whole(300000),
     annual: whole(75000),
     charge: whole(56250),
-    writtenOffBefore: whole(0),
     remaining: whole(243750),
+    scheduledBefore: whole(0),
+    writtenOffBefore: whole(0),
+    agreesWithJournal: true,
     rules: "2026",
   }
 
@@ -991,6 +1081,34 @@ describe("the rules, against what was published", () => {
     })
   })
 
+  test("the declining rate is twice one divided by the years, to the nearest thousandth", () => {
+    // The revised rate and the guarantee rate are the statute and nothing else,
+    // so this is the only column a transcription can be checked against.
+    Object.entries(japaneseTaxRules2026.decliningBalance.table).forEach(([years, rates]) => {
+      expect(rates.rate.under).toBe(1000)
+      expect(rates.rate.over).toBe(Math.round(2000 / Number(years)))
+    })
+  })
+
+  test("every life but the shortest has all three of its rates", () => {
+    const table = japaneseTaxRules2026.decliningBalance.table
+    const years = Object.keys(table).map(Number)
+    expect(Math.min(...years)).toBe(2)
+    expect(Math.max(...years)).toBe(50)
+    expect(years.length).toBe(49)
+
+    // Two years is written off in one go: the table prints a dash for the other
+    // two, and a dash is an absence rather than a zero.
+    expect(table[2]?.revised).toBeUndefined()
+    expect(table[2]?.guarantee).toBeUndefined()
+    years
+      .filter((one) => one > 2)
+      .forEach((one) => {
+        expect(table[one]?.revised).toBeDefined()
+        expect(table[one]?.guarantee).toBeDefined()
+      })
+  })
+
   test("it covers every useful life from two years to fifty", () => {
     const years = Object.keys(japaneseTaxRules2026.straightLine).map(Number)
     expect(Math.min(...years)).toBe(2)
@@ -1007,7 +1125,7 @@ describe("the rules, against what was published", () => {
 describe("what is worth saying about a set of books, and how loudly", () => {
   const rules = RULES
 
-  test("a line that cannot be read is an error; a method that cannot be worked out is not", () => {
+  test("a line that cannot be read is an error; a method with no table is not", () => {
     const reading = readEvents(
       [
         "{ not json",
@@ -1019,7 +1137,7 @@ describe("what is worth saying about a set of books, and how loudly", () => {
           account: "資産:車両",
           cost: "1000000",
           commodity: "$",
-          method: "declining-balance",
+          method: "sum-of-the-years-digits",
           usefulLife: 6,
           inService: "2026-03-01",
         }),

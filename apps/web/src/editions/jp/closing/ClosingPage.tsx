@@ -4,6 +4,8 @@ import { Button } from "~/core/components/ui/button"
 import { propose, type Item } from "~/core/journal/proposals"
 import { dock } from "~/core/dock"
 import { depreciationFor } from "../fixed-assets/depreciation"
+import { checkDepreciation } from "../check/findings"
+import { Findings } from "../ui/Findings"
 import { depreciationItems } from "../fixed-assets/proposal"
 import { writtenOffSoFar } from "../fixed-assets/written-off"
 import { RULES } from "../rules"
@@ -172,6 +174,8 @@ export function ClosingPage(): JSX.Element {
                 <span class="text-xs text-muted-foreground">{words().closing.offered}</span>
               </Show>
             </div>
+
+            <Findings findings={checkDepreciation(charges())} />
 
             <datalist id="known-accounts">
               <For each={accountsNow()}>{(one) => <option value={one} />}</For>
