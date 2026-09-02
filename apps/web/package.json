@@ -12,7 +12,8 @@
     "build:jp": "CHOAI_EDITION=jp bun run build",
     "preview": "vite preview",
     "test": "bun test tests",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:jp": "CHOAI_EDITION=jp playwright test e2e/jp.spec.ts"
   },
   "dependencies": {
     "@bjorn3/browser_wasi_shim": "^0.4.2",

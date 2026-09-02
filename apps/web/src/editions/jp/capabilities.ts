@@ -1,11 +1,11 @@
 import { withJournal } from "~/core/api/capabilities/journal"
 import type { SomeCapability } from "~/core/api/capability"
+import type { AccountType } from "~/core/hledger/wire"
 import { fromHledger, type Hitch } from "~/core/api/hitch"
 import { figureOf, type Figure } from "~/core/api/answered"
 import { ask } from "~/core/hledger/client"
 import { askTrialBalance } from "~/core/reports/ask"
 import { Err, Ok, digits, fields, spare, type Result } from "~/core/lib/monad"
-import { placingsNow } from "~/core/journal/chart"
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
@@ -49,6 +49,21 @@ const YEAR = {
 
 const APRIL = 4
 
+/**
+ * What hledger takes each account to be, asked outright.
+ *
+ * The screens read this off a resource core keeps for them, which is right for
+ * a screen: it settles a moment later and everything redraws. It is wrong here.
+ * A capability answers once and is done, and one that read a resource would
+ * answer differently depending on whether an unrelated screen had happened to
+ * ask first — silently, and in the direction of claiming less than it knows.
+ * Asking costs one more round trip and cannot be out of date.
+ */
+const typesOf = async (): Promise<Result<Readonly<Record<string, AccountType>>, Hitch>> => {
+  const reply = await ask({ kind: "accountTypes" })
+  return reply.ok ? Ok(reply.value) : Err(fromHledger(reply.error))
+}
+
 const yearFrom = (args: { readonly year: number; readonly startingMonth?: number }): FiscalYear =>
   fiscalYearFrom(args.year, args.startingMonth ?? APRIL)
 
@@ -91,7 +106,10 @@ const consumptionTax = (args: {
     })
     if (!reply.ok) return Err(fromHledger(reply.error))
 
-    const summary = summarizeConsumptionTax(normalize(reply.value.items), RULES, placingsNow())
+    const types = await typesOf()
+    if (!types.ok) return types
+
+    const summary = summarizeConsumptionTax(normalize(reply.value.items), RULES, types.value)
     return Ok({
       from: year.from,
       to: lastDayOf(year),
@@ -175,14 +193,16 @@ const statements = (args: {
     const moving = await askTrialBalance(during(year))
     if (!moving.ok) return Err(fromHledger(moving.error))
 
-    const declared = declaredAcross(open.source.files)
-    const types = placingsNow()
+    const types = await typesOf()
+    if (!types.ok) return types
 
-    const sheet = balanceSheetFrom(standing.value.report.prRows, declared, types, lastDayOf(year))
+    const declared = declaredAcross(open.source.files)
+
+    const sheet = balanceSheetFrom(standing.value.report.prRows, declared, types.value, lastDayOf(year))
     const income = incomeStatementFrom(
       moving.value.report.prRows,
       declared,
-      types,
+      types.value,
       year.from,
       lastDayOf(year),
     )
@@ -272,7 +292,10 @@ const depreciation = (args: {
     })
     if (!already.ok) return Err(fromHledger(already.error))
 
-    const writtenOff = writtenOffIn(already.value.items, placingsNow())
+    const types = await typesOf()
+    if (!types.ok) return types
+
+    const writtenOff = writtenOffIn(already.value.items, types.value)
 
     const worked = register.assets.map((asset) => ({
       asset,
@@ -323,15 +346,17 @@ const check = (args: {
     })
     if (!reply.ok) return Err(fromHledger(reply.error))
 
-    const types = placingsNow()
+    const types = await typesOf()
+    if (!types.ok) return types
+
     const declared = declaredAcross(open.source.files)
     const { reading, register } = registerIn(open.source.files)
     const entries = normalize(reply.value.items)
 
     const found: readonly Finding[] = [
       ...checkRegister(reading, register, RULES, open.summary.accounts, open.summary.defaultCommodity?.symbol),
-      ...checkConsumptionTax(entries, summarizeConsumptionTax(entries, RULES, types)),
-      ...checkChart(open.summary.accounts, declared, types),
+      ...checkConsumptionTax(entries, summarizeConsumptionTax(entries, RULES, types.value)),
+      ...checkChart(open.summary.accounts, declared, types.value),
     ]
 
     return Ok({
