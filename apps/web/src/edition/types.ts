@@ -78,6 +78,36 @@ export interface Edition {
   readonly id: EditionId
   readonly views: readonly View[]
   readonly capabilities: Readonly<Record<string, SomeCapability>>
+  /**
+   * How these books are kept, said to a model.
+   *
+   * This app has three doors, not two. `views` is how a person arrives and
+   * `capabilities` is how a script arrives — and a model arrives through both:
+   * it is handed the capabilities as tools, and it is told what it is doing.
+   * The first half was covered and the second was not. An edition could give a
+   * model a report to call and could not tell it that entries in these books
+   * carry a classification, so a model writing an entry wrote it without one
+   * and the report it had just been given came back saying so.
+   *
+   * That is not a hook and not a lifecycle. It is the contract catching up with
+   * a door it already had half of.
+   *
+   * **Added, never replacing.** This goes after core's instructions and cannot
+   * remove or contradict them — the same rule `viewsWith` and `capabilitiesWith`
+   * keep, in the form the third table can keep it. What a model is told about
+   * writing an entry is core's; what it is told about the conventions of one
+   * jurisdiction's books is this.
+   *
+   * A function because an edition composes it — the tag names and the values
+   * come from the same constants the code reads, so a text that has fallen
+   * behind the code is a test failure rather than a thing nobody noticed. Not
+   * for the reason `label` is a function: this is read by a model and does not
+   * follow the language the screens are speaking.
+   *
+   * Left out where there is nothing to say, which is what the global edition
+   * does — it belongs to nowhere, so there are no local conventions to describe.
+   */
+  readonly guidance?: () => string
 }
 
 /**

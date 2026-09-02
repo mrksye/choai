@@ -60,12 +60,30 @@ second is the order of a spread in `capabilitiesWith`. So no edition can
 quietly change what a balance sheet means, and reading core tells you the whole
 of what core does.
 
-**The contract stays small.** Two tables, because this app has two doors:
-`views` is how a person arrives, `capabilities` is how a script, a test or a
-model arrives. That is the whole of what a jurisdiction needs. Do not grow this
-into a plugin framework — no hooks, no lifecycle, no registry, no dependency
-injection. If something genuinely cannot be said as a view or a capability,
-that is worth a conversation, not a third abstraction added in advance.
+**The contract stays small.** Two tables and a paragraph, because this app has
+three doors: `views` is how a person arrives, `capabilities` is how a script or
+a test arrives, and a model arrives through both of them at once — it is handed
+the capabilities as tools, and it is told what it is doing. `guidance` is the
+second half of that third door.
+
+It was added after the first half proved to be half. An edition could give a
+model a consumption tax report to call and could not tell it that entries in
+these books carry a classification, so a model writing an entry wrote it without
+one and the report it had just been given came back saying so. That is not a
+hook and not a lifecycle; it is the contract catching up with a door it already
+had part of.
+
+Do not grow it further into a plugin framework — no hooks, no lifecycle, no
+registry, no dependency injection. If something genuinely cannot be said as a
+view, a capability or a paragraph, that is worth a conversation, not a fourth
+abstraction added in advance.
+
+**What an edition says to a model is added, never in place of anything.** It
+goes after core's instructions and cannot remove or contradict them: what a
+model is told about offering an entry before it is kept is core's, in every
+edition. This is the same rule `viewsWith` and `capabilitiesWith` keep, in the
+form a paragraph can keep it — and `tests/pure.test.ts` holds it, because
+appending is the only thing `prompt.ts` is allowed to do with it.
 
 **Names are `global` and `jp`.** In TypeScript, `GlobalEdition` and
 `JapanEdition`. Never `isJP`, never `useJapaneseMode`, never `specialMode`. A
@@ -99,7 +117,7 @@ editions/jp/
 
 It may reach into core the way any code here does — the journal, hledger, the
 reports, the components, the shape checkers. It reaches the app only through
-`JapanEdition`, and only as one of the two tables:
+`JapanEdition`, and only as one of the two tables or the paragraph:
 
 - A **view** is a screen with an address, a place on the rail and an explorer
   beside it. It carries its own `label` as a function, so it can bring words the
@@ -109,8 +127,13 @@ reports, the components, the shape checkers. It reaches the app only through
   by `describe()`, callable as `choai.call(name, args)`, and given to a model as
   a tool by exactly the same rules as core's own — including `offered`, which is
   what decides whether a model may call it at all.
+- **`guidance`** is what a model is told about how these books are kept: which
+  tags entries here carry and what the words for them are. Compose it from the
+  constants the code already reads, so it cannot fall behind them, and leave the
+  deciding to the reader — say where a classification goes, not which one a
+  particular purchase takes.
 
-Both are `readonly` data. Neither needs core to be edited.
+All three are `readonly` data. None of them needs core to be edited.
 
 ## What holds these rules
 

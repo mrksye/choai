@@ -1,3 +1,4 @@
+import { edition } from "~/edition"
 import { describe } from "~/core/api/manifest"
 import { amountExample } from "~/core/compose/hint"
 import type { OpenJournal } from "~/core/journal/store"
@@ -14,7 +15,9 @@ import { toolNameOf } from "./naming"
  * The instructions are kept apart from the facts about the open journal. The
  * instructions are the same for everyone and never change, which is what lets
  * them be sent ahead of everything else; the facts belong to one book and go in
- * with the first thing said.
+ * with the first thing said. What an edition adds to them is settled at build
+ * time and is the same for every reader of that build, so it is still one
+ * constant string and still worth sending ahead.
  */
 
 /**
@@ -71,7 +74,24 @@ export const instructions = (): string =>
     "Offering is not keeping. Stop after transaction.propose and say what you offered, unless the reader asked for the entries to be written — then call proposal.apply as well and say what was kept. If a proposal comes back not reading, fix it and offer again rather than trying to apply it.",
     "",
     "Deliver what was asked at the scope intended. If you think the question is the wrong one, say so in a sentence and answer it anyway.",
+    // Last, and added rather than woven in: what an edition says about the
+    // conventions of one jurisdiction's books cannot alter what core says about
+    // writing an entry into any. See `edition/types.ts`.
+    ...saidByTheEdition(),
   ].join("\n")
+
+/**
+ * What this build's edition says about how its books are kept.
+ *
+ * Nothing at all where there is nothing to say, and nothing at all in a global
+ * build — which is the point of a global build. Where there is something, it
+ * arrives with a blank line before it, as a paragraph of its own rather than as
+ * a sentence appended to core's last one.
+ */
+const saidByTheEdition = (): readonly string[] => {
+  const said = edition.guidance?.().trim()
+  return said === undefined || said === "" ? [] : ["", said]
+}
 
 /**
  * What is true about the book in front of us, said once at the start.
