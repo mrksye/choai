@@ -1,4 +1,4 @@
-import type { AccountType, Tag } from "~/core/hledger/wire"
+import type { Tag } from "~/core/hledger/wire"
 import { LETTER, type Kind } from "~/core/journal/declarations"
 import { JP } from "./mapping"
 import type { Section } from "./sections"
@@ -111,6 +111,3 @@ export const notYetDeclared = (
   preset: readonly Offered[],
   declared: ReadonlyMap<string, readonly Tag[]>,
 ): readonly Offered[] => preset.filter((one) => !declared.has(one.account))
-
-/** hledger's own word for a kind, for reading a preset entry beside an answer of its. */
-export const typeOf = (offered: Offered): AccountType => offered.kind

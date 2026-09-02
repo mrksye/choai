@@ -2,7 +2,7 @@ import { createMemo, createResource, type Accessor } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
 import type { AccountType, Quantity, Transaction } from "~/core/hledger/wire"
-import { minusOf, plusOf, whole } from "../money"
+import { plusOf, whole } from "../money"
 import { said } from "../tags"
 import { openNow, typesNow } from "../ui/books"
 import { ASSET } from "./register"
@@ -76,6 +76,3 @@ export const writtenOffIn = (
 
   return into
 }
-
-/** What is left of a cost after what has been written off it. */
-export const leftOf = (cost: Quantity, writtenOff: Quantity): Quantity => minusOf(cost, writtenOff)

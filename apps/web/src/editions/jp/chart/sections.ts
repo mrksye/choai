@@ -68,10 +68,6 @@ export const isBalanceSection = (section: Section): section is BalanceSection =>
 
 export const partOf = (section: BalanceSection): Part => PART_OF[section]
 
-/** Which statement a heading belongs to. */
-export const statementOf = (section: Section): "balance-sheet" | "income-statement" =>
-  isBalanceSection(section) ? "balance-sheet" : "income-statement"
-
 /**
  * The headings whose balances are credits, and which read as positive figures.
  *

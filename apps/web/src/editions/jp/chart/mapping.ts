@@ -97,14 +97,6 @@ export const placementOf = (
     : { is: "assumed", section: assumed, from: kind }
 }
 
-/** Where each of these accounts goes, in the order they were given. */
-export const placementsFor = (
-  accounts: readonly string[],
-  declared: ReadonlyMap<string, readonly Tag[]>,
-  types: Readonly<Record<string, AccountType>>,
-): ReadonlyMap<string, Placement> =>
-  new Map(accounts.map((account) => [account, placementOf(account, declared, types)]))
-
 /** The heading a placement settled on, where it settled on one. */
 export const sectionIn = (placement: Placement): Section | undefined =>
   placement.is === "declared" || placement.is === "assumed" ? placement.section : undefined
