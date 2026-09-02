@@ -213,8 +213,8 @@ test("the settings list offers the page's own sections, and nothing else", async
     "Language",
     "Appearance",
     "The current journal",
-    "AI",
     "Cloud storage",
+    "AI",
     "Licences",
   ])
 })

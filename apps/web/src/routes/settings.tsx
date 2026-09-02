@@ -39,8 +39,8 @@ export const SECTIONS: readonly Section[] = [
   { id: "language", name: () => t("settings.language") },
   { id: "appearance", name: () => t("settings.appearance") },
   { id: "library", name: () => t("library.title"), when: inHand },
-  { id: "ai", name: () => t("ai.title") },
   { id: "github", name: () => t("github.title") },
+  { id: "ai", name: () => t("ai.title") },
   { id: "licenses", name: () => t("licenses.title") },
 ]
 
@@ -111,8 +111,8 @@ export default function Settings(): JSX.Element {
         <p class="text-xs text-muted-foreground">{t("settings.appearanceHint")}</p>
       </section>
       <Library />
-      <AiKeyPanel id="ai" />
       <GitHubPanel id="github" />
+      <AiKeyPanel id="ai" />
       <section id="licenses" class="flex flex-col gap-2">
         <h2 class="text-sm font-medium">{t("licenses.title")}</h2>
         <p class="text-xs text-muted-foreground">{t("licenses.app")}</p>
