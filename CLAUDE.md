@@ -114,8 +114,13 @@ src/
 ```
 
 `src/edition/README.md` is the standing policy: the rules an edition is added
-under, what is deliberately not built, and the checks that say the boundary has
-broken. Read it before putting anything in `editions/jp/`.
+under, what is deliberately not built, and what holds each of them. Read it
+before putting anything in `editions/jp/`. Two of the rules are not prose:
+`tsconfig.boundary.json` is every file but the Japan edition, and `composite`
+makes that list binding — so `core -> editions/jp` is `TS6307` and takes the
+build down before vite runs. `tests/boundary.test.ts` holds what no type can
+say, chiefly that the seam is reached as `~/edition/chosen` and never by a
+relative path.
 
 - **The app is built twice from one tree**, as the global edition at `choai.dev`
   and the Japan edition at `jp.choai.dev`. Core is plain text accounting and

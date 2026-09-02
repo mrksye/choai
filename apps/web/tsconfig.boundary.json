@@ -1,0 +1,27 @@
+/* The one rule a typechecker can be made to hold: core does not know Japan.
+ *
+ * This project builds nothing. It is the app's own settings over a narrower
+ * list of files — everything except `src/editions/jp` — and `composite` is what
+ * makes that list binding: under it, importing a file the project does not
+ * include is an error rather than a reason to widen the project. So any import
+ * of the Japan edition from core, from the app, or from the contract comes back
+ * as TS6307, naming the file and the line it is on.
+ *
+ * `src/editions/global` is in the list because the seam points there by
+ * default: `edition/chosen.ts` imports it, and is meant to. What is being held
+ * is the direction the README calls forbidden — core reaching a jurisdiction —
+ * not the seam that every build resolves through.
+ *
+ * The Japan edition itself is typechecked by tsconfig.app.json, which takes the
+ * whole of src. This one is a check, so it duplicates rather than replaces:
+ * it cannot be made a reference of that project, because a referenced project
+ * may not disable emit and nothing here emits anything (TS6310).
+ */
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.boundary.tsbuildinfo",
+    "composite": true
+  },
+  "include": ["src/core", "src/app", "src/edition", "src/editions/global"]
+}

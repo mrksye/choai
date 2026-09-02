@@ -7,8 +7,8 @@ core does not know either of them exists.
 
 This file is the standing policy, kept beside the code it governs. The root
 `README.md` says what an edition is and how to build one; this says what must
-stay true while they are added to, and how you would find out that it no longer
-does.
+stay true while they are added to, and what holds each rule — two of them are
+held by the build rather than by anybody remembering.
 
 ```
 global ─┐
@@ -111,35 +111,52 @@ reports, the components, the shape checkers. It reaches the app only through
 
 Both are `readonly` data. Neither needs core to be edited.
 
-## How you would know the boundary had broken
+## What holds these rules
 
-Nothing enforces this at build time, so these are the checks worth running when
-the edition directories start to fill up.
+Two of them are held rather than hoped for. The rest are still prose, and are
+marked as such below.
 
-**Core naming an edition** — this must print nothing:
+**`core -> editions/jp` fails to compile.** `tsconfig.boundary.json` is the
+app's own settings over every file except `src/editions/jp`, and it is
+`composite`, which makes that list binding: importing a file the project does
+not include is an error rather than a reason to widen it. So the import comes
+back as `TS6307`, naming the file and the line, and `bun run build` stops
+before vite is ever reached.
+
+`src/editions/global` is inside that list, because the seam points there by
+default and `edition/chosen.ts` is meant to import it. What is being held is
+the direction this file calls forbidden — core reaching a jurisdiction — not
+the seam every build resolves through.
+
+**`tests/boundary.test.ts` holds what no type can say.** It reads the source
+rather than importing it, and asserts:
+
+- the seam is reached as `~/edition/chosen` and never by a relative path. The
+  build swaps a *name*; `./chosen` resolves to the same file, typechecks, tests
+  clean, and quietly builds every edition as the global one. This has happened
+  once already, and it is the reason the test exists.
+- `edition/chosen.ts` is the only module outside `editions/` that names an
+  edition module at all.
+- nothing outside `editions/` asks `edition.id === "jp"`.
+- every `editions/*/index.ts` answers to the name `edition`, which is what the
+  alias replaces the seam with.
+
+**Still only prose**, so worth a look by eye when the Japan edition fills up:
+that a Japanese rule has not been expressed as a branch somewhere subtler than
+the test's pattern, that the contract has not grown a third table, and that
+what an edition adds is still only added.
+
+**The other edition's code staying out of a bundle** is not held by anything,
+because nothing can assert on a bundle from here. Check it by hand when the
+Japan edition first has code worth shaking out: put a distinctive string in a
+Japan-only module and look for it.
 
 ```sh
-grep -rn "editions/" src/core src/app
+bun run build:global && grep -rc "THE_STRING" dist/assets/   # every count zero
+bun run build:jp     && grep -rc "THE_STRING" dist/assets/   # one of them is not
 ```
 
-The only permitted mention of an edition module anywhere outside `editions/` is
-`edition/chosen.ts`, which is the hole the build fills.
-
-**The other edition's code in the bundle** — put a distinctive string in a
-Japan-only module, build the global edition, and look for it:
-
-```sh
-bun run build:global && grep -rc "THE_STRING" dist/assets/
-```
-
-Every count must be zero. Then build `build:jp` and confirm it is one, so that
-the check is measuring something.
-
-**The seam still being a seam** — `edition/chosen.ts` must be imported through
-the alias, as `~/edition/chosen`, and from `edition/index.ts` alone. The build
-swaps a *name*; a relative `./chosen` is a name it has no way to recognise, and
-under it both editions quietly build as the global one. This has happened once
-already.
+The second half is what makes the first half mean anything.
 
 **Which edition a deployment is** — `window.choai.describe().edition`, and the
 one line the app writes to the console.
