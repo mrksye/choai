@@ -137,9 +137,25 @@ const step = async (
   const spoke = talker.textIn(reply.value.content)
   if (spoke !== "") onBeat({ is: "said", said: { from: "ai", text: spoke } })
 
-  if (reply.value.stopped === "cut-off") return Ok({ ending: { stopped: "cut-off" }, turns: grown, spent })
-
   const asked = talker.calledIn(reply.value.content)
+
+  /**
+   * A reply cut off keeps its words, but not a request it did not finish making.
+   *
+   * Running out of room does not stop a model part way through a sentence and
+   * nowhere else: it stops wherever it had got to, which is often just after it
+   * has written out a call and before anything could answer one. Keeping that
+   * turn leaves a question in the conversation that nothing ever answers, and
+   * every provider refuses the whole conversation from then on rather than the
+   * turn that spoiled it — so one long answer that overran costs every exchange
+   * after it, with the complaint naming a message nobody can find.
+   *
+   * Words alone are worth keeping: an answer that stops mid-sentence is still
+   * an answer, and the model reads its own unfinished one perfectly well.
+   */
+  if (reply.value.stopped === "cut-off")
+    return Ok({ ending: { stopped: "cut-off" }, turns: asked.length === 0 ? grown : turns, spent })
+
   if (asked.length === 0) return Ok({ ending: { stopped: "done" }, turns: grown, spent })
 
   const answers = await Promise.all(

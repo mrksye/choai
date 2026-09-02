@@ -1566,3 +1566,63 @@ test("an exchange can be stopped part way, and what it spent is still counted", 
   expect(JSON.stringify(again.messages)).not.toContain("tool_use")
   expect(JSON.stringify(again.messages)).toContain("just July")
 })
+
+/**
+ * An answer that overran does not spoil every exchange after it.
+ *
+ * Running out of room stops a model wherever it had got to, which is often just
+ * after it has written out a call for a capability and before anything could
+ * answer one. Keeping that turn puts a question in the conversation that
+ * nothing ever answers, and Anthropic — like the rest — then refuses the whole
+ * conversation rather than the turn that spoiled it:
+ *
+ *   messages.54: `tool_use` ids were found without `tool_result` blocks
+ *   immediately after
+ *
+ * which names a message the reader cannot see and has no way to remove. It is
+ * the worst shape a fault can take here: silent when it happens, fatal from
+ * then on, and cured only by throwing the conversation away.
+ */
+test("a reply that ran out of room part way through a call is not carried forward", async ({
+  page,
+}) => {
+  const asked = await answerWith(page, CLAUDE, (route, sofar) =>
+    asJson(
+      route,
+      sofar === 1
+        ? {
+            model: "claude-opus-5",
+            stop_reason: "max_tokens",
+            content: [
+              { type: "text", text: "Writing these up" },
+              // Room ran out here: the call is written, and nothing answers it.
+              {
+                type: "tool_use",
+                id: "toolu_01S6NgVdiagXe5zhcyHkQMga",
+                name: "transaction__propose",
+                input: { transactions: [] },
+              },
+            ],
+            usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+          }
+        : CLAUDE.answers,
+    ),
+  )
+
+  await connect(page, CLAUDE)
+  await openTheDemo(page)
+  await askThat(page, "Write up this statement")
+
+  await expect(page.getByText("ran out of room")).toBeVisible()
+
+  await page.getByPlaceholder("Ask about these books").fill("Try again, shorter")
+  await page.getByRole("button", { name: "Ask", exact: true }).last().click()
+  await expect.poll(() => asked.length).toBe(2)
+
+  // The unfinished call went nowhere near the next exchange. Anything else is
+  // the 400 above, for good.
+  const again = asked[1] as { messages: readonly { role: string; content: unknown }[] }
+  expect(JSON.stringify(again.messages)).not.toContain("toolu_01S6NgVdiagXe5zhcyHkQMga")
+  expect(JSON.stringify(again.messages)).not.toContain("tool_use")
+  expect(JSON.stringify(again.messages)).toContain("Try again, shorter")
+})
