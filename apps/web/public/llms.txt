@@ -7,8 +7,8 @@
 
 **The interface lives in the page, not at a URL.** Nothing here is an HTTP API:
 there is no server to call, and fetching a path from this host returns the
-application, not an answer. To use it, open https://choai.dev in a browser and
-call it from there.
+application, not an answer. To use it, open this app in a browser and call it
+from the page you are on.
 
 ```js
 await window.choai.ready          // the app has decided which journal is open
@@ -28,6 +28,20 @@ is given it at all.
 the source, so it cannot disagree with what actually runs, and it carries a
 `version` that moves when the promise narrows. Any list written down elsewhere —
 including this file — would be wrong within a month.
+
+## One app, more than one edition
+
+choai is published more than once from one source. `describe().edition` says
+which one you have open, and the console says it too when the page loads. An
+edition adds screens and capabilities for one jurisdiction's bookkeeping; it
+never replaces or removes what core does, so everything below is true of every
+edition and some builds answer to more names than others.
+
+That is the other reason to read `describe()` rather than a list: a capability
+you have not seen before is not a version you are behind on, it is the build you
+are looking at. An edition may also say something about how its books are kept —
+which tags entries carry, and what they mean — and where it does, that arrives in
+the instructions a model is given rather than here.
 
 ## Two doors
 

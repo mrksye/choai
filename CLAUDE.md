@@ -130,11 +130,14 @@ three tsconfigs agree on where the seam resolves.
 - **The app is built twice from one tree**, as the global edition at `choai.dev`
   and the Japan edition at `jp.choai.dev`. Core is plain text accounting and
   does not know Japan exists — there is no `if (edition ===` in it and there is
-  not to be one. What an edition adds is two tables and nothing else
-  (`edition/types.ts`): `views`, screens with an address and a place on the
-  rail, and `capabilities`, the same offered by name through `describe()` and
-  `call`. Those are the two doors this app has, so they are the whole of what a
-  jurisdiction needs in order to arrive. **An edition adds; it cannot replace or
+  not to be one. What an edition adds is two tables and a
+  paragraph (`edition/types.ts`): `views`, screens with an address and a place
+  on the rail; `capabilities`, the same offered by name through `describe()` and
+  `call`; and `guidance`, how these books are kept, said to a model. Three doors,
+  not two — a model arrives through both tables at once, handed the capabilities
+  as tools and told what it is doing, and the second half of that was missing
+  until an edition needed to say that entries here carry a classification.
+  `guidance` is appended to core's instructions and can never replace them. **An edition adds; it cannot replace or
   take away** — a view at an address core has is dropped and a name core uses
   stays core's, so what a balance sheet means cannot come to depend on which
   name the app was reached by.
