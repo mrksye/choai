@@ -244,6 +244,7 @@ const send = async (key: string, ask: Ask): Promise<Result<Reply, Failure>> => {
 
   const reached = await reach(`${ROOT}/v1/messages`, {
     method: "POST",
+    signal: ask.signal,
     headers: headers(key),
     body: JSON.stringify({
       model: ask.model.id,

@@ -15,6 +15,8 @@ import {
   howItEnded,
   sending,
   spentSoFar,
+  stopAsking,
+  stoppable,
 } from "~/ai/store"
 import type { Shown, Spent } from "~/ai/talker"
 import { wording } from "~/components/ai-key-panel"
@@ -24,7 +26,7 @@ import { underReview } from "~/journal/proposals"
 import type { Hitch } from "~/api/hitch"
 import { Button } from "~/components/ui/button"
 import { Ellipsis } from "~/lib/ui/ellipsis"
-import { PaperclipIcon, SendIcon, XIcon } from "~/lib/ui/icons"
+import { CircleStopIcon, PaperclipIcon, SendIcon, XIcon } from "~/lib/ui/icons"
 import { getOrUndefined } from "~/lib/monad"
 import { t } from "~/i18n"
 
@@ -194,18 +196,36 @@ export function AiChat(): JSX.Element {
               {t("ai.forget")}
             </Button>
           </Show>
-          <Button
-            size="icon"
-            class="ml-auto size-8"
-            aria-label={t("ai.send")}
-            title={t("ai.send")}
-            disabled={
-              !ready() || (written().trim() === "" && carrying().length === 0) || sending()
+          {/* The same place in the row either way: what is under way is ended
+              where it was started, rather than by finding a second control. */}
+          <Show
+            when={stoppable()}
+            fallback={
+              <Button
+                size="icon"
+                class="ml-auto size-8"
+                aria-label={t("ai.send")}
+                title={t("ai.send")}
+                disabled={
+                  !ready() || (written().trim() === "" && carrying().length === 0) || sending()
+                }
+                onClick={() => void send()}
+              >
+                <SendIcon />
+              </Button>
             }
-            onClick={() => void send()}
           >
-            <SendIcon />
-          </Button>
+            <Button
+              size="icon"
+              variant="outline"
+              class="ml-auto size-8"
+              aria-label={t("ai.stop")}
+              title={t("ai.stop")}
+              onClick={stopAsking}
+            >
+              <CircleStopIcon />
+            </Button>
+          </Show>
         </div>
       </div>
     </div>
@@ -386,6 +406,8 @@ function Note(props: { ending: Ending }): JSX.Element {
         return t("ai.stoppedCutOff")
       case "too-many-turns":
         return t("ai.stoppedTooMany")
+      case "by-hand":
+        return t("ai.stoppedByHand")
     }
   }
 

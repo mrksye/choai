@@ -180,6 +180,7 @@ const within = (ask: Ask): number => {
 const send = async (key: string, ask: Ask): Promise<Result<Reply, Failure>> => {
   const reached = await reach(`${ROOT}/models/${encodeURIComponent(ask.model.id)}:generateContent`, {
     method: "POST",
+    signal: ask.signal,
     headers: headers(key),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: ask.system }] },

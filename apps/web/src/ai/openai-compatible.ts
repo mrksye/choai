@@ -163,6 +163,7 @@ export const speaksOpenAI = (of: Compatible): Talker => {
       `${of.root}/chat/completions`,
       {
         method: "POST",
+        signal: ask.signal,
         headers: headers(key),
         body: JSON.stringify({
           model: ask.model.id,

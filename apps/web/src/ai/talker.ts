@@ -87,6 +87,15 @@ export interface Ask {
    * minutes.
    */
   readonly within?: number
+  /**
+   * How a reader ends this before it is finished.
+   *
+   * A conversation that may legitimately take minutes needs a way out that is
+   * not a deadline, and abandoning the answer is not the same as stopping the
+   * work: what is not asked for is not paid for, so the request itself has to
+   * go. Absent for the questions that are quick enough that nobody would.
+   */
+  readonly signal?: AbortSignal
 }
 
 /**

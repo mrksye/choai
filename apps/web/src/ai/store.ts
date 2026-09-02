@@ -26,11 +26,27 @@ const [failure, setFailure] = createSignal<Option<Failure>>(None)
 const [ending, setEnding] = createSignal<Option<Ending>>(None)
 const [usedBy, setUsedBy] = createSignal<string | undefined>(undefined)
 const [spent, setSpent] = createSignal<Spent>(NOTHING_SPENT)
+const [stopper, setStopper] = createSignal<AbortController | undefined>(undefined)
 
 export { beats, sending }
 
 export const askingTrouble: Accessor<Option<Failure>> = failure
 export const howItEnded: Accessor<Option<Ending>> = ending
+
+/**
+ * End the exchange in flight.
+ *
+ * The request goes with it rather than being left to arrive unread: a model
+ * writing up a statement is being paid by the token for as long as it writes,
+ * and a reader who has seen enough is saying stop, not saying look away.
+ *
+ * Safe to press twice, and safe to press when there is nothing to stop.
+ */
+export const stopAsking = (): void => stopper()?.abort()
+
+/** Whether there is an exchange to stop. Held rather than derived from sending,
+ * because what can be stopped is the request, and the request is this. */
+export const stoppable = (): boolean => stopper() !== undefined
 
 /** What this conversation has cost so far, counting every exchange in it. */
 export const spentSoFar: Accessor<Spent> = spent
@@ -87,16 +103,37 @@ export const ask = async (text: string, shown: readonly Shown[] = []): Promise<v
     turns().length === 0 && open !== undefined ? `${groundingFor(open)}\n\n${written}` : written
 
   const chosen = (await keptModel(talker.id)) ?? { id: talker.defaultModel, label: talker.defaultModel }
-  const done = await converse(talker, saved, chosen, [...turns(), talker.said(asked, shown)], (beat) =>
-    setBeats((was) => [...was, beat]),
+  const ending = new AbortController()
+  setStopper(ending)
+  const done = await converse(
+    talker,
+    saved,
+    chosen,
+    [...turns(), talker.said(asked, shown)],
+    (beat) => setBeats((was) => [...was, beat]),
+    ending.signal,
   )
   setSending(false)
+  setStopper(undefined)
 
   if (!done.ok) {
     setFailure(Some(done.error))
     return
   }
-  setTurns(done.value.turns)
   setEnding(Some(done.value.ending))
+  /**
+   * What was spent was spent, whether or not the answer was waited for.
+   */
   setSpent((was) => alsoSpent(was, done.value.spent))
+
+  /**
+   * A stopped exchange leaves the conversation where it was.
+   *
+   * The question is still on screen, because it was asked and the reader saw it
+   * asked; it does not go back to the model, because nothing answered it and a
+   * question with no answer in front of the next one is not a conversation any
+   * provider will take. The two records differing here is the reason there are
+   * two of them.
+   */
+  if (done.value.ending.stopped !== "by-hand") setTurns(done.value.turns)
 }

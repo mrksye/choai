@@ -224,6 +224,7 @@ const send = async (key: string, ask: Ask): Promise<Result<Reply, Failure>> => {
     `${ROOT}/responses`,
     {
       method: "POST",
+      signal: ask.signal,
       headers: headers(key),
       body: JSON.stringify({
         model: ask.model.id,

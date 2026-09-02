@@ -14,6 +14,7 @@ import cloudSvg from './cloud.svg?raw'
 import sparklesSvg from './sparkles.svg?raw'
 import paperclipSvg from './paperclip.svg?raw'
 import sendSvg from './send.svg?raw'
+import circleStopSvg from './circle-stop.svg?raw'
 import refreshCwSvg from './refresh-cw.svg?raw'
 import searchSvg from './search.svg?raw'
 import chevronLeftSvg from './chevron-left.svg?raw'
@@ -74,6 +75,8 @@ export const SparklesIcon = icon(sparklesSvg)
 export const PaperclipIcon = icon(paperclipSvg)
 /** Send what has been written. */
 export const SendIcon = icon(sendSvg)
+/** Ending something that is under way, as against closing something that is not. */
+export const CircleStopIcon = icon(circleStopSvg)
 
 export const RefreshIcon = icon(refreshCwSvg)
 

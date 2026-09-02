@@ -130,6 +130,8 @@ export const en = {
     stoppedRefused: "That one was declined rather than answered.",
     stoppedCutOff: "The answer ran out of room before it finished.",
     stoppedTooMany: "Stopped after going round too many times. Ask again, more narrowly.",
+    stoppedByHand: "Stopped part way. What was said here does not go back to the model.",
+    stop: "Stop",
     offline: "The model could not be reached.",
     timedOut: "No answer after {{ seconds }} seconds. The provider may be busy — try again.",
     unauthorised: "That key was not accepted. Check it in settings.",

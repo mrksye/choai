@@ -1491,3 +1491,78 @@ test("a call that came back with nothing says what was wrong with it", async ({ 
   await expect(page.getByText("1 thing(s) wrong")).toBeVisible()
   await expect(page.getByText("transactions[0].postings[0].amount — a string")).toBeVisible()
 })
+
+/**
+ * A conversation can be ended before it ends itself.
+ *
+ * A model writing up a statement is paid for by the token for as long as it
+ * writes, and a reader who has seen enough is saying stop rather than saying
+ * look away — so the request goes, not just the waiting for it. What already
+ * ran stays on screen, because it ran.
+ *
+ * The reply is held open so the stop lands while the exchange is genuinely in
+ * flight. Whether the request was really abandoned is read from the browser's
+ * own end of it: the route was asked for and never fulfilled, and the app is no
+ * longer sending.
+ */
+test("an exchange can be stopped part way, and what it spent is still counted", async ({ page }) => {
+  const held: { let_go: () => void } = { let_go: () => {} }
+  const waiting = new Promise<void>((resolve) => {
+    held.let_go = resolve
+  })
+
+  const asked = await answerWith(page, CLAUDE, async (route, sofar) => {
+    if (sofar === 1) {
+      return asJson(route, {
+        model: "claude-opus-5",
+        stop_reason: "tool_use",
+        content: [
+          { type: "text", text: "Looking at the year." },
+          { type: "tool_use", id: "toolu_1", name: "report__incomeStatement", input: { query: "" } },
+        ],
+        usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+      })
+    }
+    await waiting
+    return asJson(route, CLAUDE.answers)
+  })
+
+  await connect(page, CLAUDE)
+  await openTheDemo(page)
+  await askThat(page, "How did the year go?")
+
+  // The first round is done and the second is being waited on.
+  await expect(page.getByText("Looked at report.incomeStatement")).toBeVisible()
+  const stop = page.getByRole("button", { name: "Stop", exact: true })
+  await expect(stop).toBeVisible()
+
+  await stop.click()
+
+  await expect(page.getByText("Stopped part way")).toBeVisible()
+  // The send button is back, which is the app no longer being in an exchange.
+  await expect(page.getByRole("button", { name: "Ask", exact: true }).last()).toBeVisible()
+  await expect(stop).toBeHidden()
+
+  // What ran before the stop is still shown, and what the first round cost is
+  // still counted — it was spent whether or not the answer was waited for.
+  await expect(page.getByText("Looked at report.incomeStatement")).toBeVisible()
+  await expect(page.getByText("100 sent, 50 back")).toBeVisible()
+
+  // Two exchanges were asked for; the second was abandoned rather than answered.
+  expect(asked.length).toBe(2)
+  held.let_go()
+
+  // Asking again starts from where the conversation stood before the stopped
+  // question — one message, and no half-built turn asking for a capability that
+  // nothing ever answered. A dangling tool_use is a conversation no provider
+  // will take, and it would be carried by every exchange after it.
+  await page.getByPlaceholder("Ask about these books").fill("Never mind — just July")
+  await page.getByRole("button", { name: "Ask", exact: true }).last().click()
+  await expect.poll(() => asked.length).toBe(3)
+
+  const again = asked[2] as { messages: readonly { role: string; content: unknown }[] }
+  expect(again.messages.length).toBe(1)
+  expect(again.messages[0]?.role).toBe("user")
+  expect(JSON.stringify(again.messages)).not.toContain("tool_use")
+  expect(JSON.stringify(again.messages)).toContain("just July")
+})

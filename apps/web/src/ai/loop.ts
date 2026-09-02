@@ -62,6 +62,8 @@ export type Ending =
   | { readonly stopped: "refused"; readonly why?: string }
   | { readonly stopped: "cut-off" }
   | { readonly stopped: "too-many-turns" }
+  /** A reader ended it. The only one of these anybody chose. */
+  | { readonly stopped: "by-hand" }
 
 export interface Conversed {
   readonly ending: Ending
@@ -77,8 +79,21 @@ export const converse = (
   model: Model,
   turns: readonly Turn[],
   onBeat: (beat: Beat) => void,
+  signal: AbortSignal,
 ): Promise<Result<Conversed, Failure>> =>
-  step(talker, key, model, turns, onBeat, TURNS, NOTHING_SPENT)
+  step(talker, key, model, turns, onBeat, TURNS, NOTHING_SPENT, signal)
+
+/**
+ * Where an exchange ended when somebody ended it.
+ *
+ * The turns handed back are the ones this round began with, never the ones it
+ * was part way through building. A model's turn asking for three capabilities
+ * is only a turn at all once all three have been answered; handing back the
+ * half of it that exists would leave a question in the conversation that
+ * nothing can ever answer, and every later exchange would carry it.
+ */
+const byHand = (turns: readonly Turn[], spent: Spent): Result<Conversed, Failure> =>
+  Ok({ ending: { stopped: "by-hand" }, turns, spent })
 
 const step = async (
   talker: Talker,
@@ -88,16 +103,26 @@ const step = async (
   onBeat: (beat: Beat) => void,
   left: number,
   sofar: Spent,
+  signal: AbortSignal,
 ): Promise<Result<Conversed, Failure>> => {
+  if (signal.aborted) return byHand(turns, sofar)
   if (left <= 0) return Ok({ ending: { stopped: "too-many-turns" }, turns, spent: sofar })
 
   const reply = await talker.send(key, {
+    signal,
     model,
     system: instructions(),
     turns,
     tools: toolsOffered(),
     maxTokens: ROOM,
   })
+  /**
+   * Stopping is read before the reply is, because the reply to a request that
+   * was abandoned is the abandoning itself — `reach` has no way to tell that
+   * from the network having gone, and reporting it as being offline would blame
+   * the connection for something a reader did on purpose.
+   */
+  if (signal.aborted) return byHand(turns, sofar)
   if (!reply.ok) return reply
 
   const spent = alsoSpent(sofar, reply.value.spent)
@@ -126,5 +151,11 @@ const step = async (
     }),
   )
 
-  return step(talker, key, model, [...grown, talker.answering(answers)], onBeat, left - 1, spent)
+  /**
+   * Answers already gathered are still shown — they ran, and what ran is part of
+   * the working — but the round they were gathered for does not go back.
+   */
+  if (signal.aborted) return byHand(turns, spent)
+
+  return step(talker, key, model, [...grown, talker.answering(answers)], onBeat, left - 1, spent, signal)
 }

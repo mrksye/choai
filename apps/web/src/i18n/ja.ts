@@ -123,6 +123,8 @@ export const ja: Dictionary = {
     stoppedRefused: "この質問には答えられませんでした。",
     stoppedCutOff: "答えの途中で長さの上限に達しました。",
     stoppedTooMany: "往復が多すぎたので止めました。範囲を絞って尋ね直してください。",
+    stoppedByHand: "途中で止めました。ここまでのやり取りはモデルには渡りません。",
+    stop: "止める",
     offline: "モデルに到達できませんでした。",
     timedOut: "{{ seconds }} 秒待っても応答がありませんでした。混んでいるかもしれません。もう一度お試しください。",
     unauthorised: "キーが受け付けられませんでした。設定で確認してください。",
