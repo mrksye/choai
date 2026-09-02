@@ -415,6 +415,28 @@ export const rewriteFiles = async (
   return change(current, { ...current.source.files, ...written })
 }
 
+/**
+ * The same, for files that may not be there yet.
+ *
+ * The only write here that does not refuse an unknown path, which is the whole
+ * of the difference: `rewriteFile` is for text somebody is replacing, and a path
+ * it does not recognise is a typo about to blank a file nobody meant to touch.
+ * This is for a file being made — a companion the journal declares, written the
+ * first time — where not recognising the path is the ordinary case.
+ *
+ * Several at once for the same reason `rewriteFiles` takes several: making the
+ * file and declaring it in the journal is one act to whoever asked, and it has
+ * to be one to hledger too, or a companion could end up written and undeclared
+ * — which is a file that will not come back from the repository.
+ */
+export const putFiles = async (
+  written: Readonly<Record<string, string>>,
+): Promise<Result<OpenJournal, Trouble>> => {
+  const current = getOrUndefined(opened())
+  if (current === undefined) return Err({ kind: "no-journal" })
+  return change(current, { ...current.source.files, ...written })
+}
+
 /** The entry path as hledger sees it, back to the key the files are held under. */
 const entryName = (source: Source): string => source.entry.replace(/^\//, "")
 

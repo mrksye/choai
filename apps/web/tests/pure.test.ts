@@ -13,7 +13,8 @@ import { PERIODS, TERMS, periodByTerm } from "~/core/reports/periods"
 import { CAME_AND_WENT, OWNED_AND_OWED, inChartOrder, ofKinds } from "~/core/journal/declarations"
 import { capabilitiesWith, viewsWith, type View } from "~/edition/types"
 import { GlobalEdition } from "~/editions/global"
-import { JapanEdition } from "~/editions/jp"
+import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
+import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
 
 /**
  * The parts that are only functions, checked as functions.
@@ -449,6 +450,54 @@ describe("the list beside a statement", () => {
   })
 })
 
+describe("the files a journal says belong beside it", () => {
+  const journal = ["; the books", "", "; how amounts are written", "D $1,000.00", "", "2026-01-01 Shop", "    a  $1", "    b"].join("\n")
+
+  test("a declaration is read off any comment spelled that way", () => {
+    expect(companionsIn("; choai-file: fixed-assets.jsonl")).toEqual(["fixed-assets.jsonl"])
+    expect(companionsIn(";choai-file:fixed-assets.jsonl")).toEqual(["fixed-assets.jsonl"])
+    expect(companionsIn("# choai-file:  papers/assets.csv  ")).toEqual(["papers/assets.csv"])
+  })
+
+  test("an ordinary comment is not one, and the same file twice is one file", () => {
+    expect(companionsIn("; choai-file is where the assets live")).toEqual([])
+    expect(companionsIn("; nothing here\nD $1,000.00")).toEqual([])
+    expect(companionsIn("; choai-file: a.jsonl\n; choai-file: a.jsonl")).toEqual(["a.jsonl"])
+  })
+
+  test("a path that climbs out of the books is not one of them", () => {
+    expect(companionsIn("; choai-file: /etc/passwd")).toEqual([])
+    expect(companionsIn("; choai-file: ../../elsewhere.csv")).toEqual([])
+    expect(companionsIn("; choai-file:")).toEqual([])
+  })
+
+  test("what a whole set of files declares between them", () => {
+    expect(
+      [...companionsAcross({ "main.journal": "; choai-file: a.jsonl", "more.journal": "; choai-file: b.csv" })].sort(),
+    ).toEqual(["a.jsonl", "b.csv"])
+  })
+
+  test("declaring one writes it under the title, where a rename cannot reach it", () => {
+    const written = declaringCompanion(journal, "fixed-assets.jsonl")
+    expect(written.split("\n").slice(0, 4)).toEqual([
+      "; the books",
+      "; choai-file: fixed-assets.jsonl",
+      "",
+      "; how amounts are written",
+    ])
+    expect(companionsIn(written)).toEqual(["fixed-assets.jsonl"])
+  })
+
+  test("declaring it twice declares it once", () => {
+    const once = declaringCompanion(journal, "fixed-assets.jsonl")
+    expect(declaringCompanion(once, "fixed-assets.jsonl")).toBe(once)
+  })
+
+  test("a journal that says nothing about itself still gets the line", () => {
+    expect(declaringCompanion("D $1,000.00\n", "a.jsonl")).toBe("; choai-file: a.jsonl\n\nD $1,000.00\n")
+  })
+})
+
 describe("what an edition joins on", () => {
   const nothingDrawn = () => null
 
@@ -493,10 +542,24 @@ describe("what an edition joins on", () => {
     expect(joined["report.balance"]?.summary).toBe("core")
   })
 
-  test("both editions are the app, and neither takes anything away", () => {
+  /**
+   * An edition's own tables are read as data rather than imported.
+   *
+   * `editions/jp/index.ts` names its screens, and a screen is a `.tsx`, which
+   * needs a JSX runtime the test runner does not have. So what the Japan
+   * edition claims is kept in a module with no imports and both sides read it —
+   * see `editions/jp/naming.ts`.
+   */
+  test("nothing the Japan edition claims can be spelled the way core spells things", () => {
+    const claimed = [...Object.values(ROUTE), ...Object.values(CAPABILITY)]
+    expect(claimed.length).toBe(new Set(claimed).size)
+    Object.values(ROUTE).forEach((href) => expect(href.startsWith(UNDER)).toBe(true))
+    Object.values(CAPABILITY).forEach((name) => expect(name.startsWith(NAMED)).toBe(true))
+  })
+
+  test("the global edition adds nothing, because everything it would add is core", () => {
     expect(GlobalEdition.id).toBe("global")
-    expect(JapanEdition.id).toBe("jp")
-    expect([...GlobalEdition.views, ...JapanEdition.views]).toEqual([])
-    expect(Object.keys({ ...GlobalEdition.capabilities, ...JapanEdition.capabilities })).toEqual([])
+    expect(GlobalEdition.views).toEqual([])
+    expect(Object.keys(GlobalEdition.capabilities)).toEqual([])
   })
 })

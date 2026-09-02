@@ -1,5 +1,6 @@
 import { Err, Ok, getOrUndefined, type Result } from "~/core/lib/monad"
-import { journal, openBringingMissing, rewriteFile, type OpenJournal } from "~/core/journal/store"
+import { companionsAcross } from "~/core/journal/companions"
+import { journal, openBringingMissing, putFiles, rewriteFile, type OpenJournal } from "~/core/journal/store"
 import type { Remote } from "~/core/journal/kept"
 import type { Trouble } from "~/core/hledger/wire"
 import { fetchFile, putFile, type Failure, type Where } from "./api"
@@ -118,12 +119,48 @@ const take = async (
   )
   if (!opened.ok) return Err({ at: "hledger", trouble: opened.error })
 
+  const alsoTaken = await takeCompanions(opened.value.source.files, brought, bring)
+  if (!alsoTaken.ok) return alsoTaken
+
   await Promise.all(
     [...brought].map(([path, file]) =>
       agree(into, { path, repoPath: file.repoPath, sha: file.sha, baseText: file.text, at: Date.now() }),
     ),
   )
   return Ok({ did: "pulled", files: brought.size })
+}
+
+/**
+ * The files the journal declares beside itself, fetched after it.
+ *
+ * hledger asks for what it `include`s and for nothing else, so without this a
+ * companion would be pushed from the device that made it and never come back to
+ * any other — which is the same as losing it, only slower. What the journal
+ * declares is the whole of what is looked for; see `journal/companions.ts`.
+ *
+ * One that is not in the repository is not a failure. A book that has declared
+ * a companion and not yet sent it is the ordinary state of one being started,
+ * and the file is here already in that case.
+ */
+const takeCompanions = async (
+  files: Readonly<Record<string, string>>,
+  brought: Map<string, { text: string; sha: string; repoPath: string }>,
+  bring: (path: string) => Promise<string | undefined>,
+): Promise<Result<void, Snag>> => {
+  const wanted = companionsAcross(files).filter((path) => !brought.has(path))
+  if (wanted.length === 0) return Ok(undefined)
+
+  const texts = await Promise.all(wanted.map(bring))
+  const arrived = Object.fromEntries(
+    wanted.flatMap((path, at) => {
+      const text = texts[at]
+      return text === undefined ? [] : [[path, text] as const]
+    }),
+  )
+  if (Object.keys(arrived).length === 0) return Ok(undefined)
+
+  const kept = await putFiles(arrived)
+  return kept.ok ? Ok(undefined) : Err({ at: "hledger", trouble: kept.error })
 }
 
 /** Every file of the open journal that is not already what the repository has. */
