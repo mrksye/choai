@@ -1,11 +1,11 @@
 import { withJournal } from "~/core/api/capabilities/journal"
 import type { SomeCapability } from "~/core/api/capability"
-import type { AccountType } from "~/core/hledger/wire"
+import type { AccountType, Quantity } from "~/core/hledger/wire"
 import { fromHledger, type Hitch } from "~/core/api/hitch"
 import { figureOf, type Figure } from "~/core/api/answered"
 import { ask } from "~/core/hledger/client"
 import { askTrialBalance } from "~/core/reports/ask"
-import { Err, Ok, digits, fields, spare, type Result } from "~/core/lib/monad"
+import { Err, Ok, digits, fields, nothing, spare, type Result } from "~/core/lib/monad"
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
@@ -14,7 +14,7 @@ import { depreciationFor } from "./fixed-assets/depreciation"
 import { readEvents } from "./fixed-assets/events"
 import { ASSET, REGISTER, registerFrom, type FixedAsset } from "./fixed-assets/register"
 import { writtenOffIn } from "./fixed-assets/written-off"
-import { writeDecimal, whole } from "./money"
+import { asFigure, whole } from "./money"
 import { CAPABILITY } from "./naming"
 import { RULES } from "./rules"
 import { balanceSheetFrom, incomeStatementFrom } from "./statements/layout"
@@ -67,9 +67,6 @@ const typesOf = async (): Promise<Result<Readonly<Record<string, AccountType>>, 
 const yearFrom = (args: { readonly year: number; readonly startingMonth?: number }): FiscalYear =>
   fiscalYearFrom(args.year, args.startingMonth ?? APRIL)
 
-/** A figure as the API publishes one: exact, and rendered the way the journal writes it. */
-const asFigure = figureOf
-
 export interface TaxBand {
   readonly category: string
   readonly postings: number
@@ -119,9 +116,9 @@ const consumptionTax = (args: {
       bands: summary.bands.map((band) => ({
         category: band.category,
         postings: band.postings,
-        recorded: asFigure(band.recorded),
-        total: asFigure(band.total),
-        ...(band.taxWithin === undefined ? {} : { taxWithin: asFigure(band.taxWithin) }),
+        recorded: figureOf(band.recorded),
+        total: figureOf(band.total),
+        ...(band.taxWithin === undefined ? {} : { taxWithin: figureOf(band.taxWithin) }),
         query: band.query,
       })),
       unmarked: summary.unmarked.map((one) => ({ index: one.index, account: one.account })),
@@ -168,7 +165,7 @@ const lineOf = (line: {
   placement: { is: string }
 }): StatementLine => ({
   account: line.account,
-  amount: asFigure(line.amount),
+  amount: figureOf(line.amount),
   placed: line.placement.is,
 })
 
@@ -178,7 +175,7 @@ const headingOf = (heading: {
   lines: readonly Parameters<typeof lineOf>[0][]
 }): StatementHeading => ({
   section: heading.section,
-  total: asFigure(heading.total),
+  total: figureOf(heading.total),
   lines: heading.lines.map(lineOf),
 })
 
@@ -212,7 +209,7 @@ const statements = (args: {
         asAt: sheet.asAt,
         parts: sheet.parts.map((part) => ({
           part: part.part,
-          total: asFigure(part.total),
+          total: figureOf(part.total),
           headings: part.headings.map(headingOf),
         })),
         unplaced: sheet.unplaced.lines.map(lineOf),
@@ -221,7 +218,7 @@ const statements = (args: {
         from: income.from,
         to: income.to,
         headings: income.headings.map(headingOf),
-        running: income.running.map((one) => ({ id: one.id, total: asFigure(one.total) })),
+        running: income.running.map((one) => ({ id: one.id, total: figureOf(one.total) })),
         unplaced: income.unplaced.lines.map(lineOf),
       },
     })
@@ -259,12 +256,19 @@ export interface Charge {
   readonly months: number
   /** Whether this year is worked out on a fixed base rather than a proportion. */
   readonly switched: boolean
-  /** The charge as a plain figure, in the commodity the register records. */
-  readonly charge: string
-  readonly remaining: string
+  /**
+   * Every figure here is a figure, not a string of one.
+   *
+   * These were worked out in this edition rather than by hledger, and they leave
+   * under the same promise as everything else that leaves: a mantissa, a scale
+   * and the same amount written out. A caller adding two of them together should
+   * not have to parse a decimal point back out of text.
+   */
+  readonly charge: Figure
+  readonly remaining: Figure
   /** What the schedule had written off before this year, and what the journal says. */
-  readonly scheduledBefore: string
-  readonly writtenOffBefore: string
+  readonly scheduledBefore: Figure
+  readonly writtenOffBefore: Figure
   readonly agreesWithJournal: boolean
   readonly rules: string
 }
@@ -308,6 +312,10 @@ const depreciation = (args: {
       out: depreciationFor(asset, year, RULES, writtenOff.get(asset.id) ?? whole(0)),
     }))
 
+    /** Written the way this journal writes figures, where it says how it does. */
+    const shown = (value: Quantity, commodity: string): Figure =>
+      asFigure(value, commodity, open.summary.defaultCommodity)
+
     return Ok({
       from: year.from,
       to: lastDayOf(year),
@@ -320,10 +328,10 @@ const depreciation = (args: {
                 commodity: asset.commodity,
                 months: out.value.months,
                 switched: out.value.switched,
-                charge: writeDecimal(out.value.charge),
-                remaining: writeDecimal(out.value.remaining),
-                scheduledBefore: writeDecimal(out.value.scheduledBefore),
-                writtenOffBefore: writeDecimal(out.value.writtenOffBefore),
+                charge: shown(out.value.charge, asset.commodity),
+                remaining: shown(out.value.remaining, asset.commodity),
+                scheduledBefore: shown(out.value.scheduledBefore, asset.commodity),
+                writtenOffBefore: shown(out.value.writtenOffBefore, asset.commodity),
                 agreesWithJournal: out.value.agreesWithJournal,
                 rules: out.value.rules,
               },
@@ -400,8 +408,8 @@ export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
 
   [CAPABILITY.fixedAssets]: {
     summary:
-      "The fixed asset register, read from the plain text file kept beside the journal. Lifecycle only — what was bought, when it was put to use, how long it is expected to last. How much has been written off is not here because the journal has it: query tag:asset=<id> for that.",
-    takes: fields({}),
+      "The fixed asset register, read from the plain text file kept beside the journal. Lifecycle only — what was bought, when it was put to use, how long it is expected to last. `cost` is the text the file holds, exactly as somebody wrote it, because that is what the register records; the figures worked out from it come back from jp.depreciation as figures. How much has been written off is not here because the journal has it: query tag:asset=<id> for that.",
+    takes: nothing,
     writes: false,
     needsJournal: true,
     leaves: false,

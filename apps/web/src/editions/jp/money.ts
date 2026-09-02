@@ -1,4 +1,5 @@
-import type { Amount, MixedAmount, Quantity } from "~/core/hledger/wire"
+import { figureOf, type Figure } from "~/core/api/answered"
+import type { Amount, DefaultCommodity, MixedAmount, Quantity } from "~/core/hledger/wire"
 import type { Fraction, Rounding } from "./rules"
 
 /**
@@ -211,3 +212,36 @@ export const writeDecimal = (value: Quantity): string => {
     value.decimalPlaces === 0 ? digits : `${digits.slice(0, point)}.${digits.slice(point)}`
   return negative ? `-${written}` : written
 }
+
+/**
+ * A figure worked out here, put in the shape everything published is in.
+ *
+ * `core/api/answered.ts` rebuilds every figure crossing out as a mantissa, a
+ * scale and the same figure written out — so that a caller never has to parse a
+ * string to add two of them together, and never meets a float. A figure this
+ * edition worked out is under the same promise as one hledger produced, and
+ * publishing it as text would put the parsing back on whoever asked.
+ *
+ * The style comes from what the journal declares, so a charge is written the way
+ * that journal writes figures. Where it declares nothing there is nothing to
+ * copy, and the symbol goes in front with no grouping — plain rather than
+ * pretending to a style the books never stated.
+ */
+export const asFigure = (
+  value: Quantity,
+  commodity: string,
+  declared?: DefaultCommodity,
+): Figure =>
+  figureOf([
+    {
+      acommodity: commodity,
+      aquantity: value,
+      astyle: {
+        ascommodityside: declared?.side === "right" ? "R" : "L",
+        ascommodityspaced: declared?.spaced ?? false,
+        asdecimalmark: null,
+        asdigitgroups: null,
+        asprecision: value.decimalPlaces,
+      },
+    },
+  ])
