@@ -56,7 +56,8 @@ function Editor(props: { open: OpenJournal }): JSX.Element {
   }
 
   return (
-    <div class="flex flex-col gap-2">
+    /* flex-1 asks the page column for the height it has; see app.tsx. */
+    <div class="flex flex-1 flex-col gap-2">
       <Show when={paths().length > 1}>
         <div class="flex flex-wrap gap-1">
           <For each={paths()}>
@@ -76,8 +77,15 @@ function Editor(props: { open: OpenJournal }): JSX.Element {
         </div>
       </Show>
 
+      {/* The box takes the height the screen has rather than a fixed number of
+          lines: this is a file being edited, and a journal is longer than any
+          height that would be picked here. Not resizable, because a handle that
+          set its own height would be arguing with the one it is given — and
+          there is nothing left to gain from dragging a box that is already as
+          tall as the window. Below the height it can take, it keeps its floor
+          and the page scrolls. */}
       <textarea
-        class="min-h-[24rem] w-full flex-1 resize-y rounded-md border border-input bg-background p-3 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        class="min-h-[24rem] w-full flex-1 resize-none rounded-md border border-input bg-background p-3 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         spellcheck={false}
         autocapitalize="off"
         autocorrect="off"

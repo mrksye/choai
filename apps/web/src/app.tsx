@@ -585,23 +585,29 @@ export function Layout(props: ParentProps) {
           </AuxPanel>
         }
       >
-        {/* Above the work rather than in it, and only where the work is a
-            screen of its own: with the rail and the explorer put away there is
-            nothing else on this screen that leads back to them. Sticky, because
-            the work below it scrolls. */}
-        <Show when={snapped() && !chromeShowing()}>
-          <button
-            type="button"
-            onClick={toggleChrome}
-            aria-label={t("nav.back")}
-            title={t("nav.back")}
-            class="sticky top-0 z-10 flex h-9 w-full items-center gap-1 border-b border-border bg-background px-2 text-sm font-medium text-muted-foreground"
-          >
-            <ChevronLeftIcon class="h-4 w-4" />
-            <span class="truncate">{t(current().key)}</span>
-          </button>
-        </Show>
-        <div class="p-4">{props.children}</div>
+        {/* A column at least as tall as the screen, so a page that wants the
+            height it has can take it with flex-1 — the text editor does — while
+            one taller than the screen still grows and scrolls as it always
+            did. */}
+        <div class="flex min-h-full flex-col">
+          {/* Above the work rather than in it, and only where the work is a
+              screen of its own: with the rail and the explorer put away there
+              is nothing else on this screen that leads back to them. Sticky,
+              because the work below it scrolls. */}
+          <Show when={snapped() && !chromeShowing()}>
+            <button
+              type="button"
+              onClick={toggleChrome}
+              aria-label={t("nav.back")}
+              title={t("nav.back")}
+              class="sticky top-0 z-10 flex h-9 w-full items-center gap-1 border-b border-border bg-background px-2 text-sm font-medium text-muted-foreground"
+            >
+              <ChevronLeftIcon class="h-4 w-4" />
+              <span class="truncate">{t(current().key)}</span>
+            </button>
+          </Show>
+          <div class="flex flex-1 flex-col p-4">{props.children}</div>
+        </div>
       </Shell>
     </>
   )
