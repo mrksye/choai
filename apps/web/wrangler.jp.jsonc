@@ -1,0 +1,18 @@
+// The Japan edition, served the same way and from the same directory as the
+// global one — see wrangler.jsonc, which this is a copy of but for the name.
+//
+// Two files rather than one with an environment, because what differs between
+// the two deployments is not how they are served but what was built: each is
+// `bun run build:<edition>` followed by a deploy of ./dist, and the two never
+// happen in the same working copy at the same time.
+{
+  "name": "choai-jp",
+  "compatibility_date": "2026-08-15",
+  // Answers on jp.choai.dev. The name is attached where the deployment is
+  // rather than declared here, for the reason written in wrangler.jsonc.
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

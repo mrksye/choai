@@ -54,6 +54,7 @@ From `apps/web`. There is no linter; `tsc` is the check that runs over everythin
 ```sh
 bun install      # bun is the package manager and the script runner
 bun run dev      # licences, then vite on :8396      bun run build   # + tsc -b
+bun run dev:jp   # the same as the Japan edition       bun run build:jp
 bunx tsc -b      # typecheck alone: src, vite.config, tests and e2e
 bun run test     # bun test over tests/ — the pure functions only
 bun run e2e      # playwright over e2e/ — drives window.choai, not the screen
@@ -64,7 +65,7 @@ bun scripts/vendor-ui.mjs <name>...    # re-fetch a solid-ui component
 turns the service worker off: it precaches the ~7 MB engine and updates itself,
 which is right on a phone and wrong under a test.
 
-The engine — `public/hledger.wasm` and the `src/hledger/ghc-jsffi.mjs` the worker
+The engine — `public/hledger.wasm` and the `src/core/hledger/ghc-jsffi.mjs` the worker
 imports — is committed, so a fresh clone runs. It is the one wasm here that is
 not a measurement, and it is checked in because rebuilding it needs the ghc-wasm
 toolchain, which the machine that deploys will not have. Everything under
@@ -72,7 +73,7 @@ toolchain, which the machine that deploys will not have. Everything under
 
 ```sh
 ../../wasm/scripts/build.sh hledger-bindings   # needs the ghc-wasm toolchain
-bun scripts/sync-hledger.mjs                   # -> public/hledger.wasm, src/hledger/ghc-jsffi.mjs
+bun scripts/sync-hledger.mjs                   # -> public/hledger.wasm, src/core/hledger/ghc-jsffi.mjs
 ```
 
 Both land in the same commit as the `wasm/` source they came from, which is what
@@ -101,28 +102,63 @@ app's fallback — the reason is written where it is handled instead.
 ## Architecture
 
 `wasm/` makes hledger reachable from JavaScript; `apps/web` is everything around
-it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/`.
+it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/`,
+which has four directories and no loose files:
 
-- **The worker holds the journal.** `hledger/worker.ts` keeps one reactor
+```
+src/
+├── core/       plain text accounting. Belongs to nowhere and knows of no edition
+├── edition/    the contract (types.ts), the roll, and the seam the build fills
+├── editions/   global/ and jp/, one module each
+└── app/        the entry, the shell, and the table of every screen there is
+```
+
+- **The app is built twice from one tree**, as the global edition at `choai.dev`
+  and the Japan edition at `jp.choai.dev`. Core is plain text accounting and
+  does not know Japan exists — there is no `if (edition ===` in it and there is
+  not to be one. What an edition adds is two tables and nothing else
+  (`edition/types.ts`): `views`, screens with an address and a place on the
+  rail, and `capabilities`, the same offered by name through `describe()` and
+  `call`. Those are the two doors this app has, so they are the whole of what a
+  jurisdiction needs in order to arrive. **An edition adds; it cannot replace or
+  take away** — a view at an address core has is dropped and a name core uses
+  stays core's, so what a balance sheet means cannot come to depend on which
+  name the app was reached by.
+- **`~/edition/chosen` is the hole the build fills**, and `edition/index.ts` is
+  the one door core knows an edition by — `chosen` is imported there and nowhere
+  else, and always through the alias, because the build swaps a *name* and a
+  relative path is a name it has no way to recognise. `vite.config.ts` points it
+  at whichever of `editions/` `CHOAI_EDITION` asks for, so the other one's code
+  is not in the bundle rather than in it and unreachable. `edition/roll.ts` is
+  the roll of the two and is plain data with no imports, because the build reads
+  it as well as the app does. Japanese tax work goes under `editions/jp/`, one
+  directory per subject, and nothing in core ever imports it.
+- **`app/views.ts` is every screen there is**, and both the rail and the router
+  are read off it — written as two lists, a page could be reachable from the
+  rail without being routed, or routed with nothing leading to it, and neither
+  shows up until somebody presses the thing. A view carries its own label as a
+  function rather than a dictionary key, so an edition can bring words the
+  dictionary has never heard of and still follow the language being switched.
+- **The worker holds the journal.** `core/hledger/worker.ts` keeps one reactor
   instance alive across calls — parsing costs ~290 ms, queries 10–25 ms. Files go
   into a WASI `PreopenDirectory` rather than as strings, because hledger's text
   entry point needs `createPipe` and because `include` then resolves itself.
-- **`hledger/client.ts` is the only way in**, answering `Result<T, Trouble>`;
+- **`core/hledger/client.ts` is the only way in**, answering `Result<T, Trouble>`;
   nothing throws or rejects, and a dead worker settles everyone stranded.
-- **`hledger/turn.ts` is the one queue.** hledger holds a single parsed journal,
+- **`core/hledger/turn.ts` is the one queue.** hledger holds a single parsed journal,
   so `ask` and every open wait their turn. A trial — read a candidate, then put
   the old one back — is one turn, which is why `openJournal` is left ungated and
   its callers take the turn instead. The worker takes its messages one at a time
   for the same reason.
-- **`api/` is the app without a screen.** One table in `api/table.ts` yields all
+- **`core/api/` is the app without a screen.** One table in `core/api/table.ts` yields all
   three faces: the typed `window.choai.report.balance(...)`, the by-name
   `call(name, args)`, and the manifest `describe()` — so none can drift from
-  another. It sits strictly on `journal/store.ts`, `compose/commit.ts` and
-  `hledger/client.ts`; nothing there reaches `lib/idb.ts` or the worker, no
+  another. It sits strictly on `core/journal/store.ts`, `core/compose/commit.ts` and
+  `core/hledger/client.ts`; nothing there reaches `core/lib/idb.ts` or the worker, no
   capability writes raw text or reads back a token, and answers are rebuilt in
-  `api/answered.ts` rather than passed through, because what is published is a
+  `core/api/answered.ts` rather than passed through, because what is published is a
   promise and hledger's floats are not part of it. `README.md` documents it.
-- **`journal/proposals.ts` is the write path for anything without a screen.**
+- **`core/journal/proposals.ts` is the write path for anything without a screen.**
   Changes are trialled as one candidate (hledger re-reads the whole journal per
   open, so one call per change is two orders of magnitude of waiting), the files
   are derived from the items every time rather than stored, and `apply` compares
@@ -131,11 +167,11 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
   replaced by text composed before it. A removal is an item like an addition, so
   a correction is one shown, atomic write; removals are applied bottom-up
   because every line taken out shifts the ones below it.
-- **`ai/` sits on `api/` and nowhere else.** The tools are `describe()` filtered
+- **`core/ai/` sits on `core/api/` and nowhere else.** The tools are `describe()` filtered
   to `offered`, which is a fact of its own and not derivable from `writes`:
   `transaction.create` writes one entry nobody saw first and is withheld, while
   `proposal.apply` writes many and is offered, because they were shown.
-- **`ai/talker.ts` is the seam between providers.** `loop.ts`, `prompt.ts` and
+- **`core/ai/talker.ts` is the seam between providers.** `loop.ts`, `prompt.ts` and
   the panels are written against it and against nobody's API; `anthropic.ts`,
   `gemini.ts` and `openai.ts` are each one provider's spelling of it,
   `openai-compatible.ts` is one spelling shared by everyone who answers to
@@ -145,11 +181,11 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
   keep things in a turn that must come back byte for byte. The host a key is
   sent to is a field on the talker, so a provider cannot be added without the
   page saying where what is typed will go. **A conversation belongs to one
-  provider** — `ai/store.ts` starts again on a switch rather than handing one
+  provider** — `core/ai/store.ts` starts again on a switch rather than handing one
   provider's blocks to another. Gemini takes only a subset of JSON Schema and
   refuses `additionalProperties`, so `gemini.ts` trims it on the way out; that
-  is why the schema is not written twice. `ai/kept.ts` holds the key and names its
-  only two permitted importers; nothing under `api/` may read it. A turn goes
+  is why the schema is not written twice. `core/ai/kept.ts` holds the key and names its
+  only two permitted importers; nothing under `core/api/` may read it. A turn goes
   back to the model exactly as it arrived — thinking and tool blocks unedited —
   which is why `anthropic.ts` holds blocks opaque instead of parsing them into a
   union. Leave adaptive thinking on: with it off, a tool call is sometimes
@@ -165,23 +201,23 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
   than recorded as a no. Google and OpenAI answer nothing, so `gemini.ts` and
   `openai.ts` decide on the names and err towards leaving a model out — which is safe because the settings panel
   offers what they find as suggestions in a box you type in
-  (`lib/ui/suggesting.tsx`), not as the whole of what can be said. A name missing
+  (`core/lib/ui/suggesting.tsx`), not as the whole of what can be said. A name missing
   from the list is an inconvenience, never a wall, and each talker carries a
   `modelsFrom` link to where its provider publishes the real answer. All three
   listings say how much a model will write, and no turn asks for more than that.
 - **Attachments are read before they are sent.** A photograph is scaled to
-  1568px and re-encoded (`ai/photo.ts`) — a phone writes 4000px and every model
-  charges by area. A statement is parsed by `lib/csv.ts` only to know it is a
+  1568px and re-encoded (`core/ai/photo.ts`) — a phone writes 4000px and every model
+  charges by area. A statement is parsed by `core/lib/csv.ts` only to know it is a
   table and how long; **the file's own text is what goes over**, because rows
   read out and written back is a chance to change somebody's figures on the way.
-- **`lib/text.ts` decides a file's encoding rather than assuming it**, and is
+- **`core/lib/text.ts` decides a file's encoding rather than assuming it**, and is
   what every file read off the filesystem goes through — an attachment and a
   journal alike. Japanese banks and much of the accounting software here write
   Shift_JIS, and assuming UTF-8 does not fail: the commas and line endings
   survive, so it still parses, and the payees quietly become replacement
   characters. UTF-8 is tried strictly first because plenty of it decodes as
   Shift_JIS into nonsense, while almost no Shift_JIS is accidentally valid UTF-8.
-- **What `describe()` promises, `lib/monad/shape.ts` keeps.** A name that was
+- **What `describe()` promises, `core/lib/monad/shape.ts` keeps.** A name that was
   never asked for is refused rather than dropped, because the schema has always
   said `additionalProperties: false` and because a misspelling dropped quietly
   is unrecoverable: `query` written `qeury` answers about the whole journal and
@@ -192,43 +228,43 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
   the balance report asked for flat and with the empty accounts kept (`Listing`
   in `Bindings.hs`) — a parent counted beside its own children would be counted
   twice by a column that is added up — and what each column comes to is
-  hledger's, the one answer not shaped by hledger's own `ToJSON`. `columns.ts`
+  hledger's, the one answer not shaped by hledger's own `ToJSON`. `core/reports/columns.ts`
   only splits what is on the page, by sign alone: an overdrawn asset is a credit
   balance, and placing it by account type would hide the thing the report is run
   to find.
-- **`hledger/wire.ts` mirrors `Bindings.hs`** — `Request`, `Answer`, `Trouble`
+- **`core/hledger/wire.ts` mirrors `Bindings.hs`** — `Request`, `Answer`, `Trouble`
   against its `Request` parser and `Failure` type. A new report means editing
   both. Shapes are hledger's own `ToJSON`, so they follow upstream.
-- **The text is what is true.** `journal/store.ts` alone owns the open journal,
+- **The text is what is true.** `core/journal/store.ts` alone owns the open journal,
   and every write is offered to hledger first and kept only if it reads.
   `openBringingMissing` fetches `include`d files as hledger asks for them.
-- **One line in the console, and no others.** `api/install.ts` says `window.choai`
+- **One line in the console, and no others.** `core/api/install.ts` says `window.choai`
   is there, because an agent driving a browser reads the console and sees
   nothing in the screens about it. Nothing else writes there — not hledger's own
   stdout, not what a model listing set aside — since a console with a running
   commentary in it has nowhere to put the one line meant to be read. An e2e test
   holds that count at one.
-- **`lib/idb.ts` is the whole database** — name, version, stores, migrations —
+- **`core/lib/idb.ts` is the whole database** — name, version, stores, migrations —
   because IndexedDB versions all of it at once.
-- **`github/sync.ts`** appends local entries after remote ones when both texts
+- **`core/github/sync.ts`** appends local entries after remote ones when both texts
   still begin with what was last agreed, and otherwise reports `diverged`
   untouched. Straight to api.github.com; there is no backend anywhere.
 - **A window too narrow for both gives the left one screen.** Where the rail and
   the explorer would together take more than half the window (`overHalf` in
-  `lib/narrow.ts`), they take all of it, the work goes behind them, and choosing
+  `core/lib/narrow.ts`), they take all of it, the work goes behind them, and choosing
   in the explorer is how it is reached again — with a way back at the top of it.
   Nothing asks what kind of device it is, and the rule holds for a desktop window
   dragged thin. It is asked of the widths those two settle at, never of the width
   the explorer currently has: pinning a draggable width is a thing there is no
   dragging back out of. The pinning itself is `minWidth === maxWidth`, which
   `resize.ts` already clamps to.
-- **The dock holds one thing at a time**, and `dock.ts` is that one piece of
+- **The dock holds one thing at a time**, and `core/dock.ts` is that one piece of
   state — the name of whoever the panel is lent to. Not a flag per occupant with
   a rule about who wins: under that, opening the second does not close the first,
-  it hides it, and pressing the loser does nothing. `lib/solid-workbench-ui`'s
+  it hides it, and pressing the loser does nothing. `core/lib/solid-workbench-ui`'s
   `createSlot` is the vessel; closing is never clearing, so a draft, a
   conversation and a proposal all survive it.
-- **`app.tsx`** wires `lib/solid-workbench-ui` (MIT, kept app-agnostic); its
+- **`app/app.tsx`** wires `core/lib/solid-workbench-ui` (MIT, kept app-agnostic); its
   `NAV`/`FOOT`/`INNER` tables pair each route with its explorer, and one query in
   the URL is shared by every view.
 - **Choosing in the explorer lands on the view the explorer belongs to**, which
@@ -237,16 +273,16 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
   hands the query up rather than setting it, because the page and the query are
   one navigation — the router keeps only the last of two in a tick, so a query
   set first is dropped by the page that follows it.
-- **`i18n/en.ts` is the type** every other dictionary is checked against, and
+- **`core/i18n/en.ts` is the type** every other dictionary is checked against, and
   `docs/src/words.ts` does the same for the landing page — which speaks to
   someone who has not opened the app, so it does not share the app's wording.
-- **Generated or vendored, so don't hand-edit:** `src/generated/` (licences,
-  rebuilt each dev/build), `src/components/ui/*` (solid-ui), `wasm/vendor/`.
+- **Generated or vendored, so don't hand-edit:** `src/core/generated/` (licences,
+  rebuilt each dev/build), `src/core/components/ui/*` (solid-ui), `wasm/vendor/`.
 
 ## Constraints
 
 - **GPL-3.0-or-later**, inherited by linking hledger-lib; publishing here is what
-  satisfies it. Keep `lib/solid-workbench-ui` MIT and reusable.
+  satisfies it. Keep `core/lib/solid-workbench-ui` MIT and reusable.
 - **`docs/` is GPL by choice and must stay separable.** It links against nothing
   of the app's — no shared config, no shared dependencies, no imports across the
   two — so the copyleft does not reach it on its own; it carries the same licence
@@ -258,14 +294,14 @@ it. They meet only at the two files `sync-hledger.mjs` copies. `~` aliases `src/
 - **An update waits to be taken.** `registerType` is `prompt`, so a new service
   worker installs and stands by: the browser hands over when the last window on
   the old one closes, which makes shutting the app and opening it again an
-  update. `lib/renewal.ts` is the only thing that reloads, and only when asked —
+  update. `core/lib/renewal.ts` is the only thing that reloads, and only when asked —
   a reload takes a half-typed entry, a conversation and every undecided proposal
   with it. It also does the asking, because a phone app is resumed rather than
   navigated to and a resume is not when a browser looks for a new worker.
 - **The module is ~7 MB** against a 25 MiB Cloudflare limit, which is why
   `maximumFileSizeToCacheInBytes` is raised in `vite.config.ts`.
 - **Money is never a float** — rendered from mantissa and scale in
-  `hledger/amount.ts`; hledger's float field is left out of `Quantity`.
+  `core/hledger/amount.ts`; hledger's float field is left out of `Quantity`.
 
 Commit subjects say what the app now does, not what was touched: "Let the journal
 be edited as the text it is".

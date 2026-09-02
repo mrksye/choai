@@ -115,40 +115,112 @@ them.
 Not one line of hledger's source is modified. What we write is the binding that
 exports its functions to JavaScript, in `wasm/hledger-wasm/src/Bindings.hs`.
 
-## Two sites
+## Editions
+
+The app is built twice from one source tree. `choai.dev` is the **global
+edition** and `jp.choai.dev` the **Japan edition** — the same core, the same
+screens, and somewhere for Japanese tax work to go without any of it reaching
+the books everyone else keeps.
+
+The dependency runs one way:
+
+```
+global ─┐
+        ├──> core
+jp ─────┘
+```
+
+`apps/web/src` has four directories and no loose files:
+
+```
+src/
+├── core/       plain text accounting. Belongs to nowhere and knows of no edition
+├── edition/    the contract (types.ts), the roll, and the seam the build fills
+├── editions/   global/ and jp/, one module each
+└── app/        the entry, the shell, and the table of every screen there is
+```
+
+Core is plain text accounting: the journal, hledger, the reports, the screens,
+`window.choai`. It has no idea Japan exists, and there is no `if (edition ===`
+anywhere in it. What an edition adds is two tables and nothing else —
+`src/edition/types.ts`:
+
+- **`views`** — screens with an address of their own and a place on the rail.
+  The door a person comes through.
+- **`capabilities`** — the same thing offered by name, described by
+  `describe()` and given to a model as a tool by the same rules as everything
+  else. The door a script or an agent comes through.
+
+An edition adds; it cannot replace or take away. A view at an address core
+already has is dropped, and a capability core already names stays core's, so no
+edition can quietly change what a balance sheet means.
+
+Which one a build is comes from `CHOAI_EDITION`, never from anything the running
+app asks:
+
+```sh
+bun run build            # the global edition — the default
+bun run build:global     # the same, said out loud
+bun run build:jp         # the Japan edition
+bun run dev:jp           # and the same while developing
+```
+
+`vite.config.ts` points `~/edition/chosen` at whichever edition was named, so
+the other one's code is not in the bundle at all rather than in it and
+unreachable — a global build carries no Japanese tax law even after there is
+some to carry. A `CHOAI_EDITION` it does not recognise stops the build rather
+than falling back, because the fallback would be a global build published at a
+name that promised something else.
+
+The Japan edition adds nothing yet, and that is the point: what has been built
+is the boundary, not what will stand inside it. Consumption tax, qualified
+invoices, a fixed asset register, the adjustments a corporate return is made of,
+an e-Tax export — each goes in a directory of its own under
+`apps/web/src/editions/jp/`, reaching core the way any code here does and
+reaching the app only through those two tables.
+
+Which edition you have open is on the manifest — `describe().edition` — and on
+the one line the app writes to the console.
+
+## Three sites
 
 - **`choai.dev`** — the app itself, from `apps/web/dist`.
+- **`jp.choai.dev`** — the same app built as the Japan edition, from the same
+  directory: `bun run build:jp` and the `wrangler.jp.jsonc` beside it.
 - **`docs.choai.dev`** — the page that explains it, from `docs/dist`:
   a separate Astro project, English at the root and Japanese at `/ja/`. It loads
   no fonts and ships no script of its own.
 
-Both names are counted by the host as it serves them, rather than by anything
-written into either site: page views, and where they were reached from. Nothing
+The names are counted by the host as it serves them, rather than by anything
+written into any of them: page views, and where they were reached from. Nothing
 is kept on the device to recognise a return by, so there is no monthly total and
 nobody is followed from one name to the next — which is the counting the privacy
 page describes, on the app's behalf as well as its own.
 
-`scripts/build-site.sh` builds both locally.
+`scripts/build-site.sh` builds the app and the docs locally; the Japan edition
+is `bun --cwd=apps/web run build:jp`, which writes to the same `apps/web/dist`.
 
 Each is published on its own as a Cloudflare Worker serving static assets, built
 from this repository on a push to `main`. What the directory is and how it is
-served is in the `wrangler.jsonc` beside it; the rest lives in the dashboard,
-where each of the two is configured the same way but for its own directory:
+served is in the `wrangler.jsonc` beside it — `wrangler.jp.jsonc` for the Japan
+edition, which is the same file but for the worker's name. The rest lives in the
+dashboard, where each is configured the same way but for its own directory and
+its own build:
 
-| | `choai` | `choai-docs` |
-| --- | --- | --- |
-| Root directory | `apps/web` | `docs` |
-| Build command | `bun install && bun run build` | `bun install && bun run build` |
-| Deploy command | `bunx wrangler deploy` | `bunx wrangler deploy` |
-| `BUN_VERSION` | `1.3.14` | `1.3.14` |
-| Custom domain | `choai.dev` | `docs.choai.dev` |
+| | `choai` | `choai-jp` | `choai-docs` |
+| --- | --- | --- | --- |
+| Root directory | `apps/web` | `apps/web` | `docs` |
+| Build command | `bun install && bun run build` | `bun install && bun run build:jp` | `bun install && bun run build` |
+| Deploy command | `bunx wrangler deploy` | `bunx wrangler deploy -c wrangler.jp.jsonc` | `bunx wrangler deploy` |
+| `BUN_VERSION` | `1.3.14` | `1.3.14` | `1.3.14` |
+| Custom domain | `choai.dev` | `jp.choai.dev` | `docs.choai.dev` |
 
-No output directory is set in either, because `assets.directory` already says
+No output directory is set in any of them, because `assets.directory` already says
 it. Nothing else is needed: the engine is committed, so the build wants no
 Haskell toolchain, and `docs` needs no `PUBLIC_APP` because a build that is not
 a development one already points at the published app.
 
-Both names are attached in the dashboard, on the worker's own Domains & Routes,
+The names are attached in the dashboard, on the worker's own Domains & Routes,
 and each name's record is written by attaching it. They are deliberately not in
 the `wrangler.jsonc` files, though a `routes` entry would put them there: a name
 is not part of what this software is, only of where this one copy of it happens
@@ -165,8 +237,8 @@ GPL-3.0-or-later, so the combined work is too. Publishing the source here is
 what satisfies the corresponding-source obligation for the binary that browsers
 download.
 
-`apps/web/src/lib/solid-workbench-ui` is the author's own work under MIT, which
+`apps/web/src/core/lib/solid-workbench-ui` is the author's own work under MIT, which
 is compatible with the above and leaves it reusable outside this project.
-Components under `apps/web/src/components/ui` are adapted from
+Components under `apps/web/src/core/components/ui` are adapted from
 [solid-ui](https://github.com/stefan-karger/solid-ui) (MIT). Icons are from
 [lucide](https://lucide.dev) (ISC).

@@ -6,7 +6,10 @@
   "scripts": {
     "licenses": "bun scripts/collect-licenses.mjs",
     "dev": "bun run licenses && vite",
+    "dev:jp": "CHOAI_EDITION=jp bun run dev",
     "build": "bun run licenses && tsc -b && vite build",
+    "build:global": "CHOAI_EDITION=global bun run build",
+    "build:jp": "CHOAI_EDITION=jp bun run build",
     "preview": "vite preview",
     "test": "bun test tests",
     "e2e": "playwright test"

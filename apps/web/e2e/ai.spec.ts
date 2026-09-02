@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test"
 
-import type { Choai } from "~/api/install"
+import type { Choai } from "~/core/api/install"
 
 declare global {
   interface Window {

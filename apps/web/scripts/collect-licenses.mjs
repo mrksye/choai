@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url"
 
 const here = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(here, "..")
-const outPath = join(webRoot, "src/generated/licenses.json")
+const outPath = join(webRoot, "src/core/generated/licenses.json")
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"))
 const readJsonOr = (path, fallback) => (existsSync(path) ? readJson(path) : fallback)
@@ -125,8 +125,8 @@ const bundledPackages = [
   })
   .sort((a, b) => a.name.localeCompare(b.name))
 
-const engine = readJsonOr(join(webRoot, "src/licenses/engine.json"), { packages: [] })
-const vendored = readJsonOr(join(webRoot, "src/licenses/vendored.json"), []).map((entry) => ({
+const engine = readJsonOr(join(webRoot, "src/core/licenses/engine.json"), { packages: [] })
+const vendored = readJsonOr(join(webRoot, "src/core/licenses/vendored.json"), []).map((entry) => ({
   ...entry,
   copyright: entry.copyright ?? copyrightIn(entry.text, undefined),
 }))

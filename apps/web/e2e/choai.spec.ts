@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import type { Choai } from "~/api/install"
+import type { Choai } from "~/core/api/install"
 
 declare global {
   interface Window {
@@ -38,6 +38,11 @@ test("the manifest says enough to be used by something that was not written agai
 
   expect(manifest.name).toBe("choai")
   expect(manifest.version).toBe("2")
+
+  // Which edition this is, because the list below is not the same in both and
+  // something reading a capability it does not know should be able to tell why.
+  // A test run is a plain `vite` with nothing asked for, so it is the global one.
+  expect(manifest.edition).toBe("global")
   expect(Object.keys(manifest.capabilities).length).toBeGreaterThan(0)
 
   Object.entries(manifest.capabilities).forEach(([name, told]) => {

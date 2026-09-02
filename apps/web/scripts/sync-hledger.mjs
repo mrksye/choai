@@ -17,10 +17,10 @@ const WASM_OUT = "../../wasm/out";
 const TARGET = "hledger-bindings";
 const copies = [
   [`${WASM_OUT}/${TARGET}-D.wasm`, "public/hledger.wasm"],
-  [`${WASM_OUT}/${TARGET}.jsffi.mjs`, "src/hledger/ghc-jsffi.mjs"],
+  [`${WASM_OUT}/${TARGET}.jsffi.mjs`, "src/core/hledger/ghc-jsffi.mjs"],
 ];
 
-await mkdir("src/hledger", { recursive: true });
+await mkdir("src/core/hledger", { recursive: true });
 for (const [from, to] of copies) {
   try {
     await copyFile(from, to);

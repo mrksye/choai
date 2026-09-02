@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test"
 
-import { amountExample } from "~/compose/hint"
-import { asWritten, ghostOf, isBare } from "~/compose/commodity"
-import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/compose/draft"
-import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/lib/monad/shape"
-import { looksTabular, rowsOf } from "~/lib/csv"
-import { textOf } from "~/lib/text"
-import { allOf, anchorAfter, noneOf, tickedBy } from "~/journal/ticking"
-import { saidIn } from "~/ai/talker"
-import { narrowed } from "~/reports/ask"
-import { PERIODS, TERMS, periodByTerm } from "~/reports/periods"
-import { CAME_AND_WENT, OWNED_AND_OWED, inChartOrder, ofKinds } from "~/journal/declarations"
+import { amountExample } from "~/core/compose/hint"
+import { asWritten, ghostOf, isBare } from "~/core/compose/commodity"
+import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/core/compose/draft"
+import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/core/lib/monad/shape"
+import { looksTabular, rowsOf } from "~/core/lib/csv"
+import { textOf } from "~/core/lib/text"
+import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
+import { saidIn } from "~/core/ai/talker"
+import { narrowed } from "~/core/reports/ask"
+import { PERIODS, TERMS, periodByTerm } from "~/core/reports/periods"
+import { CAME_AND_WENT, OWNED_AND_OWED, inChartOrder, ofKinds } from "~/core/journal/declarations"
+import { capabilitiesWith, viewsWith, type View } from "~/edition/types"
+import { GlobalEdition } from "~/editions/global"
+import { JapanEdition } from "~/editions/jp"
 
 /**
  * The parts that are only functions, checked as functions.
@@ -443,5 +446,57 @@ describe("the list beside a statement", () => {
 
   test("knowing nothing yet is an empty list, not the whole journal", () => {
     expect(ofKinds(ACCOUNTS, {}, OWNED_AND_OWED)).toEqual([])
+  })
+})
+
+describe("what an edition joins on", () => {
+  const nothingDrawn = () => null
+
+  const view = (href: string): View => ({
+    href,
+    label: () => href,
+    Icon: nothingDrawn,
+    Explorer: nothingDrawn,
+    page: nothingDrawn,
+    writes: false,
+    reached: { from: "rail" },
+  })
+
+  const capability = (summary: string) =>
+    ({ summary }) as unknown as Parameters<typeof capabilitiesWith>[0][string]
+
+  test("an edition's screens come after core's, in the order it gave them", () => {
+    const joined = viewsWith([view("/"), view("/trial-balance")], [view("/consumption-tax"), view("/fixed-assets")])
+    expect(joined.map((one) => one.href)).toEqual(["/", "/trial-balance", "/consumption-tax", "/fixed-assets"])
+  })
+
+  test("an address core already has stays core's", () => {
+    const ours = view("/")
+    const joined = viewsWith([ours], [view("/"), view("/consumption-tax")])
+    expect(joined.map((one) => one.href)).toEqual(["/", "/consumption-tax"])
+    expect(joined[0]).toBe(ours)
+  })
+
+  test("an edition's capabilities arrive under their own names", () => {
+    const joined = capabilitiesWith(
+      { "report.balance": capability("core") },
+      { "consumptionTax.summary": capability("added") },
+    )
+    expect(Object.keys(joined).sort()).toEqual(["consumptionTax.summary", "report.balance"])
+  })
+
+  test("a name core already uses stays core's, however an edition spells it", () => {
+    const joined = capabilitiesWith(
+      { "report.balance": capability("core") },
+      { "report.balance": capability("added") },
+    )
+    expect(joined["report.balance"]?.summary).toBe("core")
+  })
+
+  test("both editions are the app, and neither takes anything away", () => {
+    expect(GlobalEdition.id).toBe("global")
+    expect(JapanEdition.id).toBe("jp")
+    expect([...GlobalEdition.views, ...JapanEdition.views]).toEqual([])
+    expect(Object.keys({ ...GlobalEdition.capabilities, ...JapanEdition.capabilities })).toEqual([])
   })
 })

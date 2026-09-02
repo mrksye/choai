@@ -16,7 +16,7 @@ import { dirname } from "node:path";
 const REPO = "stefan-karger/solid-ui";
 const REF = "main";
 const SOURCE = `https://raw.githubusercontent.com/${REPO}/${REF}/apps/docs/src/registry/ui`;
-const DEST = "src/components/ui";
+const DEST = "src/core/components/ui";
 
 const names = process.argv.slice(2);
 if (names.length === 0) {
@@ -60,9 +60,9 @@ if (licence.ok) {
     note: `Components copied into ${DEST}, not installed as a dependency.`,
     text: (await licence.text()).trim(),
   };
-  await mkdir("src/licenses", { recursive: true });
-  await writeFile("src/licenses/vendored.json", `${JSON.stringify([entry], null, 2)}\n`);
-  console.log("licence: src/licenses/vendored.json");
+  await mkdir("src/core/licenses", { recursive: true });
+  await writeFile("src/core/licenses/vendored.json", `${JSON.stringify([entry], null, 2)}\n`);
+  console.log("licence: src/core/licenses/vendored.json");
 } else {
   console.error(`licence: ${licence.status} ${licence.statusText} -- vendored.json left as it was`);
   process.exitCode = 1;

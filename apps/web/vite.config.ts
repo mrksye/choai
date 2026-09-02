@@ -3,6 +3,24 @@ import { fileURLToPath } from "node:url"
 import solid from "vite-plugin-solid"
 import tailwindcss from "@tailwindcss/vite"
 import { VitePWA } from "vite-plugin-pwa"
+import { DEFAULT_EDITION, EDITIONS, isEditionId, nameOf } from "./src/edition/roll.ts"
+
+/**
+ * Which edition is being built.
+ *
+ * A name this does not know stops the build rather than falling back, because
+ * the fallback would be a global build published at a name that promised a
+ * Japanese one, and nothing about the result would say so.
+ */
+const asked = process.env.CHOAI_EDITION ?? DEFAULT_EDITION
+if (!isEditionId(asked)) {
+  throw new Error(
+    `CHOAI_EDITION=${asked} is not an edition. It is one of: ${Object.keys(EDITIONS).join(", ")}.`,
+  )
+}
+const EDITION = asked
+
+const inSource = (path: string): string => fileURLToPath(new URL(path, import.meta.url))
 
 export default defineConfig({
   server: {
@@ -17,9 +35,17 @@ export default defineConfig({
     strictPort: true,
   },
   resolve: {
-    alias: {
-      "~": fileURLToPath(new URL("./src", import.meta.url)),
-    },
+    // Written as a list rather than a table, because the order matters: the
+    // edition seam has to be matched before the source root it sits inside.
+    alias: [
+      // The one thing a build decides. `~/edition/chosen` is a name with a file
+      // behind it — the global edition, which is what the typechecker and the
+      // tests resolve — and this points it at whichever edition was asked for,
+      // so the other one's code is not in the bundle rather than in it and
+      // unreachable.
+      { find: "~/edition/chosen", replacement: inSource(`./src/editions/${EDITION}/index.ts`) },
+      { find: "~", replacement: inSource("./src") },
+    ],
   },
   plugins: [
     solid(),
@@ -39,8 +65,10 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "choai",
-        short_name: "choai",
+        // The edition's name, so that somebody with both installed can tell
+        // which of the two they are opening.
+        name: nameOf(EDITION),
+        short_name: nameOf(EDITION),
         description: "Your hledger journal, in the browser",
         // From the icon: its navy for the browser's own furniture, and the
         // colour the app actually paints for the screen shown while it starts,
