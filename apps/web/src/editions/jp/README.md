@@ -86,6 +86,27 @@ The last two are read by parsing the journal's own text, because hledger sends
 neither: the wire answers what kind each account is and nothing further. That is
 not a second source of truth — it is a second reader of the only one.
 
+## Depreciation
+
+Both methods, from the tables the tax office publishes. The straight-line rate
+and the 200% declining-balance rate each agree with an arithmetic — one over the
+years rounded up, and twice one over the years to the nearest — and a test says
+so, which is the only check available on a transcription. The revised rate and
+the guarantee rate agree with nothing; they are the statute and are written one
+line per year in the order it lists them.
+
+The answer is a **schedule replayed from the year the asset went into use**, not
+a figure worked out from a running total. Under the declining-balance method a
+year cannot be worked out on its own: the moment where a proportion stops being a
+proportion is not recoverable from an accumulated amount, because two different
+histories reach the same book value. The straight-line method goes through the
+same replay so the two have one set of edges.
+
+What the journal says has been written off is carried **alongside** rather than
+used. The schedule is what the rules allow; the journal is what happened; and a
+year nobody posted shows up as `agreesWithJournal: false` and a warning, instead
+of disappearing into a plausible figure.
+
 ## The fixed asset register
 
 `fixed-assets.jsonl`, beside the journal, declared by it, and **only ever added
@@ -95,7 +116,8 @@ The register is what reading them in order comes to.
 It is a log rather than a table because an asset has a life rather than a value,
 and because a file that only grows is the one shape the GitHub syncing here can
 merge without asking a person. Correcting a useful life adds a line saying so; it
-never goes back and changes the line that was wrong.
+never goes back and changes the line that was wrong. All three events are
+writable from the screen.
 
 **Money is not in it.** How much has been written off is the balance of the
 depreciation postings, which the journal has, and a second copy kept here would
@@ -106,12 +128,13 @@ be a second copy to disagree with.
 Not "not yet" in every case. Some of these are things this app should not do.
 
 **Not built, and there is a place for it later** — corporate tax return forms and
-their schedules, local taxes, the NTA CSV exporter, e-Tax submission, the
-declining-balance method, tax-exclusive accounting. Each has a named boundary
-already: `DepreciationMethod` and `AccountingMethod` are unions with the
-unsupported cases in them, so adding one is a case somebody has to handle rather
-than a shape somebody has to invent; the exporter's input is the statements and
-the tax summary, which are already structured data.
+their schedules, local taxes, the NTA CSV exporter, e-Tax submission,
+tax-exclusive accounting, and the 250% declining-balance table for assets bought
+between 2007 and 2012. Each has a named boundary already: `AccountingMethod` is a
+union with the unsupported case in it, an asset from before the table these rules
+hold is refused by name rather than run through the wrong numbers, and the
+exporter's input is the statements and the tax summary, which are already
+structured data.
 
 **Not built, on purpose** — the taxable base, the tax payable, the choice between
 working the tax out by aggregation or by invoice, the simplified basis, the
