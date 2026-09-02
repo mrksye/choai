@@ -21,7 +21,8 @@ jp ─────┘
 ```
 src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
-├── edition/    the contract (types.ts), the roll, and the seam the build fills
+├── edition/    the contract (types.ts), the roll, and the door core knows an
+│               edition by
 ├── editions/   global/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
@@ -116,30 +117,39 @@ Both are `readonly` data. Neither needs core to be edited.
 Two of them are held rather than hoped for. The rest are still prose, and are
 marked as such below.
 
-**`core -> editions/jp` fails to compile.** `tsconfig.boundary.json` is the
-app's own settings over every file except `src/editions/jp`, and it is
-`composite`, which makes that list binding: importing a file the project does
-not include is an error rather than a reason to widen it. So the import comes
-back as `TS6307`, naming the file and the line, and `bun run build` stops
-before vite is ever reached.
+**Naming an edition module from outside one fails to compile.**
+`tsconfig.boundary.json` is the app's own settings over core, the app and this
+contract — and over no edition at all — with `composite`, which makes that list
+binding: importing a file the project does not list is an error rather than a
+reason to widen it. So the import comes back as `TS6307`, naming the file and
+the line, and `bun run build` stops before vite is ever reached.
 
-`src/editions/global` is inside that list, because the seam points there by
-default and `edition/chosen.ts` is meant to import it. What is being held is
-the direction this file calls forbidden — core reaching a jurisdiction — not
-the seam every build resolves through.
+There is no exception, not even for the seam. `~/edition/chosen` is a name with
+no file behind it: vite's alias points it at the edition being built, `paths`
+points it at the global edition for the typechecker, the tests and the editor,
+and the boundary check points it at `edition/none.ts`, which declares an edition
+without being one. So the check can list no editions and still typecheck the
+whole of core, and there is nothing left that a rule has to be bent around.
 
-**`tests/boundary.test.ts` holds what no type can say.** It reads the source
+That the seam has no file is also why it can only be spelled one way. A
+`./chosen` beside it would resolve to the same module, typecheck, test clean,
+and quietly build every edition as the global one — which happened once. There
+is no longer a file to reach that way.
+
+**`tests/boundary.test.ts` holds what no type can say**, which is which
+spelling was used and what a module says about itself. It reads the source
 rather than importing it, and asserts:
 
-- the seam is reached as `~/edition/chosen` and never by a relative path. The
-  build swaps a *name*; `./chosen` resolves to the same file, typechecks, tests
-  clean, and quietly builds every edition as the global one. This has happened
-  once already, and it is the reason the test exists.
-- `edition/chosen.ts` is the only module outside `editions/` that names an
-  edition module at all.
+- nothing outside `editions/` names an edition module — the list is empty, not
+  "empty but for the seam".
+- the seam has no file, is spelled `~/edition/chosen`, and is imported from
+  `edition/index.ts` alone.
+- the three tsconfigs agree on where that name resolves, since a seam that
+  resolved differently between the typechecker and the tests would be a
+  difference nobody could see.
 - nothing outside `editions/` asks `edition.id === "jp"`.
 - every `editions/*/index.ts` answers to the name `edition`, which is what the
-  alias replaces the seam with.
+  seam is replaced by.
 
 **Still only prose**, so worth a look by eye when the Japan edition fills up:
 that a Japanese rule has not been expressed as a branch somewhere subtler than

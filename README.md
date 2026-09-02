@@ -135,7 +135,7 @@ jp ─────┘
 ```
 src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
-├── edition/    the contract (types.ts), the roll, and the seam the build fills
+├── edition/    the contract (types.ts), the roll, and the door core knows one by
 ├── editions/   global/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
@@ -165,9 +165,9 @@ bun run build:jp         # the Japan edition
 bun run dev:jp           # and the same while developing
 ```
 
-`vite.config.ts` points `~/edition/chosen` at whichever edition was named, so
-the other one's code is not in the bundle at all rather than in it and
-unreachable — a global build carries no Japanese tax law even after there is
+`~/edition/chosen` is a name with no file behind it, and `vite.config.ts` points
+it at whichever edition was named, so the other one's code is not in the bundle
+at all rather than in it and unreachable — a global build carries no Japanese tax law even after there is
 some to carry. A `CHOAI_EDITION` it does not recognise stops the build rather
 than falling back, because the fallback would be a global build published at a
 name that promised something else.

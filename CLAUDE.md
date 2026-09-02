@@ -108,7 +108,7 @@ which has four directories and no loose files:
 ```
 src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
-├── edition/    the contract (types.ts), the roll, and the seam the build fills
+├── edition/    the contract (types.ts), the roll, and the door core knows one by
 ├── editions/   global/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
@@ -116,11 +116,15 @@ src/
 `src/edition/README.md` is the standing policy: the rules an edition is added
 under, what is deliberately not built, and what holds each of them. Read it
 before putting anything in `editions/jp/`. Two of the rules are not prose:
-`tsconfig.boundary.json` is every file but the Japan edition, and `composite`
-makes that list binding — so `core -> editions/jp` is `TS6307` and takes the
-build down before vite runs. `tests/boundary.test.ts` holds what no type can
-say, chiefly that the seam is reached as `~/edition/chosen` and never by a
-relative path.
+`tsconfig.boundary.json` is core, the app and the contract over **no edition at
+all**, and `composite` makes that list binding — so naming any edition module
+from any of them is `TS6307` and takes the build down before vite runs. There
+is no exception for the seam, because `~/edition/chosen` is a name with no file:
+vite points it at the edition being built, `paths` points it at the global one,
+and the check points it at `edition/none.ts`, which declares an edition without
+being one. `tests/boundary.test.ts` holds what no type can say — that the list
+of modules naming an edition is empty rather than nearly empty, and that the
+three tsconfigs agree on where the seam resolves.
 
 - **The app is built twice from one tree**, as the global edition at `choai.dev`
   and the Japan edition at `jp.choai.dev`. Core is plain text accounting and

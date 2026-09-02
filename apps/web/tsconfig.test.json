@@ -14,8 +14,14 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* The tests reach into src, and src reaches into itself through this */
-    "paths": { "~/*": ["./src/*"] },
+    /* The seam. `~/edition/chosen` is a name with no file: vite points it at the
+       edition being built, and this points it at the one this repository
+       defaults to, which is what everything that is not vite resolves. Written
+       above the wildcard because an exact key is tried first. */
+    "paths": {
+      "~/edition/chosen": ["./src/editions/global/index.ts"],
+      "~/*": ["./src/*"]
+    },
 
     /* Linting */
     "noUnusedLocals": true,
