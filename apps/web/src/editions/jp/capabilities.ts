@@ -9,7 +9,7 @@ import { Err, Ok, digits, fields, listOf, nothing, spare, text, type Result } fr
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
-import { summarizeConsumptionTax } from "./consumption-tax/summarize"
+import { summarizeConsumptionTax, type NotWorkedOut } from "./consumption-tax/summarize"
 import { depreciationFor } from "./fixed-assets/depreciation"
 import { readEvents } from "./fixed-assets/events"
 import { ASSET, REGISTER, registerFrom, type FixedAsset } from "./fixed-assets/register"
@@ -94,6 +94,22 @@ export interface TaxAnswer {
   readonly notWorkedOut: readonly string[]
 }
 
+/**
+ * What is not worked out, in the words something that is not a person reads.
+ *
+ * English here and the reader's language on the screen, from the one list of
+ * names — because a model that mistakes a band total for a tax return will say
+ * so to somebody who believes it, and it should be told plainly which steps are
+ * missing.
+ */
+const NOT_WORKED_OUT_SAID: Readonly<Record<NotWorkedOut, string>> = {
+  "taxable-base": "the taxable base, which is rounded down to the nearest thousand yen",
+  "tax-payable":
+    "the tax payable, which depends on whether it is worked out by aggregation or by invoice",
+  "simplified-basis": "the simplified basis, and the transitional twenty-percent rule",
+  "national-and-local": "the split between national and local consumption tax",
+}
+
 const consumptionTax = (args: {
   readonly year: number
   readonly startingMonth?: number
@@ -132,7 +148,7 @@ const consumptionTax = (args: {
         account: one.account,
         said: one.said,
       })),
-      notWorkedOut: summary.notWorkedOut,
+      notWorkedOut: summary.notWorkedOut.map((one) => NOT_WORKED_OUT_SAID[one]),
     })
   })
 

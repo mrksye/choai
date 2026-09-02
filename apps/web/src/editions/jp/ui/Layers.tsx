@@ -77,11 +77,28 @@ function Heading(props: {
   )
 }
 
-/** A table the way the reports here draw one: figures right, monospaced, tabular. */
+/**
+ * A table the way the reports here draw one: figures right, monospaced, tabular.
+ *
+ * As wide as what is in it, not as wide as what is around it. Given the whole
+ * width, a browser hands the slack to whichever column will take it: a three
+ * column table flings its figures to the far edge, so reading across from a
+ * heading to its own number is a journey; a four column one lets the widest
+ * column — here an hledger query, the least important thing on the row — claim
+ * everything left over. Sized to its content, every column is beside the one
+ * before it and there is no slack to hand out.
+ *
+ * The gap between them belongs to the table rather than to each cell, and the
+ * last column gives it back. Left to the cells it has to be remembered at every
+ * one of them, and a table that forgets reads as a table whose columns do not
+ * line up.
+ */
 export function Figures(props: { readonly children: JSX.Element }): JSX.Element {
   return (
     <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-sm">{props.children}</table>
+      <table class="border-collapse text-sm [&_td]:pr-6 [&_td:last-child]:pr-0 [&_th]:pr-6 [&_th:last-child]:pr-0">
+        {props.children}
+      </table>
     </div>
   )
 }
@@ -89,3 +106,6 @@ export function Figures(props: { readonly children: JSX.Element }): JSX.Element 
 export const HEAD = "border-b border-border pb-1 text-left text-xs font-medium text-muted-foreground"
 export const CELL = "border-b border-border/50 py-1 align-top"
 export const FIGURE = `${CELL} text-right font-mono tabular-nums`
+
+/** A column whose contents must not be broken across lines. */
+export const NARROW = "whitespace-nowrap"

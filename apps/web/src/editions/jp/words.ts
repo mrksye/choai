@@ -116,8 +116,16 @@ const en = {
     checkIt: "Put this query to hledger yourself and the same figure comes back.",
     entries: "{{ count }} entries read",
     included: "Books kept tax-inclusive",
-    rounding: "Fractions rounded {{ how }}",
+    rounding: "Fractions {{ how }}",
     notWorkedOut: "Not worked out here",
+    said: {
+      "taxable-base": "The taxable base, which is rounded down to the nearest thousand yen.",
+      "tax-payable":
+        "The tax payable, which depends on whether it is worked out by aggregation or by invoice.",
+      "simplified-basis": "The simplified basis, and the transitional twenty-percent rule.",
+      "national-and-local": "The split between national and local consumption tax.",
+    },
+    rounded: { down: "rounded down", up: "rounded up", "half-up": "rounded to the nearest" },
     category: {
       "taxable-sale-10": "Taxable sales, 10%",
       "taxable-sale-8": "Taxable sales, 8% (reduced)",
@@ -337,6 +345,13 @@ const ja: typeof en = {
     included: "税込経理",
     rounding: "端数は{{ how }}",
     notWorkedOut: "ここでは算出しないもの",
+    said: {
+      "taxable-base": "課税標準額（千円未満切捨て）",
+      "tax-payable": "納付税額 ── 割戻し計算と積上げ計算のどちらによるかで変わります",
+      "simplified-basis": "簡易課税、および2割特例",
+      "national-and-local": "消費税と地方消費税の内訳",
+    },
+    rounded: { down: "切り捨て", up: "切り上げ", "half-up": "四捨五入" },
     category: {
       "taxable-sale-10": "課税売上 10%",
       "taxable-sale-8": "課税売上 8%（軽減）",
@@ -460,6 +475,15 @@ const WORDS: Readonly<Record<Locale, typeof en>> = { en, ja }
 
 /** The words, in whichever language the screens are speaking. */
 export const words = (): typeof en => WORDS[locale()]
+
+/**
+ * The words of one named language, for a test to hold them against the code.
+ *
+ * A sentence missing in one language and present in the other is a blank on
+ * somebody's screen, and `typeof en` catches only a key that is absent — not one
+ * that was added to a list the words are read by. See `tests/jp.test.ts`.
+ */
+export const wordsIn = (which: Locale): typeof en => WORDS[which]
 
 /**
  * A sentence with its blanks filled, the way core's translator fills them.

@@ -4,6 +4,10 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount, Posting, Tag, Transaction } from "~/core/hledger/wire"
 import { RULES, bandFor } from "~/editions/jp/rules"
 import { japaneseGuidance } from "~/editions/jp/guidance"
+import { wordsIn } from "~/editions/jp/words"
+
+const japaneseWords = () => wordsIn("ja")
+const englishWords = () => wordsIn("en")
 import { CAPABILITY } from "~/editions/jp/naming"
 import { japaneseTaxRules2026 } from "~/editions/jp/rules/2026"
 import { asFigure, includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
@@ -15,7 +19,7 @@ import {
   treatmentIn,
 } from "~/editions/jp/consumption-tax/category"
 import { normalize } from "~/editions/jp/consumption-tax/normalize"
-import { summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
+import { NOT_WORKED_OUT, summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
 import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
 import { evidenceAt, inRepository } from "~/editions/jp/invoice/where"
 import {
@@ -422,6 +426,24 @@ describe("what each band of the consumption tax came to", () => {
     expect(summary.unrecognised[0]?.description).toBe("打ち間違い")
     // And it is in no band at all, rather than quietly in the one it resembles.
     expect(band("taxable-purchase-10")?.postings).toBe(1)
+  })
+
+  test("what it does not work out is named, and both voices have a sentence for each", () => {
+    // One list, two tables of words: English for something that is not a person,
+    // and the reader's language on the screen. A name added to the list without
+    // a sentence in either is a blank where a caveat should be.
+    expect([...summary.notWorkedOut]).toEqual([...NOT_WORKED_OUT])
+    NOT_WORKED_OUT.forEach((one) => {
+      expect(japaneseWords().tax.said[one]).toBeTruthy()
+      expect(englishWords().tax.said[one]).toBeTruthy()
+    })
+  })
+
+  test("every rounding the rules may name has a word on the screen", () => {
+    ;(["down", "up", "half-up"] as const).forEach((how) => {
+      expect(japaneseWords().tax.rounded[how]).toBeTruthy()
+      expect(englishWords().tax.rounded[how]).toBeTruthy()
+    })
   })
 
   test("it says which rules decided it, and what it did not work out", () => {

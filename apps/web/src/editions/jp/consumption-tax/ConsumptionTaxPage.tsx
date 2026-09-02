@@ -8,7 +8,7 @@ import { checkConsumptionTax } from "../check/findings"
 import { Purchases } from "../invoice/Purchases"
 import { RULES } from "../rules"
 import { Findings } from "../ui/Findings"
-import { CELL, FIGURE, Figures, HEAD, Layers } from "../ui/Layers"
+import { CELL, FIGURE, Figures, HEAD, Layers, NARROW } from "../ui/Layers"
 import { PeriodPicker } from "../ui/PeriodPicker"
 import { fiscalYear } from "../ui/period"
 import { openNow, typesNow } from "../ui/books"
@@ -85,8 +85,8 @@ export function ConsumptionTaxPage(): JSX.Element {
                   <thead>
                     <tr>
                       <th class={HEAD}>{words().tax.band}</th>
-                      <th class={`${HEAD} text-right`}>{words().tax.postings}</th>
-                      <th class={`${HEAD} text-right`}>{words().tax.recorded}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.postings}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.recorded}</th>
                       <th class={HEAD}>{words().tax.query}</th>
                     </tr>
                   </thead>
@@ -95,9 +95,11 @@ export function ConsumptionTaxPage(): JSX.Element {
                       {(band) => (
                         <tr>
                           <td class={CELL}>{nameOf(band)}</td>
-                          <td class={FIGURE}>{band.postings}</td>
-                          <td class={FIGURE}>{formatMixed(band.recorded)}</td>
-                          <td class={`${CELL} font-mono text-xs text-muted-foreground`}>{band.query}</td>
+                          <td class={`${FIGURE} ${NARROW}`}>{band.postings}</td>
+                          <td class={`${FIGURE} ${NARROW}`}>{formatMixed(band.recorded)}</td>
+                          <td class={`${CELL} whitespace-nowrap font-mono text-xs text-muted-foreground`}>
+                            {band.query}
+                          </td>
                         </tr>
                       )}
                     </For>
@@ -113,15 +115,16 @@ export function ConsumptionTaxPage(): JSX.Element {
             {(found) => (
               <div class="flex flex-col gap-4">
                 <p class="text-xs text-muted-foreground">
-                  {words().tax.included} · {filled(words().tax.rounding, { how: found().rounding })}
+                  {words().tax.included} ·{" "}
+                  {filled(words().tax.rounding, { how: words().tax.rounded[found().rounding] })}
                 </p>
 
                 <Figures>
                   <thead>
                     <tr>
                       <th class={HEAD}>{words().tax.band}</th>
-                      <th class={`${HEAD} text-right`}>{words().tax.total}</th>
-                      <th class={`${HEAD} text-right`}>{words().tax.within}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.total}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.within}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -129,8 +132,8 @@ export function ConsumptionTaxPage(): JSX.Element {
                       {(band) => (
                         <tr>
                           <td class={CELL}>{nameOf(band)}</td>
-                          <td class={FIGURE}>{formatMixed(band.total)}</td>
-                          <td class={FIGURE}>
+                          <td class={`${FIGURE} ${NARROW}`}>{formatMixed(band.total)}</td>
+                          <td class={`${FIGURE} ${NARROW}`}>
                             {band.taxWithin === undefined ? "—" : formatMixed(band.taxWithin)}
                           </td>
                         </tr>
@@ -143,7 +146,9 @@ export function ConsumptionTaxPage(): JSX.Element {
                   <h3 class="text-xs font-medium">{words().tax.notWorkedOut}</h3>
                   <ul class="flex list-disc flex-col gap-0.5 pl-4">
                     <For each={found().notWorkedOut}>
-                      {(what) => <li class="text-xs text-muted-foreground">{what}</li>}
+                      {(what) => (
+                        <li class="text-xs text-muted-foreground">{words().tax.said[what]}</li>
+                      )}
                     </For>
                   </ul>
                 </div>

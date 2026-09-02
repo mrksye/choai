@@ -27,13 +27,22 @@ import type { JapaneseTaxTransaction, TaxPosting } from "./normalize"
  * against, not the sort they copy onto a form.
  */
 
-/** What this deliberately does not work out, said in the answer rather than only on a screen. */
-export const NOT_WORKED_OUT: readonly string[] = [
-  "the taxable base, which is rounded down to the nearest thousand yen",
-  "the tax payable, which depends on whether it is worked out by aggregation or by invoice",
-  "the simplified basis, and the transitional twenty-percent rule",
-  "the split between national and local consumption tax",
-]
+/**
+ * What this deliberately does not work out, named rather than worded.
+ *
+ * Named, because the two places that say it say it differently: a screen says it
+ * in the language the reader is reading, and the API says it in English to
+ * something that is not a person. One list of identifiers, two tables of
+ * sentences, and a test that neither table has fallen behind the list.
+ */
+export const NOT_WORKED_OUT = [
+  "taxable-base",
+  "tax-payable",
+  "simplified-basis",
+  "national-and-local",
+] as const
+
+export type NotWorkedOut = (typeof NOT_WORKED_OUT)[number]
 
 /** One posting that a return would want an answer about, and has not got one. */
 export interface Loose {
@@ -94,7 +103,7 @@ export interface ConsumptionTaxSummary {
   readonly unmarked: readonly Loose[]
   /** Postings marked with something that is not a category. */
   readonly unrecognised: readonly Mistyped[]
-  readonly notWorkedOut: readonly string[]
+  readonly notWorkedOut: readonly NotWorkedOut[]
 }
 
 /**
