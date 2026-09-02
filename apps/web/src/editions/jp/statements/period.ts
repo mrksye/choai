@@ -56,3 +56,41 @@ const A_DAY = 24 * 60 * 60 * 1000
  */
 export const lastDayOf = (year: FiscalYear): string =>
   new Date(Date.parse(`${year.to}T00:00:00Z`) - A_DAY).toISOString().slice(0, 10)
+
+/** The month a year begins in, read back off it. 1 is January. */
+export const startingMonthOf = (year: FiscalYear): number => Number(year.from.slice(5, 7))
+
+/** The calendar year it begins in. */
+export const startingYearOf = (year: FiscalYear): number => Number(year.from.slice(0, 4))
+
+/**
+ * The year a date falls in, for a company whose years begin in this month.
+ *
+ * Where writing off an asset starts from: the first year it is in use is the one
+ * containing the day it was put to use, whatever the calendar says.
+ */
+export const yearContaining = (date: string, startingMonth: number): FiscalYear => {
+  const year = Number(date.slice(0, 4))
+  const month = Number(date.slice(5, 7))
+  return fiscalYearFrom(month >= startingMonth ? year : year - 1, startingMonth)
+}
+
+/**
+ * Every year from the first through the last, in order.
+ *
+ * Bounded, because it is walked to replay a schedule and an asset registered with
+ * a date typed wrong should not be able to ask for a hundred thousand years of
+ * them. A life is at most fifty years and the walk is at most that plus a
+ * decade of a book that was left alone; past the bound the answer is empty,
+ * which reads on screen as an asset nothing could be worked out for rather than
+ * as a page that will not load.
+ */
+const AT_MOST = 60
+
+export const yearsThrough = (first: FiscalYear, last: FiscalYear): readonly FiscalYear[] => {
+  const month = startingMonthOf(first)
+  const from = startingYearOf(first)
+  const span = startingYearOf(last) - from
+  if (span < 0 || span >= AT_MOST) return []
+  return Array.from({ length: span + 1 }, (_, at) => fiscalYearFrom(from + at, month))
+}
