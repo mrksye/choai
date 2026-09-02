@@ -78,3 +78,74 @@ test("with no journal at all, connecting and taking makes one", async ({ page })
     })
     .toBe(2)
 })
+
+/**
+ * A repository holding a journal and a file the journal says belongs with it.
+ *
+ * hledger never asks for the second one — nothing `include`s it, and it is not
+ * a journal — so without the declaration it would be fetched by nobody and the
+ * book would arrive missing a file it had been pushed with.
+ */
+const COMPANION = "papers.csv"
+
+const DECLARING = `; the books
+; choai-file: ${COMPANION}
+
+${JOURNAL}`
+
+const PAPERS = "date,what\n2026-07-05,a receipt\n"
+
+const answerGitHubWithCompanion = async (page: Page): Promise<void> => {
+  await page.route("**/api.github.com/**", (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname === "/user") return asJson(route, { login: "mrksye" })
+    if (url.pathname.endsWith(`/contents/books/${COMPANION}`)) {
+      return asJson(route, {
+        content: Buffer.from(PAPERS, "utf-8").toString("base64"),
+        encoding: "base64",
+        sha: "def456",
+      })
+    }
+    if (url.pathname.includes("/contents/")) {
+      return asJson(route, {
+        content: Buffer.from(DECLARING, "utf-8").toString("base64"),
+        encoding: "base64",
+        sha: "abc123",
+      })
+    }
+    return asJson(route, {}, 404)
+  })
+}
+
+test("a file the journal says belongs beside it comes back with the journal", async ({ page }) => {
+  await answerGitHubWithCompanion(page)
+
+  await page.goto("/settings")
+  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Owner", "mrksye")
+  await fill(page, "Repository", "books")
+  await fill(page, "Path to the journal", "books/main.journal")
+
+  await page.getByRole("button", { name: "Save and check", exact: true }).click()
+  await expect(page.getByText("Connected as mrksye")).toBeVisible()
+  await page.getByRole("button", { name: "Take from GitHub as a new journal" }).click()
+
+  await expect
+    .poll(async () => {
+      const open = await page.evaluate(() => window.choai.journal.summary({}))
+      return open.ok ? open.value.files : []
+    })
+    .toContain(COMPANION)
+
+  // And it arrived as the text it is, not as anything hledger did to it.
+  const papers = await page.evaluate(
+    (path) => window.choai.journal.text({ path }),
+    COMPANION,
+  )
+  expect(papers.ok && papers.value.text).toBe(PAPERS)
+
+  // hledger read the journal without being confused by it: the entries are the
+  // journal's own, and the extra file is inert.
+  const open = await page.evaluate(() => window.choai.journal.summary({}))
+  expect(open.ok && open.value.transactions).toBe(2)
+})
