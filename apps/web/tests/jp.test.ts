@@ -15,6 +15,7 @@ import {
 import { normalize } from "~/editions/jp/consumption-tax/normalize"
 import { summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
 import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
+import { evidenceAt, inRepository } from "~/editions/jp/invoice/where"
 import {
   declarationsIn,
   declaredAcross,
@@ -190,6 +191,34 @@ describe("what is known about the paper behind an entry", () => {
     expect(looksLikeRegistration("T12345678901234")).toBe(false)
     expect(looksLikeRegistration("1234567890123")).toBe(false)
     expect(looksLikeRegistration("t1234567890123")).toBe(false)
+  })
+})
+
+describe("where the document behind an entry actually is", () => {
+  const remote = { owner: "mrksye", repo: "books", branch: "main", path: "books/main.journal" }
+
+  test("it resolves against the journal's own directory, the way an include does", () => {
+    expect(evidenceAt(remote, "papers/2026/09/a.pdf")).toBe(
+      "https://github.com/mrksye/books/blob/main/books/papers/2026/09/a.pdf",
+    )
+    expect(inRepository(remote, "a.pdf")).toBe("books/a.pdf")
+  })
+
+  test("a path that climbs out of the books gets no link, rather than a wrong one", () => {
+    expect(evidenceAt(remote, "../../elsewhere.pdf")).toBeUndefined()
+    expect(evidenceAt(remote, "/etc/passwd")).toBeUndefined()
+    expect(evidenceAt(remote, "")).toBeUndefined()
+  })
+
+  test("with no repository there is no link, and the path is still the path", () => {
+    expect(evidenceAt(undefined, "papers/a.pdf")).toBeUndefined()
+    expect(evidenceAt({ ...remote, repo: " " }, "papers/a.pdf")).toBeUndefined()
+  })
+
+  test("a name with a space in it survives being made into an address", () => {
+    expect(evidenceAt(remote, "papers/a receipt.pdf")).toBe(
+      "https://github.com/mrksye/books/blob/main/books/papers/a%20receipt.pdf",
+    )
   })
 })
 

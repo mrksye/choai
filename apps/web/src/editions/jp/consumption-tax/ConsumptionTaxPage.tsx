@@ -5,6 +5,7 @@ import { ask } from "~/core/hledger/client"
 import { TroubleNote } from "~/core/components/trouble-note"
 import { matchResource } from "~/core/lib/monad"
 import { checkConsumptionTax } from "../check/findings"
+import { Purchases } from "../invoice/Purchases"
 import { RULES } from "../rules"
 import { Findings } from "../ui/Findings"
 import { CELL, FIGURE, Figures, HEAD, Layers } from "../ui/Layers"
@@ -146,6 +147,8 @@ export function ConsumptionTaxPage(): JSX.Element {
                     </For>
                   </ul>
                 </div>
+
+                <Purchases entries={read() ?? []} />
 
                 <Findings findings={checkConsumptionTax(read() ?? [], found())} />
               </div>

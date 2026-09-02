@@ -419,6 +419,48 @@ test("depreciation comes back as figures, and says so rather than writing them",
   expect(summary.ok && summary.value.transactions).toBe(9)
 })
 
+test("a taxable purchase is listed with the paper behind it, and the paper stays a file", async ({ page }) => {
+  await openTheDemo(page)
+
+  const offered = await page.evaluate(() =>
+    window.choai.transaction.propose({
+      transactions: [
+        {
+          date: "2026-06-02",
+          payee: "a supplier",
+          tags: [
+            { name: "invoice", value: "qualified" },
+            { name: "partner", value: "Example Co" },
+            { name: "evidence", value: "papers/2026/06/a receipt.pdf" },
+          ],
+          postings: [
+            {
+              account: "expenses:supplies",
+              amount: "$1100.00",
+              tags: [{ name: "tax", value: "taxable-purchase-10" }],
+            },
+            { account: "assets:cash", amount: "$-1100.00" },
+          ],
+        },
+      ] as never,
+    }),
+  )
+  expect(offered.ok).toBe(true)
+  if (!offered.ok) return
+  await page.evaluate((id) => window.choai.proposal.apply({ id } as never), offered.value.id)
+
+  await page.goto("/jp/consumption-tax")
+
+  // The entry where the question arises, with what is known about the document.
+  await expect(page.getByText("Example Co")).toBeVisible()
+  await expect(page.getByText(/^Qualified$|^適格$/)).toBeVisible()
+
+  // The path is shown as the text the journal holds. With no repository there is
+  // nowhere for it to point, and it is shown plainly rather than as a dead link.
+  await expect(page.getByText("papers/2026/06/a receipt.pdf")).toBeVisible()
+  expect(await page.getByRole("link", { name: "papers/2026/06/a receipt.pdf" }).count()).toBe(0)
+})
+
 test("what needs deciding is a warning, and only what does not hold together is an error", async ({ page }) => {
   await openTheDemo(page)
   await writeTaggedEntries(page)
