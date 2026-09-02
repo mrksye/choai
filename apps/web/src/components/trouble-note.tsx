@@ -15,7 +15,7 @@ import { t } from "~/i18n"
 export function TroubleNote(props: { trouble: Trouble }): JSX.Element {
   return (
     <div class="rounded-md border border-error bg-error/40 px-3 py-2 text-sm">
-      <p class="font-medium">{headline(props.trouble)}</p>
+      <p class="font-medium">{troubleHeadline(props.trouble)}</p>
       <Show when={detailOf(props.trouble)}>
         {(detail) => (
           <details class="mt-1">
@@ -32,7 +32,13 @@ export function TroubleNote(props: { trouble: Trouble }): JSX.Element {
   )
 }
 
-const headline = (trouble: Trouble): string => {
+/**
+ * The heading alone, for a screen with no room for the box around it.
+ *
+ * The conversation shows a failed call in one line of its working, where the
+ * bordered note below would be a wall rather than a note.
+ */
+export const troubleHeadline = (trouble: Trouble): string => {
   switch (trouble.kind) {
     case "no-journal":
       return t("trouble.noJournal")

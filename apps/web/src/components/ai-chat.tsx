@@ -2,7 +2,7 @@ import { For, Show, createEffect, createResource, createSignal, type JSX } from 
 
 import { key, which } from "~/ai/kept"
 import { talkerFor } from "~/ai/talkers"
-import type { Beat, Ending } from "~/ai/loop"
+import type { Beat, Ending, Ran } from "~/ai/loop"
 import { asUrl, shrink } from "~/ai/photo"
 import { looksTabular, rowsOf } from "~/lib/csv"
 import { readText } from "~/lib/text"
@@ -18,6 +18,8 @@ import {
 } from "~/ai/store"
 import type { Shown, Spent } from "~/ai/talker"
 import { wording } from "~/components/ai-key-panel"
+import { HitchNote } from "~/components/hitch-note"
+import type { Hitch } from "~/api/hitch"
 import { Button } from "~/components/ui/button"
 import { Ellipsis } from "~/lib/ui/ellipsis"
 import { PaperclipIcon, SendIcon, XIcon } from "~/lib/ui/icons"
@@ -307,16 +309,28 @@ function One(props: { beat: Beat }): JSX.Element {
   )
 }
 
-/** One capability, and whether it answered. The working, kept where it can be seen. */
+/** What a call came back with instead of an answer, if it came back with none. */
+const wentWrongIn = (ran: Ran): Hitch | undefined => (ran.answer.ok ? undefined : ran.answer.error)
+
+/**
+ * One capability, and whether it answered. The working, kept where it can be
+ * seen — including why a call came back with nothing, which is the part of the
+ * working a reader has any use for.
+ */
 function Looked(props: { beat: Beat }): JSX.Element {
   return (
     <Show when={props.beat.is === "ran" ? props.beat : undefined}>
       {(beat) => (
-        <p class="text-xs text-muted-foreground">
-          {beat().ran.answer.ok
-            ? t("ai.ran", { capability: beat().ran.capability })
-            : t("ai.ranBadly", { capability: beat().ran.capability })}
-        </p>
+        <div class="flex flex-col">
+          <p class="text-xs text-muted-foreground">
+            {beat().ran.answer.ok
+              ? t("ai.ran", { capability: beat().ran.capability })
+              : t("ai.ranBadly", { capability: beat().ran.capability })}
+          </p>
+          <Show when={wentWrongIn(beat().ran)}>
+            {(hitch) => <HitchNote hitch={hitch()} />}
+          </Show>
+        </div>
       )}
     </Show>
   )

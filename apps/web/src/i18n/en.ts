@@ -291,6 +291,21 @@ export const en = {
     add: "Add to journal",
   },
   /** Why something did not work. The wording is chosen here, not passed up. */
+  hitch: {
+    noSuchCapability: "There is no {{ name }} to call.",
+    badArguments: "It was called with {{ count }} thing(s) wrong:",
+    noJournal: "No journal was open to work on.",
+    incomplete: "The entry is still missing: {{ missing }}.",
+    nothingProposed: "Nothing was offered — no entries to add and none to take out.",
+    noSuchEntry: "No entry has index {{ indexes }}.",
+    noSuchProposal: "That proposal is no longer standing.",
+    staleProposal: "The journal moved on; that proposal was about an older one.",
+    missing: {
+      date: "a date",
+      payee: "who it was with",
+      postings: "two accounts",
+    },
+  },
   trouble: {
     noJournal: "No journal is open yet.",
     fileMissing: "{{ path }} is not among the files given.",

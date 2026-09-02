@@ -254,7 +254,7 @@ function Field(props: {
 /** hledger's own troubles are already explained; the rest are said here. */
 function SnagNote(props: { snag: Snag }): JSX.Element {
   return (
-    <Show when={props.snag.at === "hledger" ? props.snag.trouble : undefined} fallback={<p class="text-xs text-error-foreground">{words(props.snag)}</p>}>
+    <Show when={props.snag.at === "hledger" ? props.snag.trouble : undefined} fallback={<p class="text-xs text-error-foreground">{snagWords(props.snag)}</p>}>
       {(trouble) => <TroubleNote trouble={trouble()} />}
     </Show>
   )
@@ -273,7 +273,8 @@ const describe = (outcome: Outcome): string => {
   }
 }
 
-const words = (snag: Snag): string => {
+/** Exported for the conversation, which reports the same snags in its working. */
+export const snagWords = (snag: Snag): string => {
   switch (snag.at) {
     case "not-connected":
       return t("github.notConnected")

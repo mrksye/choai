@@ -1423,3 +1423,58 @@ for (const wire of [CLAUDE, GEMINI, OPENAI, COMPATIBLE]) {
     await expect(page.getByText("declined rather than answered")).toBeVisible()
   })
 }
+
+/**
+ * A call that failed says which call and why.
+ *
+ * The working is shown so an answer can be traced to what it was built from,
+ * and a call that came back with nothing is the place a reader most needs that
+ * — it is where the building stopped. Saying only that something gave nothing
+ * names the one thing already visible and drops the one thing that is not.
+ *
+ * Written against a wrong argument because that is the failure a model makes
+ * for itself and can make repeatedly: the same call refused six times reads, on
+ * a screen that will not say why, as the app being broken.
+ */
+test("a call that came back with nothing says what was wrong with it", async ({ page }) => {
+  await answerWith(page, CLAUDE, (route, sofar) =>
+    asJson(
+      route,
+      sofar === 1
+        ? {
+            model: "claude-opus-5",
+            stop_reason: "tool_use",
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_1",
+                name: "transaction__propose",
+                // An amount as a number rather than as text, which is a thing a
+                // model writes and hledger's own field never is.
+                input: {
+                  transactions: [
+                    {
+                      date: "2026-07-03",
+                      payee: "Grocer",
+                      postings: [
+                        { account: "expenses:food", amount: 1200 },
+                        { account: "assets:cash" },
+                      ],
+                    },
+                  ],
+                },
+              },
+            ],
+          }
+        : CLAUDE.answers,
+    ),
+  )
+
+  await connect(page, CLAUDE)
+  await openTheDemo(page)
+  await askThat(page, "Write that down")
+
+  await expect(page.getByText("transaction.propose had nothing to give")).toBeVisible()
+  await expect(page.getByText("1 thing(s) wrong")).toBeVisible()
+  await expect(page.getByText("transactions[0].postings[0].amount — a string")).toBeVisible()
+})

@@ -282,6 +282,21 @@ export const ja: Dictionary = {
     hledgerFillsTheRest: "金額を空けた行は hledger が埋めます。",
     add: "帳簿に追加",
   },
+  hitch: {
+    noSuchCapability: "{{ name }} という呼び出しはありません。",
+    badArguments: "引数が {{ count }} 箇所ちがいます:",
+    noJournal: "対象の帳簿が開かれていませんでした。",
+    incomplete: "仕訳にまだ足りません: {{ missing }}。",
+    nothingProposed: "提案が空でした。追加する仕訳も、取り除く仕訳もありません。",
+    noSuchEntry: "{{ indexes }} 番の仕訳はありません。",
+    noSuchProposal: "その提案はもう残っていません。",
+    staleProposal: "帳簿が変わりました。その提案は変わる前の帳簿についてのものです。",
+    missing: {
+      date: "日付",
+      payee: "相手先",
+      postings: "勘定科目が2つ",
+    },
+  },
   trouble: {
     noJournal: "まだ帳簿が開かれていません。",
     fileMissing: "{{ path }} は渡されたファイルの中にありません。",
