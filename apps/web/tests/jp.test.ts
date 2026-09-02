@@ -4,7 +4,7 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount, Posting, Tag, Transaction } from "~/core/hledger/wire"
 import { RULES, bandFor } from "~/editions/jp/rules"
 import { japaneseTaxRules2026 } from "~/editions/jp/rules/2026"
-import { includedAt, isZero, negated, plus, sumOf, times } from "~/editions/jp/money"
+import { includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
 import { said, toldOf } from "~/editions/jp/tags"
 import {
   TAX_CATEGORIES,
@@ -25,10 +25,13 @@ import {
 import { placementOf, sectionIn, upwards } from "~/editions/jp/chart/mapping"
 import { PRESET, ROOTS, notYetDeclared, tagsFor } from "~/editions/jp/chart/preset"
 import { INCOME_SECTIONS, isSection } from "~/editions/jp/chart/sections"
-import { during, fiscalYearFrom, upTo } from "~/editions/jp/statements/period"
+import { during, fiscalYearFrom, lastDayOf, upTo } from "~/editions/jp/statements/period"
 import { balanceSheetFrom, incomeStatementFrom } from "~/editions/jp/statements/layout"
 import { appended, asLine, readEvents } from "~/editions/jp/fixed-assets/events"
-import { inUseAt, registerFrom } from "~/editions/jp/fixed-assets/register"
+import { inUseAt, registerFrom, type FixedAsset } from "~/editions/jp/fixed-assets/register"
+import { depreciationFor, monthsInService } from "~/editions/jp/fixed-assets/depreciation"
+import { depreciationDraft, depreciationItems } from "~/editions/jp/fixed-assets/proposal"
+import { draftToJournal } from "~/core/compose/draft"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -726,6 +729,158 @@ describe("a fixed asset register that is only ever added to", () => {
     expect(grown.startsWith(log)).toBe(true)
     expect(readEvents(grown).events.length).toBe(4)
     expect(appended("", [])).toBe("")
+  })
+})
+
+describe("what one asset may be written off this year", () => {
+  const asset: FixedAsset = {
+    id: "PC-2026-001",
+    name: "ノートPC",
+    account: "資産:工具器具備品",
+    cost: "300000",
+    commodity: "¥",
+    method: "straight-line",
+    usefulLife: 4,
+    inService: "2026-07-10",
+    acquiredAt: "2026-07-01",
+  }
+  const year = (from: number) => fiscalYearFrom(from, 4)
+  const charge = (a: FixedAsset, y: number, before = 0) =>
+    depreciationFor(a, year(y), RULES, whole(before))
+
+  test("a month begun is a month counted, from the month it was put to use", () => {
+    // Put to use in July of a year that opened in April: nine months of it left.
+    expect(monthsInService(year(2026), "2026-07-10")).toBe(9)
+    expect(monthsInService(year(2026), "2026-04-01")).toBe(12)
+    expect(monthsInService(year(2026), "2025-01-01")).toBe(12)
+    expect(monthsInService(year(2026), "2027-04-01")).toBe(0)
+    expect(monthsInService(year(2026), "2027-03-31")).toBe(1)
+  })
+
+  test("the first year is a full year taken by the months it was in use", () => {
+    const first = charge(asset, 2026)
+    expect(first.ok && writeDecimal(first.value.annual)).toBe("75000")
+    expect(first.ok && first.value.months).toBe(9)
+    expect(first.ok && writeDecimal(first.value.charge)).toBe("56250")
+    expect(first.ok && writeDecimal(first.value.remaining)).toBe("243750")
+    expect(first.ok && first.value.rate).toEqual({ over: 250, under: 1000 })
+  })
+
+  test("a middle year is the whole rate, and what is left comes down by it", () => {
+    const second = charge(asset, 2027, 56250)
+    expect(second.ok && second.value.months).toBe(12)
+    expect(second.ok && writeDecimal(second.value.charge)).toBe("75000")
+    expect(second.ok && writeDecimal(second.value.remaining)).toBe("168750")
+  })
+
+  test("one yen stays behind, and the last year is that cap rather than a special case", () => {
+    // Written off to within ¥40,000 of the cost: only ¥39,999 may go.
+    const last = charge(asset, 2030, 260000)
+    expect(last.ok && writeDecimal(last.value.charge)).toBe("39999")
+    expect(last.ok && writeDecimal(last.value.remaining)).toBe("1")
+  })
+
+  test("nothing left but the memorandum value is not a charge of nothing, it is a refusal", () => {
+    expect(charge(asset, 2031, 299999)).toEqual({
+      ok: false,
+      error: { why: "fully-written-off" },
+    })
+  })
+
+  test("a method it cannot calculate declines by name, and the register stays true", () => {
+    expect(charge({ ...asset, method: "declining-balance" }, 2026)).toEqual({
+      ok: false,
+      error: { why: "method", said: "declining-balance" },
+    })
+  })
+
+  test("a useful life the published table does not reach is not extrapolated", () => {
+    expect(charge({ ...asset, usefulLife: 60 }, 2026)).toEqual({
+      ok: false,
+      error: { why: "useful-life", years: 60 },
+    })
+  })
+
+  test("a cost that is not a figure is a refusal, not a zero", () => {
+    expect(charge({ ...asset, cost: "¥300,000" }, 2026)).toEqual({
+      ok: false,
+      error: { why: "cost", said: "¥300,000" },
+    })
+    // Digit groups on their own are how a person writes it, so those are read.
+    const grouped = charge({ ...asset, cost: "300,000" }, 2026)
+    expect(grouped.ok && writeDecimal(grouped.value.annual)).toBe("75000")
+  })
+
+  test("not yet in use, and already scrapped, are told apart", () => {
+    expect(charge({ ...asset, inService: "2027-05-01" }, 2026)).toEqual({
+      ok: false,
+      error: { why: "not-yet-in-service", inService: "2027-05-01" },
+    })
+    expect(charge({ ...asset, retiredAt: "2026-01-31" }, 2026)).toEqual({
+      ok: false,
+      error: { why: "retired", on: "2026-01-31" },
+    })
+  })
+
+  test("scrapped during the year is left to the reader, because both treatments are ordinary", () => {
+    expect(charge({ ...asset, retiredAt: "2026-09-30" }, 2026)).toEqual({
+      ok: false,
+      error: { why: "retired-during-the-year", on: "2026-09-30" },
+    })
+  })
+})
+
+describe("a year's depreciation, offered rather than written", () => {
+  const charge = {
+    assetId: "PC-2026-001",
+    account: "資産:工具器具備品",
+    commodity: "¥",
+    rate: { over: 250, under: 1000 },
+    months: 9,
+    annual: whole(75000),
+    charge: whole(56250),
+    writtenOffBefore: whole(0),
+    remaining: whole(243750),
+    rules: "2026",
+  }
+
+  test("the last day of the year is the day before the range ends", () => {
+    expect(lastDayOf(fiscalYearFrom(2026, 4))).toBe("2027-03-31")
+    expect(lastDayOf(fiscalYearFrom(2026, 1))).toBe("2026-12-31")
+    // A leap year, in case a subtraction ever meets one.
+    expect(lastDayOf(fiscalYearFrom(2023, 3))).toBe("2024-02-29")
+  })
+
+  test("the entry is two lines, tagged with the asset on both the entry and the expense", () => {
+    const draft = depreciationDraft(charge, "2027-03-31", "減価償却", {
+      expense: "費用:減価償却費",
+      against: "資産:工具器具備品",
+    })
+    expect(draftToJournal(draft)).toBe(
+      [
+        "2027-03-31 減価償却  ; asset:PC-2026-001",
+        "    費用:減価償却費  56250  ; asset:PC-2026-001",
+        "    資産:工具器具備品  -56250",
+        "",
+      ].join("\n"),
+    )
+  })
+
+  test("the amount is written plainly, so the journal's own commodity applies to it", () => {
+    const draft = depreciationDraft(charge, "2027-03-31", "減価償却", {
+      expense: "費用:減価償却費",
+      against: "負債:減価償却累計額",
+    })
+    expect(draftToJournal(draft, { symbol: "¥", side: "left", spaced: false })).toContain("¥56250")
+  })
+
+  test("a year's worth is one proposal, not one for each asset", () => {
+    const items = depreciationItems([charge, { ...charge, assetId: "SRV-2026-002" }], "2027-03-31", () => "減価償却", () => ({
+      expense: "費用:減価償却費",
+      against: "資産:工具器具備品",
+    }))
+    expect(items.length).toBe(2)
+    expect(items.every((one) => one.is === "add" && one.confidence === 1)).toBe(true)
   })
 })
 

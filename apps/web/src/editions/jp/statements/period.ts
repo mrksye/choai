@@ -43,5 +43,16 @@ export const during = (year: FiscalYear): string => `date:${year.from}..${year.t
 /** What stood at the end of it: the balance sheet's question, from the beginning of the books. */
 export const upTo = (year: FiscalYear): string => `date:..${year.to}`
 
-/** The last day of the year, for saying which day a balance sheet is drawn at. */
-export const endsOn = (year: FiscalYear): string => year.to
+const A_DAY = 24 * 60 * 60 * 1000
+
+/**
+ * The last day of the year — the date a closing entry carries.
+ *
+ * `to` is the day after, because that is how hledger's ranges end, and the day
+ * before it is the one a person writes on a balance sheet. Worked out in UTC
+ * throughout so that the answer does not depend on where the browser thinks it
+ * is: a subtraction that crosses a daylight-saving boundary in local time can
+ * land on the same date twice or skip one.
+ */
+export const lastDayOf = (year: FiscalYear): string =>
+  new Date(Date.parse(`${year.to}T00:00:00Z`) - A_DAY).toISOString().slice(0, 10)

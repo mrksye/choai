@@ -132,3 +132,82 @@ export const includedAt = (mixed: MixedAmount, rate: Fraction, rounding: Roundin
 /** Whether a figure comes to nothing, in every commodity it names. */
 export const isZero = (mixed: MixedAmount): boolean =>
   mixed.every((amount) => amount.aquantity.decimalMantissa === 0)
+
+/**
+ * The same arithmetic on one figure of one commodity.
+ *
+ * A fixed asset register holds a cost and nothing else — one figure, its symbol
+ * beside it — so the mixed-amount machinery above is more than it needs and the
+ * commodity would only be carried along to be ignored. These are the same
+ * integers underneath.
+ */
+
+/** A whole number of the smallest unit there is: three hundred thousand yen, exactly. */
+export const whole = (value: number): Quantity => ({ decimalMantissa: value, decimalPlaces: 0 })
+
+const bothAt = (a: Quantity, b: Quantity): { places: number; left: bigint; right: bigint } => {
+  const places = Math.max(scaleOf(a), scaleOf(b))
+  return { places, left: at(a, places), right: at(b, places) }
+}
+
+export const plusOf = (a: Quantity, b: Quantity): Quantity => {
+  const { places, left, right } = bothAt(a, b)
+  return quantity(left + right, places)
+}
+
+export const minusOf = (a: Quantity, b: Quantity): Quantity => {
+  const { places, left, right } = bothAt(a, b)
+  return quantity(left - right, places)
+}
+
+/** Negative, zero or positive as the first is less than, equal to or more than the second. */
+export const compare = (a: Quantity, b: Quantity): number => {
+  const { left, right } = bothAt(a, b)
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+export const smallerOf = (a: Quantity, b: Quantity): Quantity => (compare(a, b) <= 0 ? a : b)
+
+/** One figure taken by a rate, rounded as told, at the scale it was written in. */
+export const scaledBy = (value: Quantity, by: Fraction, rounding: Rounding): Quantity =>
+  quantity(
+    divided(BigInt(value.decimalMantissa) * BigInt(by.over), BigInt(by.under), rounding),
+    scaleOf(value),
+  )
+
+/**
+ * A figure as somebody wrote it down.
+ *
+ * Digit groups are allowed because a person writing three hundred thousand into
+ * a box writes `300,000`, and a file somebody has edited by hand will have them.
+ * Nothing else is: a symbol, a space, a stray letter all come back as absence,
+ * which is a fault for the reader to see rather than a number to guess at.
+ */
+const DECIMAL = /^([+-]?)(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d+))?$/
+
+export const readDecimal = (said: string): Quantity | undefined => {
+  const found = DECIMAL.exec(said.trim())
+  if (found === null) return undefined
+
+  const digits = (found[2] ?? "").replaceAll(",", "")
+  const after = found[3] ?? ""
+  const size = BigInt(digits + after)
+  return quantity(found[1] === "-" ? -size : size, after.length)
+}
+
+/**
+ * The same figure written back out, plainly.
+ *
+ * No symbol and no digit groups: this is what goes into a journal, where the
+ * commodity is written beside the number and hledger decides how it is shown.
+ */
+export const writeDecimal = (value: Quantity): string => {
+  const negative = value.decimalMantissa < 0
+  const digits = Math.abs(value.decimalMantissa)
+    .toString()
+    .padStart(value.decimalPlaces + 1, "0")
+  const point = digits.length - value.decimalPlaces
+  const written =
+    value.decimalPlaces === 0 ? digits : `${digits.slice(0, point)}.${digits.slice(point)}`
+  return negative ? `-${written}` : written
+}
