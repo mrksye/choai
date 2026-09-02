@@ -323,6 +323,19 @@ export function Layout(props: ParentProps) {
   /** The view being shown, which is what the explorer beside it belongs to. */
   const current = (): View => viewAt(location.pathname)
 
+  /**
+   * The heading a rail button sits under, where it says it has one.
+   *
+   * Read at the moment the rail is drawn, so it follows the language the same
+   * way the label does. Omitted rather than set to nothing when there is none,
+   * since the rail draws a heading wherever the group changes and an empty
+   * string is a change.
+   */
+  const groupOf = (entry: View): { group?: string } =>
+    entry.reached.from === "rail" && entry.reached.group !== undefined
+      ? { group: entry.reached.group() }
+      : {}
+
   const buttonsFor = (entries: readonly View[]): ActivityItem[] =>
     entries.map((entry) => ({
       id: entry.href,
@@ -330,6 +343,7 @@ export function Layout(props: ParentProps) {
       icon: <entry.Icon class="h-5 w-5" />,
       active: railOf(current()) === entry.href,
       onSelect: () => select(entry.href),
+      ...groupOf(entry),
     }))
 
   return (

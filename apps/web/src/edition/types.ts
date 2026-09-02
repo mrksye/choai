@@ -44,7 +44,14 @@ import type { EditionId } from "./roll"
 export type Icon = Component<{ readonly class?: string }>
 
 export type Reached =
-  | { readonly from: "rail" }
+  /**
+   * `group` names what this button is one of, where several belong together.
+   * A run of rail views sharing it is drawn under one heading, so an edition
+   * bringing four screens of its own can say they are four of a kind rather
+   * than four more of core's. A function, like `label`, so the heading follows
+   * the language being switched; left out, nothing is drawn.
+   */
+  | { readonly from: "rail"; readonly group?: () => string }
   | { readonly from: "foot" }
   | { readonly from: "within"; readonly under: string }
 

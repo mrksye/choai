@@ -7,6 +7,15 @@ export type ActivityItem = {
   icon: JSX.Element
   active?: boolean
   onSelect?: () => void
+  /**
+   * What this item is one of, where some of them belong together.
+   *
+   * Read off the run rather than declared as a list of sections: consecutive
+   * items sharing a group are one group, and the heading is drawn where the
+   * group changes. Leave it out and nothing is drawn, which is what a rail with
+   * no groupings should look like.
+   */
+  group?: string
 }
 
 /**
@@ -56,8 +65,13 @@ export function ActivityBar(props: {
         class="flex flex-col gap-0.5 overflow-hidden bg-muted px-1.5 py-2"
         style={{ width: `${navW()}px` }}
       >
-        <For each={props.items}>{(item) => (
-          <ActivityButton item={item} expanded={props.expanded} renderTooltip={props.renderTooltip} />
+        <For each={props.items}>{(item, at) => (
+          <>
+            <Show when={opensAGroup(props.items, at())}>
+              <GroupHeading label={item.group ?? ''} expanded={props.expanded} />
+            </Show>
+            <ActivityButton item={item} expanded={props.expanded} renderTooltip={props.renderTooltip} />
+          </>
         )}</For>
         <div class="flex-1" />
         <For each={props.footer ?? []}>{(item) => (
@@ -74,6 +88,37 @@ export function ActivityBar(props: {
         <span class="absolute inset-y-0 -left-1 -right-1 transition-colors group-hover:bg-sky-400/40" />
       </button>
     </div>
+  )
+}
+
+/** Whether this item begins a group, which is where the heading goes. */
+const opensAGroup = (items: readonly ActivityItem[], at: number): boolean => {
+  const group = items[at]?.group
+  return group !== undefined && group !== '' && group !== items[at - 1]?.group
+}
+
+/**
+ * What separates one group from the one above it.
+ *
+ * A rule when the rail is icons alone, since a word has nowhere to go in 48
+ * pixels and a heading truncated to two letters says less than a line does; the
+ * word itself once there is room for it. Either way it is decoration, so it is
+ * hidden from anything reading the rail aloud — the buttons already say what
+ * they are.
+ */
+function GroupHeading(props: { label: string; expanded: boolean }): JSX.Element {
+  return (
+    <Show
+      when={props.expanded}
+      fallback={<div class="mx-2 my-1.5 h-px bg-border" aria-hidden="true" />}
+    >
+      <div
+        class="mt-3 mb-0.5 truncate px-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+        aria-hidden="true"
+      >
+        {props.label}
+      </div>
+    </Show>
   )
 }
 
