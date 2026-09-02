@@ -182,6 +182,11 @@ reaching the app only through those two tables.
 Which edition you have open is on the manifest — `describe().edition` — and on
 the one line the app writes to the console.
 
+The rules this is added under — what core may never do, what is deliberately
+not built, and the checks that say the boundary has broken — are in
+[`apps/web/src/edition/README.md`](apps/web/src/edition/README.md), beside the
+code they govern.
+
 ## Three sites
 
 - **`choai.dev`** — the app itself, from `apps/web/dist`.

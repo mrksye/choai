@@ -113,6 +113,10 @@ src/
 └── app/        the entry, the shell, and the table of every screen there is
 ```
 
+`src/edition/README.md` is the standing policy: the rules an edition is added
+under, what is deliberately not built, and the checks that say the boundary has
+broken. Read it before putting anything in `editions/jp/`.
+
 - **The app is built twice from one tree**, as the global edition at `choai.dev`
   and the Japan edition at `jp.choai.dev`. Core is plain text accounting and
   does not know Japan exists — there is no `if (edition ===` in it and there is
