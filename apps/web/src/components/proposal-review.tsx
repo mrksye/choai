@@ -139,16 +139,26 @@ function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
       <For each={props.proposal.items}>
         {(item, at) => (
           <label class="flex cursor-pointer select-none items-start gap-2 rounded-md border border-border p-2">
+            {/* Two things write to a checkbox — the browser, on being pressed,
+                and this, from what is ticked — and the binding writes only when
+                the value differs from the one it wrote last. Stopping the
+                browser's press was meant to leave one writer, but the undoing
+                lands after the handler has run: this wrote true, the browser
+                put false back underneath it, and the binding went on believing
+                it had written true. Every tick after that showed the one
+                before it.
+
+                So the press is left alone and what is true is written over the
+                top of it. From the handler as well as from the binding, because
+                a shifted press can decide this box was right as it was, and
+                then the browser is the only one to have moved it. */}
             <input
               type="checkbox"
               class="mt-1"
               checked={ticked().has(at())}
-              /* The tick is ours to decide, so the browser's own is stopped
-                 and the box follows the signal — which is what lets a
-                 shifted click set forty of them at once. */
               onClick={(event) => {
-                event.preventDefault()
                 pick(at(), event.shiftKey)
+                event.currentTarget.checked = ticked().has(at())
               }}
             />
             <span class="flex min-w-0 flex-1 flex-col gap-1">

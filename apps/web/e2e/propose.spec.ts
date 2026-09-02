@@ -207,3 +207,62 @@ test("an entry that is not there is refused by number rather than guessed at", a
   expect(offered.ok ? "" : offered.error.at).toBe("no-such-entry")
   expect(await HOW_MANY(page)).toBe(9)
 })
+
+/**
+ * A tick that was pressed shows as pressed.
+ *
+ * The box has two writers — the browser, on being pressed, and the app, from
+ * what is ticked — and a fault between them is the worst kind of quiet: the
+ * count under the list was right the whole time, and only the boxes lagged, so
+ * a reader deciding by the boxes was deciding about the wrong entries. Every
+ * way of setting them is checked here, because it was checked at rest and
+ * passing that told nobody anything.
+ */
+test("what has been ticked is what is shown as ticked, however it was set", async ({ page }) => {
+  await openTheDemo(page)
+
+  const five = [1, 2, 3, 4, 5].map((n) => ({
+    date: `2026-04-0${n}`,
+    payee: `payee ${n}`,
+    confidence: 0.4,
+    postings: [{ account: "expenses:food", amount: `$${n}.00` }, { account: "assets:cash" }],
+  }))
+  const offered = await page.evaluate(
+    (transactions) => window.choai.transaction.propose({ transactions } as never),
+    five,
+  )
+  expect(offered.ok).toBe(true)
+
+  const boxes = page.getByRole("checkbox")
+  const shown = async (): Promise<string> =>
+    (await Promise.all([0, 1, 2, 3, 4].map((at) => boxes.nth(at).isChecked())))
+      .map((on) => (on ? "x" : "."))
+      .join("")
+
+  // Nothing is ticked: every one of these was written with doubt.
+  await expect(page.getByText("0 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe(".....")
+
+  await boxes.nth(1).click()
+  await expect(page.getByText("1 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe(".x...")
+
+  // A run, which is the reason the tick is decided here rather than left to the
+  // browser — and so the reason the two of them can disagree at all.
+  await boxes.nth(4).click({ modifiers: ["Shift"] })
+  await expect(page.getByText("4 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe(".xxxx")
+
+  await page.getByRole("button", { name: "None", exact: true }).click()
+  await expect(page.getByText("0 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe(".....")
+
+  await page.getByRole("button", { name: "All", exact: true }).click()
+  await expect(page.getByText("5 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe("xxxxx")
+
+  // And back off again, which is the press that was never getting through.
+  await boxes.nth(2).click()
+  await expect(page.getByText("4 of 5 chosen")).toBeVisible()
+  expect(await shown()).toBe("xx.xx")
+})
