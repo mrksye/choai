@@ -27,6 +27,8 @@ import { PRESET, ROOTS, notYetDeclared, tagsFor } from "~/editions/jp/chart/pres
 import { INCOME_SECTIONS, isSection } from "~/editions/jp/chart/sections"
 import { during, fiscalYearFrom, upTo } from "~/editions/jp/statements/period"
 import { balanceSheetFrom, incomeStatementFrom } from "~/editions/jp/statements/layout"
+import { appended, asLine, readEvents } from "~/editions/jp/fixed-assets/events"
+import { inUseAt, registerFrom } from "~/editions/jp/fixed-assets/register"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -636,6 +638,94 @@ describe("a Japanese company's statements, laid out", () => {
     const pl = incomeStatementFrom(rows, declared, {}, "a", "b")
     expect(sheet.parts.flatMap((p) => p.headings).flatMap((h) => h.lines).map((l) => l.account)).toEqual(["資産:現金"])
     expect(pl.headings.flatMap((h) => h.lines).map((l) => l.account)).toEqual(["収益:売上高"])
+  })
+})
+
+describe("a fixed asset register that is only ever added to", () => {
+  const bought = {
+    event: "acquired",
+    id: "PC-2026-001",
+    at: "2026-04-01",
+    name: "ノートPC",
+    account: "資産:工具器具備品",
+    cost: "300000",
+    commodity: "¥",
+    method: "straight-line",
+    usefulLife: 4,
+    inService: "2026-04-10",
+  }
+
+  const log = [
+    JSON.stringify(bought),
+    JSON.stringify({ event: "corrected", id: "PC-2026-001", at: "2026-05-02", usefulLife: 5, why: "耐用年数の誤り" }),
+    JSON.stringify({ event: "retired", id: "PC-2026-001", at: "2028-09-30" }),
+  ].join("\n")
+
+  test("a correction is a later line, and later lines win field by field", () => {
+    const { assets } = registerFrom(readEvents(log).events)
+    expect(assets.length).toBe(1)
+    expect(assets[0]?.usefulLife).toBe(5)
+    // The name and the cost were not mentioned, so they stand.
+    expect(assets[0]?.name).toBe("ノートPC")
+    expect(assets[0]?.cost).toBe("300000")
+    expect(assets[0]?.retiredAt).toBe("2028-09-30")
+  })
+
+  test("a bad line is set aside and the good ones are kept", () => {
+    const messy = [JSON.stringify(bought), "{ not json", JSON.stringify({ event: "acquired", id: "X", at: "2026-01-01" })].join("\n")
+    const read = readEvents(messy)
+    expect(read.events.length).toBe(1)
+    expect(read.faults.map((one) => one.line)).toEqual([2, 3])
+    expect(read.faults[0]?.why).toBe("this line is not JSON")
+    expect(read.faults[1]?.why).toContain("an acquisition needs")
+  })
+
+  test("blank lines are not faults", () => {
+    expect(readEvents(`\n${JSON.stringify(bought)}\n\n`).faults).toEqual([])
+  })
+
+  test("a useful life has to be a whole number of years above zero", () => {
+    const bad = JSON.stringify({ ...bought, usefulLife: 0 })
+    expect(readEvents(bad).faults[0]?.why).toContain("above zero")
+    expect(readEvents(JSON.stringify({ ...bought, usefulLife: 4.5 })).faults[0]?.why).toContain("needs")
+  })
+
+  test("a method this app cannot calculate is still a true register", () => {
+    const other = JSON.stringify({ ...bought, method: "declining-balance" })
+    const { assets } = registerFrom(readEvents(other).events)
+    expect(assets[0]?.method).toBe("declining-balance")
+  })
+
+  test("a line about an asset that was never acquired is reported, not conjured", () => {
+    const loose = JSON.stringify({ event: "retired", id: "NOPE", at: "2026-01-01" })
+    const { assets, orphans } = registerFrom(readEvents(loose).events)
+    expect(assets).toEqual([])
+    expect(orphans).toEqual([{ id: "NOPE", event: "retired", at: "2026-01-01" }])
+  })
+
+  test("what is on the books at a date is what was bought by then and not yet scrapped", () => {
+    const { assets } = registerFrom(readEvents(log).events)
+    expect(inUseAt(assets, "2026-03-31").length).toBe(0)
+    expect(inUseAt(assets, "2027-03-31").length).toBe(1)
+    expect(inUseAt(assets, "2029-03-31").length).toBe(0)
+  })
+
+  test("an event written out and read back is the same event", () => {
+    const written = readEvents(log).events
+    expect(readEvents(written.map(asLine).join("\n")).events).toEqual(written)
+  })
+
+  test("a correction is written flat, the way an acquisition is", () => {
+    const [, correction] = readEvents(log).events
+    expect(correction === undefined ? "" : asLine(correction)).toContain('"usefulLife":5')
+    expect(correction === undefined ? "" : asLine(correction)).not.toContain("changes")
+  })
+
+  test("adding to the file only ever adds", () => {
+    const grown = appended(log, readEvents(JSON.stringify({ ...bought, id: "SRV-2026-002" })).events)
+    expect(grown.startsWith(log)).toBe(true)
+    expect(readEvents(grown).events.length).toBe(4)
+    expect(appended("", [])).toBe("")
   })
 })
 
