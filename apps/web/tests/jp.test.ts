@@ -15,6 +15,16 @@ import {
 import { normalize } from "~/editions/jp/consumption-tax/normalize"
 import { summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
 import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
+import {
+  declarationsIn,
+  declaredAcross,
+  declaringAccount,
+  declaringAccounts,
+  tagsIn,
+} from "~/editions/jp/chart/directives"
+import { placementOf, sectionIn, upwards } from "~/editions/jp/chart/mapping"
+import { PRESET, ROOTS, notYetDeclared, tagsFor } from "~/editions/jp/chart/preset"
+import { isSection } from "~/editions/jp/chart/sections"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -341,6 +351,164 @@ describe("what each band of the consumption tax came to", () => {
     expect(empty.bands.length).toBe(RULES.bands.length)
     expect(empty.bands.every((one) => isZero(one.total))).toBe(true)
     expect(empty.entries).toBe(0)
+  })
+})
+
+describe("the account directives a journal carries", () => {
+  const journal = [
+    "; 帳簿",
+    "",
+    "account 費用  ; type:X, jp:sga",
+    "account 費用:通信費",
+    "    ; type:X",
+    "    ; jp:sga",
+    "account 資産 その他  ; type:A",
+    "",
+    "2026-09-01 何か",
+    "    費用:通信費  1100",
+    "    資産:現金",
+  ].join("\n")
+
+  test("tags are read from behind the line and from under it alike", () => {
+    const found = declarationsIn(journal)
+    expect(found.map((one) => one.account)).toEqual(["費用", "費用:通信費", "資産 その他"])
+    expect(found[1]?.tags).toEqual([
+      ["type", "X"],
+      ["jp", "sga"],
+    ])
+    expect(found[1]?.lines).toBe(3)
+  })
+
+  test("an account name may hold a space, and ends where the comment does", () => {
+    expect(declarationsIn(journal)[2]?.account).toBe("資産 その他")
+  })
+
+  test("a colon inside prose is not a tag", () => {
+    expect(tagsIn(" see the note at 10:30")).toEqual([])
+    expect(tagsIn(" type:A, jp:current-assets")).toEqual([
+      ["type", "A"],
+      ["jp", "current-assets"],
+    ])
+  })
+
+  test("declaring an account that is already declared replaces it where it stands", () => {
+    const written = declaringAccount(journal, "費用:通信費", [
+      ["type", "X"],
+      ["jp", "cost-of-sales"],
+    ])
+    expect(declarationsIn(written).map((one) => one.account)).toEqual([
+      "費用",
+      "費用:通信費",
+      "資産 その他",
+    ])
+    expect(written).toContain("account 費用:通信費  ; type:X, jp:cost-of-sales")
+    // The three lines it took became one, and nothing below it moved.
+    expect(written).toContain("2026-09-01 何か")
+    expect(written.split("\n").filter((line) => line.trim() === "; jp:sga")).toEqual([])
+  })
+
+  test("one that is not declared is added at the end, where it cannot displace the title", () => {
+    const written = declaringAccount(journal, "資産:現金", [["type", "A"]])
+    expect(written.split("\n")[0]).toBe("; 帳簿")
+    expect(written.trimEnd().endsWith("account 資産:現金  ; type:A")).toBe(true)
+  })
+})
+
+describe("which line of a Japanese statement an account is printed on", () => {
+  const declared = declaredAcross({
+    "main.journal": [
+      "account 費用  ; type:X, jp:sga",
+      "account 費用:仕入高  ; type:X, jp:cost-of-sales",
+      "account 収益  ; type:R, jp:revenue",
+      "account 資産:雑  ; type:A, jp:nowhere-in-particular",
+    ].join("\n"),
+  })
+  const types = { "費用:通信費": "Expense", "資産:普通預金": "Asset", "資産:雑": "Asset" } as const
+
+  test("the nearest declaration wins, so a branch can be placed once", () => {
+    expect(placementOf("費用:通信費", declared, types)).toEqual({
+      is: "declared",
+      section: "sga",
+      from: "費用",
+    })
+  })
+
+  test("and a child can still be moved out of its branch", () => {
+    expect(placementOf("費用:仕入高", declared, types)).toEqual({
+      is: "declared",
+      section: "cost-of-sales",
+      from: "費用:仕入高",
+    })
+  })
+
+  test("where nothing says, what hledger takes it to be is assumed and marked as assumed", () => {
+    expect(placementOf("資産:普通預金", declared, types)).toEqual({
+      is: "assumed",
+      section: "current-assets",
+      from: "Asset",
+    })
+  })
+
+  test("where nothing says and hledger could not place it either, nothing is claimed", () => {
+    expect(placementOf("なにか:へん", declared, {})).toEqual({ is: "unplaceable" })
+  })
+
+  test("a heading nobody recognises is reported rather than assumed away", () => {
+    expect(placementOf("資産:雑", declared, types)).toEqual({
+      is: "unrecognised",
+      said: "nowhere-in-particular",
+    })
+    expect(sectionIn(placementOf("資産:雑", declared, types))).toBeUndefined()
+  })
+
+  test("an account and everything it hangs under, nearest first", () => {
+    expect(upwards("費用:旅費交通費:電車")).toEqual([
+      "費用:旅費交通費:電車",
+      "費用:旅費交通費",
+      "費用",
+    ])
+  })
+})
+
+describe("the chart a Japanese company could start from", () => {
+  test("every offered account says both what it is and where it prints", () => {
+    PRESET.forEach((one) => {
+      const tags = tagsFor(one)
+      expect(tags.map(([name]) => name)).toEqual(["type", "jp"])
+      expect(isSection(tags[1]?.[1] ?? "")).toBe(true)
+    })
+  })
+
+  test("the five names every chart hangs from come first", () => {
+    expect(PRESET.slice(0, ROOTS.length).map((one) => one.account)).toEqual([
+      "資産",
+      "負債",
+      "純資産",
+      "収益",
+      "費用",
+    ])
+  })
+
+  test("no account is offered twice", () => {
+    const names = PRESET.map((one) => one.account)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
+  test("what a journal already declares is not offered again", () => {
+    const declared = declaredAcross({ "main.journal": "account 資産:現金  ; type:A" })
+    const left = notYetDeclared(PRESET, declared).map((one) => one.account)
+    expect(left).not.toContain("資産:現金")
+    expect(left).toContain("資産:普通預金")
+  })
+
+  test("taking it writes ordinary hledger somebody could have typed", () => {
+    const written = declaringAccounts(
+      "; 帳簿\n",
+      PRESET.slice(0, 2).map((one) => ({ account: one.account, tags: tagsFor(one) })),
+    )
+    expect(written).toContain("account 資産  ; type:A, jp:current-assets")
+    expect(written).toContain("account 負債  ; type:L, jp:current-liabilities")
+    expect(declarationsIn(written).length).toBe(2)
   })
 })
 
