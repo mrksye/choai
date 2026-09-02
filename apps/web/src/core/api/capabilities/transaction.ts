@@ -26,6 +26,7 @@ export interface Written {
   readonly postings: readonly {
     readonly account: string
     readonly amount?: string
+    readonly tags?: readonly { readonly name: string; readonly value: string }[]
   }[]
 }
 
@@ -44,8 +45,20 @@ export interface Dropped {
 const tagsOf = (given: Written["tags"]): readonly Tag[] =>
   (given ?? []).map((tag) => ({ name: tag.name, value: tag.value }))
 
+/**
+ * A posting's own tags travel too, not only the entry's.
+ *
+ * hledger reads them apart and a query can ask for either, so anything that
+ * belongs to one line rather than to the whole entry has to be writable on that
+ * line — a jurisdiction's classification of one figure among several is exactly
+ * that, and it was unwritable from here while the compose panel could write it.
+ */
 const postingsOf = (given: Written["postings"]): readonly DraftPosting[] =>
-  given.map((posting) => ({ account: posting.account, amount: posting.amount ?? "", tags: [] }))
+  given.map((posting) => ({
+    account: posting.account,
+    amount: posting.amount ?? "",
+    tags: tagsOf(posting.tags),
+  }))
 
 const draftOf = (given: Written): Draft => ({
   date: given.date,

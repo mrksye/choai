@@ -30,12 +30,29 @@ export interface Amount {
 /** One amount per commodity; empty means a zero balance. */
 export type MixedAmount = readonly Amount[]
 
+/**
+ * A tag as hledger holds one: a name and a value, in that order.
+ *
+ * A pair rather than an object because that is what arrives — hledger's `Tag`
+ * is `(TagName, TagValue)` and aeson writes a tuple as an array. A tag with
+ * nothing after the colon has an empty value rather than none.
+ */
+export type Tag = readonly [name: string, value: string]
+
 export interface Posting {
   readonly paccount: string
   readonly pamount: MixedAmount
   readonly pcomment: string
   readonly pdate: string | null
   readonly pstatus: string
+  /**
+   * This posting's own tags, as hledger read them out of its comment.
+   *
+   * The entry's tags are not among them. hledger lets a query match a posting
+   * on either, but the two are kept apart in the data, so anything reading a
+   * posting's tags on its own has to look at `ttags` as well.
+   */
+  readonly ptags: readonly Tag[]
 }
 
 /**
@@ -57,6 +74,8 @@ export interface Transaction {
   readonly tdate: string
   readonly tdescription: string
   readonly tcomment: string
+  /** The entry's own tags, which every posting under it is also matched on. */
+  readonly ttags: readonly Tag[]
   readonly tpostings: readonly Posting[]
 }
 

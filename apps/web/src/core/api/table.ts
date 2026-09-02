@@ -38,6 +38,12 @@ const POSTING = fields({
       "The amount, with the currency symbol this journal uses — a bare number starts a currency of its own. Leave it out on exactly one posting and hledger works that one out from the rest.",
     ),
   ),
+  tags: spare(
+    listOf(
+      "Tags for this posting alone, as against the whole entry. Use these for anything true of one figure and not the others — a rate applying to one line of a receipt, say. report.entries reads them back in the same shape.",
+      TAG,
+    ),
+  ),
 })
 
 /** What every transaction says, however it is being written. */
