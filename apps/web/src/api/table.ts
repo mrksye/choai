@@ -59,7 +59,7 @@ const SUGGESTED = {
 export const CAPABILITIES = {
   "journal.summary": {
     summary:
-      "What journal is open: its name, its files, how many transactions it holds, every account name in it, and the currencies it is kept in. Call this first — the account names it returns are the ones every other call expects, and the currency is what an amount must be written in.",
+      "What journal is open: its name, its files, how many transactions it holds, every account name in it, and the currencies it is kept in. Call this first — the account names it returns are the ones every other call expects, and the currency is what an amount must be written in. Where defaultCommodity comes back, a figure written with no symbol is read as that one and will be written out carrying it; where it does not, a figure with no symbol is a currency of its own and starts a second set of books by accident.",
     takes: nothing,
     writes: false,
     needsJournal: true,

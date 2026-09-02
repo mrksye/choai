@@ -1,5 +1,5 @@
 import { ask } from "~/hledger/client"
-import type { AccountType } from "~/hledger/wire"
+import type { AccountType, DefaultCommodity } from "~/hledger/wire"
 import { unplaced } from "~/journal/declarations"
 import { journal, type OpenJournal } from "~/journal/store"
 import { Err, Ok, getOrUndefined, type Result } from "~/lib/monad"
@@ -24,6 +24,12 @@ export interface Book {
   readonly transactions: number
   readonly accounts: readonly string[]
   readonly commodities: readonly string[]
+  /**
+   * What a figure written without a symbol is taken to be — the journal's `D`
+   * directive. Absent when there is none, and then a figure without a symbol is
+   * a commodity of its own rather than one of the ones above.
+   */
+  readonly defaultCommodity?: DefaultCommodity
 }
 
 /** What hledger takes each account to be, and which ones it could not place. */
@@ -64,6 +70,9 @@ export const summary = (): Promise<Result<Book, Hitch>> =>
       transactions: open.summary.transactions,
       accounts: open.summary.accounts,
       commodities: open.summary.commodities,
+      ...(open.summary.defaultCommodity === undefined
+        ? {}
+        : { defaultCommodity: open.summary.defaultCommodity }),
     }),
   )
 

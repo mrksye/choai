@@ -1,10 +1,10 @@
 import { commitDraft } from "~/compose/commit"
 import { draftToJournal, whatIsMissing, type Draft, type DraftPosting, type Tag } from "~/compose/draft"
 import { ask } from "~/hledger/client"
-import type { Transaction } from "~/hledger/wire"
+import type { DefaultCommodity, Transaction } from "~/hledger/wire"
 import { spanOf, textAt } from "~/journal/lines"
 import { propose, textOf, type Item, type Proposal } from "~/journal/proposals"
-import type { OpenJournal } from "~/journal/store"
+import { declaredCommodity, type OpenJournal } from "~/journal/store"
 import { Err, Ok, type Result } from "~/lib/monad"
 import { fromHledger, fromRefusal, type Hitch } from "../hitch"
 import { withJournal } from "./journal"
@@ -70,7 +70,10 @@ export const create = (args: Written): Promise<Result<Kept, Hitch>> =>
 
     const done = await commitDraft(draft)
     return done.ok
-      ? Ok({ transactions: done.value.summary.transactions, written: draftToJournal(draft) })
+      ? Ok({
+          transactions: done.value.summary.transactions,
+          written: draftToJournal(draft, done.value.summary.defaultCommodity),
+        })
       : Err({ at: "hledger", trouble: done.error })
   })
 
@@ -92,12 +95,12 @@ export interface OfferedAll {
   readonly saidWhat?: string
 }
 
-export const shapeOf = (proposal: Proposal): OfferedAll => ({
+export const shapeOf = (proposal: Proposal, declared: DefaultCommodity | undefined): OfferedAll => ({
   id: proposal.id,
   items: proposal.items.map((item, at) => ({
     at,
     is: item.is,
-    text: textOf(item),
+    text: textOf(item, declared),
     confidence: item.confidence,
     ...(item.why === undefined ? {} : { why: item.why }),
     missing: item.is === "add" ? whatIsMissing(item.draft) : [],
@@ -183,5 +186,5 @@ export const offer = (args: {
     ]
 
     const made = await propose(items, args.into)
-    return made.ok ? Ok(shapeOf(made.value)) : Err(fromRefusal(made.error))
+    return made.ok ? Ok(shapeOf(made.value, declaredCommodity())) : Err(fromRefusal(made.error))
   })

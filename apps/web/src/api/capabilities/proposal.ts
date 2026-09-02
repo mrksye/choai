@@ -1,4 +1,5 @@
 import { apply as applyProposal, drop as dropProposal, proposals, show } from "~/journal/proposals"
+import { declaredCommodity } from "~/journal/store"
 import { Err, Ok, type Result } from "~/lib/monad"
 import { fromRefusal, type Hitch } from "../hitch"
 import { shapeOf, type OfferedAll } from "./transaction"
@@ -14,11 +15,13 @@ import { shapeOf, type OfferedAll } from "./transaction"
  */
 
 export const list = async (): Promise<Result<readonly OfferedAll[], Hitch>> =>
-  Ok(proposals().map(shapeOf))
+  Ok(proposals().map((one) => shapeOf(one, declaredCommodity())))
 
 export const look = async (args: { readonly id: string }): Promise<Result<OfferedAll, Hitch>> => {
   const found = show(args.id)
-  return found === undefined ? Err({ at: "no-such-proposal", id: args.id }) : Ok(shapeOf(found))
+  return found === undefined
+    ? Err({ at: "no-such-proposal", id: args.id })
+    : Ok(shapeOf(found, declaredCommodity()))
 }
 
 /** What the journal came to. */

@@ -1,6 +1,6 @@
 import { createRoot, createSignal, type Accessor } from "solid-js"
 
-import type { JournalSummary, Trouble } from "~/hledger/wire"
+import type { DefaultCommodity, JournalSummary, Trouble } from "~/hledger/wire"
 import { appendToJournal, draftToJournal, type Draft } from "~/compose/draft"
 import { Err, Ok, getOrUndefined, type Result } from "~/lib/monad"
 import { replaceAt, type Span } from "./lines"
@@ -166,6 +166,7 @@ export const filesOf = (
   proposal: Proposal,
   from: Readonly<Record<string, string>>,
   entry: string,
+  declared: DefaultCommodity | undefined,
   how: Taking = {},
 ): Readonly<Record<string, string>> => {
   const picked = chosen(proposal, how.only)
@@ -184,13 +185,16 @@ export const filesOf = (
     ? afterRemovals
     : {
         ...afterRemovals,
-        [entry]: adding.reduce((text, draft) => appendToJournal(text, draft), afterRemovals[entry] ?? ""),
+        [entry]: adding.reduce(
+          (text, draft) => appendToJournal(text, draft, declared),
+          afterRemovals[entry] ?? "",
+        ),
       }
 }
 
 /** What one item reads as: the entry going in, or the lines coming out. */
-export const textOf = (item: Item): string =>
-  item.is === "add" ? draftToJournal(item.draft) : item.was
+export const textOf = (item: Item, declared: DefaultCommodity | undefined): string =>
+  item.is === "add" ? draftToJournal(item.draft, declared) : item.was
 
 /**
  * Write these down without keeping them, and say whether they read.
@@ -242,7 +246,10 @@ export const propose = async (
     reads: Ok({ transactions: 0, accounts: [], commodities: [] }),
   }
 
-  const candidate = { ...open.source.files, ...filesOf(made, open.source.files, entry) }
+  const candidate = {
+    ...open.source.files,
+    ...filesOf(made, open.source.files, entry, open.summary.defaultCommodity),
+  }
   const read = await tryOut(candidate, open.source.entry)
   const proposal: Proposal = { ...made, reads: read }
 
@@ -281,7 +288,9 @@ export const apply = async (
   )
   if (moved) return Err({ at: "stale-proposal", id })
 
-  const written = await rewriteFiles(filesOf(proposal, open.source.files, entryPath(open), how))
+  const written = await rewriteFiles(
+    filesOf(proposal, open.source.files, entryPath(open), open.summary.defaultCommodity, how),
+  )
   if (!written.ok) return Err({ at: "hledger", trouble: written.error })
 
   drop(id)

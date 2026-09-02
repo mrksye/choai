@@ -5,7 +5,14 @@
  * writes, and hledger is what decides what they mean — turning them into numbers
  * here would mean deciding about currency symbols and digit groups ourselves,
  * and then deciding again, differently, when writing them back out.
+ *
+ * The journal's declared default commodity is the one thing added to them, and
+ * only to a figure that names no commodity at all. `compose/commodity.ts` says
+ * why that decides nothing.
  */
+
+import type { DefaultCommodity } from "~/hledger/wire"
+import { asWritten } from "./commodity"
 
 /** A name and a value, as hledger reads them out of a comment. */
 export interface Tag {
@@ -122,17 +129,17 @@ const withTags = (line: string, tags: readonly Tag[]): readonly string[] => {
  * An amount left empty is written as an account on its own, which is how a
  * journal says "work this one out from the others".
  */
-export const draftToJournal = (draft: Draft): string =>
+export const draftToJournal = (draft: Draft, declared?: DefaultCommodity): string =>
   [
     ...withTags(`${draft.date.trim()} ${describe(draft)}`, draft.tags),
-    ...written(draft).flatMap(postingLines),
+    ...written(draft).flatMap((posting) => postingLines(posting, declared)),
   ].join("\n") + "\n"
 
-const postingLines = (posting: DraftPosting): readonly string[] =>
-  withTags(`${INDENT}${posting.account.trim()}${amountPart(posting)}`, posting.tags)
+const postingLines = (posting: DraftPosting, declared: DefaultCommodity | undefined): readonly string[] =>
+  withTags(`${INDENT}${posting.account.trim()}${amountPart(posting, declared)}`, posting.tags)
 
-const amountPart = (posting: DraftPosting): string =>
-  posting.amount.trim() === "" ? "" : `  ${posting.amount.trim()}`
+const amountPart = (posting: DraftPosting, declared: DefaultCommodity | undefined): string =>
+  posting.amount.trim() === "" ? "" : `  ${asWritten(posting.amount, declared)}`
 
 /**
  * Add the draft to the end of a journal.
@@ -141,5 +148,5 @@ const amountPart = (posting: DraftPosting): string =>
  * is text somebody wrote by hand and keeps in version control; reformatting it
  * would spread a diff across the whole thing for the sake of one new entry.
  */
-export const appendToJournal = (journal: string, draft: Draft): string =>
-  `${journal.replace(/\s*$/, "")}\n\n${draftToJournal(draft)}`
+export const appendToJournal = (journal: string, draft: Draft, declared?: DefaultCommodity): string =>
+  `${journal.replace(/\s*$/, "")}\n\n${draftToJournal(draft, declared)}`

@@ -1,6 +1,13 @@
 import type { Trouble } from "~/hledger/wire"
 import { replaceAt, type Span } from "~/journal/lines"
-import { appendToEntry, entryText, journal, rewriteFile, type OpenJournal } from "~/journal/store"
+import {
+  appendToEntry,
+  declaredCommodity,
+  entryText,
+  journal,
+  rewriteFile,
+  type OpenJournal,
+} from "~/journal/store"
 import { Err, getOrUndefined, type Result } from "~/lib/monad"
 import { appendToJournal, type Draft } from "./draft"
 
@@ -17,7 +24,7 @@ import { appendToJournal, type Draft } from "./draft"
 export const commitDraft = async (draft: Draft): Promise<Result<OpenJournal, Trouble>> => {
   const text = entryText()
   if (text === undefined) return Err({ kind: "no-journal" })
-  return appendToEntry(appendToJournal(text, draft))
+  return appendToEntry(appendToJournal(text, draft, declaredCommodity()))
 }
 
 /** Put an entry's lines back, or take it out by writing nothing in their place. */

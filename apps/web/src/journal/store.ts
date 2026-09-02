@@ -2,7 +2,7 @@ import { createRoot, createSignal, type Accessor } from "solid-js"
 
 import { openJournal } from "~/hledger/client"
 import { missingFile } from "~/hledger/diagnose"
-import type { JournalSummary, Trouble } from "~/hledger/wire"
+import type { DefaultCommodity, JournalSummary, Trouble } from "~/hledger/wire"
 import { deferred } from "~/lib/deferred"
 import { readText } from "~/lib/text"
 import { createTask } from "~/lib/pending"
@@ -423,6 +423,17 @@ export const entryText = (): string | undefined => {
   const current = getOrUndefined(opened())
   return current === undefined ? undefined : current.source.files[entryName(current.source)]
 }
+
+/**
+ * The commodity this journal writes a bare figure in, if it declares one.
+ *
+ * Asked of the open journal rather than passed from screen to screen, because
+ * every road to the file — a panel, a proposal, a capability with no screen at
+ * all — has to write the same figure, and the journal is the one thing all of
+ * them already have.
+ */
+export const declaredCommodity = (): DefaultCommodity | undefined =>
+  getOrUndefined(opened())?.summary.defaultCommodity
 
 /** Open the journal that ships with the app, so a first visit has something to look at. */
 export const openDemo = (): Promise<Result<OpenJournal, Trouble>> => {

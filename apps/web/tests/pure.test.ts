@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import { amountExample } from "~/compose/hint"
+import { asWritten, ghostOf, isBare } from "~/compose/commodity"
 import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/compose/draft"
 import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/lib/monad/shape"
 import { looksTabular, rowsOf } from "~/lib/csv"
@@ -70,10 +71,60 @@ describe("the text a draft becomes", () => {
     )
   })
 
+  test("a bare figure is written in the commodity the journal declares", () => {
+    const bare = {
+      ...draft,
+      tags: [],
+      postings: [
+        { account: "expenses:food", amount: "1200", tags: [] },
+        { account: "assets:cash", amount: "$12.00", tags: [] },
+      ],
+    }
+    expect(draftToJournal(bare, { symbol: "¥", side: "left", spaced: false })).toBe(
+      "2026-08-16 Shop\n    expenses:food  ¥1200\n    assets:cash  $12.00\n",
+    )
+  })
+
   test("no tags leaves no comment behind", () => {
     expect(draftToJournal({ ...draft, tags: [], postings: draft.postings.map((p) => ({ ...p, tags: [] })) })).toBe(
       "2026-08-16 Shop\n    expenses:food  $12.00\n    assets:cash\n",
     )
+  })
+})
+
+describe("the commodity a bare figure is written in", () => {
+  const yen = { symbol: "¥", side: "left", spaced: false } as const
+  const euro = { symbol: "EUR", side: "right", spaced: true } as const
+
+  test("a figure is bare when nothing in it names a commodity", () => {
+    expect(isBare("1200")).toBe(true)
+    expect(isBare("-1,200.00")).toBe(true)
+    expect(isBare("1 200")).toBe(true)
+    expect(isBare("¥1200")).toBe(false)
+    expect(isBare("1200 JPY")).toBe(false)
+    expect(isBare("")).toBe(false)
+  })
+
+  test("the symbol goes where hledger would have put it", () => {
+    expect(asWritten("1200", yen)).toBe("¥1200")
+    expect(asWritten("-1200", yen)).toBe("¥-1200")
+    expect(asWritten("1200", euro)).toBe("1200 EUR")
+  })
+
+  test("a symbol that was typed is the one that is written", () => {
+    expect(asWritten("$50", yen)).toBe("$50")
+    expect(asWritten("1200 JPY", yen)).toBe("1200 JPY")
+  })
+
+  test("with nothing declared, nothing is added", () => {
+    expect(asWritten("1200", undefined)).toBe("1200")
+  })
+
+  test("the ghost stands down as soon as a commodity is typed", () => {
+    expect(ghostOf("", yen)).toBe(yen)
+    expect(ghostOf("1200", yen)).toBe(yen)
+    expect(ghostOf("$50", yen)).toBeUndefined()
+    expect(ghostOf("1200", undefined)).toBeUndefined()
   })
 })
 

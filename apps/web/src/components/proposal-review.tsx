@@ -13,6 +13,7 @@ import {
   type Proposal,
   type Refusal,
 } from "~/journal/proposals"
+import { declaredCommodity } from "~/journal/store"
 import { allOf, anchorAfter, noneOf, tickedBy } from "~/journal/ticking"
 import { t } from "~/i18n"
 
@@ -146,7 +147,7 @@ function One(props: { proposal: Proposal }): JSX.Element {
                     class="overflow-x-auto whitespace-pre text-xs"
                     classList={{ "text-destructive line-through": item.is === "remove" }}
                   >
-                    {textOf(item)}
+                    {textOf(item, declaredCommodity())}
                   </pre>
                   <Show when={item.is === "remove"}>
                     <span class="text-xs text-destructive">{t("propose.taken")}</span>
