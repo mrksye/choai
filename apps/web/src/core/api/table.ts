@@ -198,7 +198,7 @@ const CORE = {
 
   "transaction.propose": {
     summary:
-      "Offer changes to the journal without making them, and find out whether hledger reads the result. This is how to write an entry and how to take one out: offer it, see what comes back, then call proposal.apply. Offer everything you mean to change in one call rather than one at a time — the whole journal is re-read per call, so a hundred calls is a hundred re-reads. Say how sure you are of each with confidence, so the doubtful ones can be picked out. To correct an entry, remove it and add the corrected one in the same call: both are shown together and kept together. If a statement is longer than you can write out in one reply, offer what fits and then give `into` on the calls after it: they add to the same proposal rather than making more of them, and the reader is asked once about the lot.",
+      "Offer changes to the journal without making them, and find out whether hledger reads the result. This is how to write an entry, how to take one out, and how to classify one that is already there: offer it, see what comes back, then call proposal.apply. Offer everything you mean to change in one call rather than one at a time — the whole journal is re-read per call, so a hundred calls is a hundred re-reads. Say how sure you are of each with confidence, so the doubtful ones can be picked out. To correct an entry, remove it and add the corrected one in the same call: both are shown together and kept together. To classify entries that are already right — a tax treatment, a reference, anything the books mark entries with — use `tag` rather than remove-and-add, however many there are: it changes one comment per entry and leaves everything else exactly as somebody wrote it. If a statement is longer than you can write out in one reply, offer what fits and then give `into` on the calls after it: they add to the same proposal rather than making more of them, and the reader is asked once about the lot.",
     takes: fields({
       transactions: spare(listOf("Transactions to write, in the order they should appear.", fields(SUGGESTED))),
       remove: spare(
@@ -208,6 +208,26 @@ const CORE = {
             index: digits("The entry's index, as report.entries reported it."),
             confidence: spare(digits("How sure you are, from 0 to 1.")),
             why: spare(text("Why it should go, in a phrase.")),
+          }),
+        ),
+      ),
+      tag: spare(
+        listOf(
+          "Tags to put on entries that are already in the journal, by the index report.entries gave them. This is how an entry is classified after the fact — never by removing it and writing it again, which loses its status mark, its balance assertions, any date on a posting and any comment somebody wrote on it. Only the one comment the tag goes in changes; a tag already there is given its new value rather than written twice.",
+          fields({
+            index: digits("The entry's index, as report.entries reported it."),
+            tags: spare(listOf("Tags for the entry as a whole.", TAG)),
+            postings: spare(
+              listOf(
+                "Tags for one posting rather than for the entry. Use these for anything true of one figure and not the others.",
+                fields({
+                  at: digits("Which posting, counted from zero in the order report.entries gives them."),
+                  tags: listOf("Tags for that posting.", TAG),
+                }),
+              ),
+            ),
+            confidence: spare(digits("How sure you are, from 0 to 1.")),
+            why: spare(text("Why this classification, in a phrase.")),
           }),
         ),
       ),

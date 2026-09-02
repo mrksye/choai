@@ -3,6 +3,7 @@ import { draftToJournal, whatIsMissing, type Draft, type DraftPosting, type Tag 
 import { ask } from "~/core/hledger/client"
 import type { DefaultCommodity, Transaction } from "~/core/hledger/wire"
 import { spanOf, textAt } from "~/core/journal/lines"
+import { withTags } from "~/core/journal/tagging"
 import { propose, textOf, type Item, type Proposal } from "~/core/journal/proposals"
 import { declaredCommodity, type OpenJournal } from "~/core/journal/store"
 import { Err, Ok, type Result } from "~/core/lib/monad"
@@ -38,6 +39,32 @@ export interface Suggested extends Written {
 /** One entry to take out, named the way report.entries names it. */
 export interface Dropped {
   readonly index: number
+  readonly confidence?: number
+  readonly why?: string
+}
+
+/**
+ * Tags to put on an entry that is already in the journal.
+ *
+ * Said as the act it is rather than as the text it becomes. Raw text is the one
+ * thing this API does not take — see `api/install.ts` — so what arrives is which
+ * entry, which posting, and which tags, and the lines are composed here from
+ * what is actually written in the file.
+ *
+ * That is also what makes it safe. The alternative, and what something without
+ * this would have to do, is remove the entry and write it again from a report:
+ * which loses the status mark, the posting's own date, the balance assertion and
+ * the sentence after the amount, because a `Draft` holds none of them.
+ */
+export interface Tagged {
+  readonly index: number
+  /** Tags for the entry as a whole. */
+  readonly tags?: readonly { readonly name: string; readonly value: string }[]
+  /** Tags for one posting, counted from zero in the order report.entries gives them. */
+  readonly postings?: readonly {
+    readonly at: number
+    readonly tags: readonly { readonly name: string; readonly value: string }[]
+  }[]
   readonly confidence?: number
   readonly why?: string
 }
@@ -93,7 +120,7 @@ export const create = (args: Written): Promise<Result<Kept, Hitch>> =>
 /** One change of a proposal, as it will read and as sure as it was written. */
 export interface Offered {
   readonly at: number
-  readonly is: "add" | "remove"
+  readonly is: Item["is"]
   readonly text: string
   readonly confidence: number
   readonly why?: string
@@ -175,21 +202,70 @@ const removalsFor = (
     ]
   })
 
+/**
+ * The rewrites a set of tagging requests comes to.
+ *
+ * An entry whose lines the tags could not be put on — a posting index past the
+ * end of it — produces nothing rather than a guess, and the index comes back as
+ * one that was not found. Putting the tag on whatever line happened to be next
+ * is the failure that would be hardest to see afterwards.
+ */
+const rewritesFor = (
+  open: OpenJournal,
+  wanted: readonly Tagged[],
+  found: ReadonlyMap<number, Transaction>,
+): readonly Item[] =>
+  wanted.flatMap((one) => {
+    const transaction = found.get(one.index)
+    if (transaction === undefined) return []
+
+    const at = spanOf(transaction.tsourcepos)
+    const file = open.source.files[at.path]
+    if (file === undefined) return []
+
+    const was = textAt(file, at)
+    const text = withTags(was, [
+      ...tagsOf(one.tags).map((tag) => ({ where: { on: "entry" } as const, tag })),
+      ...(one.postings ?? []).flatMap((posting) =>
+        tagsOf(posting.tags).map((tag) => ({
+          where: { on: "posting", at: posting.at } as const,
+          tag,
+        })),
+      ),
+    ])
+    if (text === undefined || text === was) return []
+
+    return [
+      {
+        is: "rewrite" as const,
+        at,
+        was,
+        text,
+        confidence: one.confidence ?? 1,
+        ...(one.why === undefined ? {} : { why: one.why }),
+      },
+    ]
+  })
+
 export const offer = (args: {
   readonly transactions?: readonly Suggested[]
   readonly remove?: readonly Dropped[]
+  readonly tag?: readonly Tagged[]
   readonly into?: string
 }): Promise<Result<OfferedAll, Hitch>> =>
   withJournal(async (open) => {
     const dropped = args.remove ?? []
-    const found = dropped.length === 0 ? Ok(new Map()) : await entriesAt(open, dropped.map((one) => one.index))
+    const tagging = args.tag ?? []
+    const wanted = [...dropped.map((one) => one.index), ...tagging.map((one) => one.index)]
+    const found = wanted.length === 0 ? Ok(new Map()) : await entriesAt(open, wanted)
     if (!found.ok) return found
 
-    const missing = dropped.filter((one) => !found.value.has(one.index)).map((one) => one.index)
-    if (missing.length > 0) return Err({ at: "no-such-entry", indexes: missing })
+    const missing = wanted.filter((index) => !found.value.has(index))
+    if (missing.length > 0) return Err({ at: "no-such-entry", indexes: [...new Set(missing)] })
 
     const items: readonly Item[] = [
       ...removalsFor(open, dropped, found.value),
+      ...rewritesFor(open, tagging, found.value),
       ...(args.transactions ?? []).map((one) => ({
         is: "add" as const,
         draft: draftOf(one),

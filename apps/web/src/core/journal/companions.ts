@@ -33,7 +33,10 @@
  */
 const DECLARED = /^\s*[;#*]\s*choai-file\s*:\s*(.+?)\s*$/
 
-const NAME = "choai-file"
+/** The tag a declaration is written with, exported so a composer can write one. */
+export const COMPANION = "choai-file"
+
+const NAME = COMPANION
 
 /**
  * A path a companion may have: beside the journal, and no further.

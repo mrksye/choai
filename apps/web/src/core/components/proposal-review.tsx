@@ -162,6 +162,17 @@ function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
               }}
             />
             <span class="flex min-w-0 flex-1 flex-col gap-1">
+              {/* A rewrite is the one that has two texts. Showing only what it
+                  would become would be asking somebody to agree to a change
+                  without the thing it changes, which is the whole of what a
+                  proposal is for. */}
+              <Show when={item.is === "rewrite" && item.was}>
+                {(was) => (
+                  <pre class="overflow-x-auto whitespace-pre text-xs text-muted-foreground line-through">
+                    {was()}
+                  </pre>
+                )}
+              </Show>
               {/* A removal is shown as the lines that would go, struck
                   through: the entry itself, not a number naming it. */}
               <pre
@@ -172,6 +183,13 @@ function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
               </pre>
               <Show when={item.is === "remove"}>
                 <span class="text-xs text-destructive">{t("propose.taken")}</span>
+              </Show>
+              <Show when={item.is === "append" && item.path}>
+                {(path) => (
+                  <span class="text-xs text-muted-foreground">
+                    {t("propose.added", { path: path() })}
+                  </span>
+                )}
               </Show>
               <Show when={item.confidence < SURE}>
                 <span class="text-xs text-muted-foreground">

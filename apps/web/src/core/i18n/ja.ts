@@ -78,6 +78,7 @@ export const ja: Dictionary = {
     counted: "自信あり {{ sure }} 件、要確認 {{ unsure }} 件",
     worthALook: "要確認",
     taken: "これは帳簿から取り除かれます。",
+    added: "{{ path }} に追記されます。",
     doesNotRead: "このままでは hledger が読めないため、どれも帳簿に入れられません。",
     keep: "{{ count }} 件を帳簿に追加",
     onlySure: "自信のある分だけ選ぶ",
