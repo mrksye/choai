@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "test": "bun test tests",
     "e2e": "playwright test",
-    "e2e:jp": "CHOAI_EDITION=jp playwright test e2e/jp.spec.ts"
+    "e2e:jp": "CHOAI_EDITION=jp playwright test"
   },
   "dependencies": {
     "@bjorn3/browser_wasi_shim": "^0.4.2",

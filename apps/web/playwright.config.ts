@@ -11,8 +11,20 @@ import { defineConfig } from "@playwright/test"
  * updates itself, which is right for someone keeping books on a phone and wrong
  * here, where it can reload the page from under a run.
  */
+/**
+ * Which suite runs is which edition is being tested.
+ *
+ * `jp.spec.ts` asserts it is looking at a Japan build, so running it against the
+ * default one would fail for a reason that says nothing about the code. The
+ * server takes its edition from the same variable the build does, so one rule
+ * settles both: the edition under test decides what is under test.
+ */
+const EDITION = process.env.CHOAI_EDITION ?? "global"
+const JAPAN_ONLY = "**/jp.spec.ts"
+
 export default defineConfig({
   testDir: "./e2e",
+  ...(EDITION === "jp" ? { testMatch: [JAPAN_ONLY] } : { testIgnore: [JAPAN_ONLY] }),
   fullyParallel: false,
   use: { baseURL: "http://localhost:8396" },
   webServer: {

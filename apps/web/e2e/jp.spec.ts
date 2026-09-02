@@ -21,6 +21,10 @@ declare global {
  *
  *     bun run e2e:jp
  *
+ * `playwright.config.ts` runs this file only under `CHOAI_EDITION=jp`, and the
+ * rest only when it is not set: the edition under test decides what is under
+ * test, so neither suite can be pointed at the build it does not describe.
+ *
  * Everything is driven through `window.choai`, the way core's own suite drives
  * it — a capability an edition adds is reachable by name exactly as core's are,
  * which is the thing being relied on here as well as the thing being tested.
