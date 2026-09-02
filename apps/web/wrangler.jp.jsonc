@@ -5,6 +5,14 @@
 // the two deployments is not how they are served but what was built: each is
 // `bun run build:<edition>` followed by a deploy of ./dist, and the two never
 // happen in the same working copy at the same time.
+//
+// The dashboard will offer to "keep settings consistent" by writing this
+// worker's name into wrangler.jsonc, and may offer it as a pull request.
+// REFUSE IT. It has found the file named wrangler.jsonc beside this one and
+// compared its name to the worker being looked at; what this deployment
+// actually uses is this file, named on the deploy command as
+// `wrangler deploy -c wrangler.jp.jsonc`. Taking the offer renames the worker
+// that serves choai.dev.
 {
   "name": "choai-jp",
   "compatibility_date": "2026-08-15",
