@@ -43,8 +43,16 @@ const remembered = (): Locale | undefined => {
   }
 }
 
+/**
+ * The first language the browser asks for that we have.
+ *
+ * Read defensively because there is not always a browser: outside one there is
+ * no `navigator.languages`, and asking a list that is not there is a crash at
+ * the moment this module loads — which is every module that says a word. No
+ * list is no preference, which is what `initialLocale` already knows to do with.
+ */
 const preferred = (): Locale | undefined =>
-  navigator.languages.map((tag) => tag.split("-")[0] ?? "").find(isLocale)
+  (globalThis.navigator?.languages ?? []).map((tag) => tag.split("-")[0] ?? "").find(isLocale)
 
 const [locale, setStoredLocale] = createRoot(() => createSignal<Locale>(initialLocale()))
 
