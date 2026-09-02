@@ -1,6 +1,7 @@
 import { createResource, createRoot } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
+import type { AccountType } from "~/core/hledger/wire"
 import { getOrUndefined } from "~/core/lib/monad"
 import { inChartOrder, ofKinds, type Kind } from "./declarations"
 import { journal } from "./store"
@@ -26,6 +27,16 @@ const placings = createRoot(() =>
     },
   ),
 )
+
+/**
+ * What hledger takes each account to be, as far as it has answered.
+ *
+ * The map itself, for anything that needs to ask a question of it other than
+ * what order to put a list in. Empty until hledger has answered, which is the
+ * same answer as "it could place nothing" — and both mean the same thing to
+ * whoever is asking: do not claim to know.
+ */
+export const placingsNow = (): Readonly<Record<string, AccountType>> => placings[0]() ?? {}
 
 /**
  * The open journal's accounts, in the order its chart is read.
