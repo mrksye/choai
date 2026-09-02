@@ -73,16 +73,52 @@ export const statementOf = (section: Section): "balance-sheet" | "income-stateme
   isBalanceSection(section) ? "balance-sheet" : "income-statement"
 
 /**
- * Whether a heading is added or taken away where its statement is totalled.
+ * The headings whose balances are credits, and which read as positive figures.
  *
- * A cost is a subtraction on a Japanese income statement even though it is a
- * debit like any other, and a heading's sign is a fact about the layout rather
- * than about the entries — so it lives here, beside the layout.
+ * A statement is not a trial balance. Liabilities, equity and revenue stand in
+ * the books as credits and are printed on a Japanese statement as amounts owed
+ * and amounts earned — plain positive numbers. Turning them over is a fact about
+ * the layout rather than about the entries, so it lives here beside the layout,
+ * and every heading not named here is printed exactly as the books have it.
  */
-export const SUBTRACTED: readonly Section[] = [
-  "cost-of-sales",
-  "sga",
-  "non-operating-expenses",
-  "extraordinary-losses",
-  "income-taxes",
+export const READ_AS_CREDITS: readonly Section[] = [
+  "current-liabilities",
+  "long-term-liabilities",
+  "shareholders-equity",
+  "valuation-adjustments",
+  "subscription-rights",
+  "revenue",
+  "non-operating-income",
+  "extraordinary-income",
 ]
+
+export const readAsCredit = (section: Section): boolean =>
+  READ_AS_CREDITS.some((one) => one === section)
+
+/**
+ * The running figures a Japanese income statement is read down.
+ *
+ * Each is the one above it, plus some headings and less others. Written as data
+ * rather than as five expressions because the shape of the statement is the
+ * thing being described here, and a reader checking it against a filed set of
+ * accounts should be able to read it as the statement rather than as arithmetic.
+ *
+ * Every figure is taken after the headings above have been read as positive
+ * amounts, which is why 売上原価 subtracts: it is a cost printed as a positive
+ * number and taken away, not a debit added to a credit.
+ */
+export interface RunningTotal {
+  readonly id: "gross-profit" | "operating-income" | "ordinary-income" | "pre-tax-income" | "net-income"
+  readonly adds: readonly IncomeSection[]
+  readonly subtracts: readonly IncomeSection[]
+}
+
+export const RUNNING_TOTALS: readonly RunningTotal[] = [
+  { id: "gross-profit", adds: ["revenue"], subtracts: ["cost-of-sales"] },
+  { id: "operating-income", adds: [], subtracts: ["sga"] },
+  { id: "ordinary-income", adds: ["non-operating-income"], subtracts: ["non-operating-expenses"] },
+  { id: "pre-tax-income", adds: ["extraordinary-income"], subtracts: ["extraordinary-losses"] },
+  { id: "net-income", adds: [], subtracts: ["income-taxes"] },
+]
+
+export type RunningTotalId = RunningTotal["id"]

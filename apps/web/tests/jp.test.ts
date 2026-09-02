@@ -24,7 +24,9 @@ import {
 } from "~/editions/jp/chart/directives"
 import { placementOf, sectionIn, upwards } from "~/editions/jp/chart/mapping"
 import { PRESET, ROOTS, notYetDeclared, tagsFor } from "~/editions/jp/chart/preset"
-import { isSection } from "~/editions/jp/chart/sections"
+import { INCOME_SECTIONS, isSection } from "~/editions/jp/chart/sections"
+import { during, fiscalYearFrom, upTo } from "~/editions/jp/statements/period"
+import { balanceSheetFrom, incomeStatementFrom } from "~/editions/jp/statements/layout"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -509,6 +511,131 @@ describe("the chart a Japanese company could start from", () => {
     expect(written).toContain("account 資産  ; type:A, jp:current-assets")
     expect(written).toContain("account 負債  ; type:L, jp:current-liabilities")
     expect(declarationsIn(written).length).toBe(2)
+  })
+})
+
+describe("the year a Japanese company's statements cover", () => {
+  test("a year beginning in April ends the day before the next April", () => {
+    expect(fiscalYearFrom(2026, 4)).toEqual({ from: "2026-04-01", to: "2027-04-01" })
+    expect(fiscalYearFrom(2026, 1)).toEqual({ from: "2026-01-01", to: "2027-01-01" })
+    expect(fiscalYearFrom(2026, 12)).toEqual({ from: "2026-12-01", to: "2027-12-01" })
+  })
+
+  test("the income statement asks what moved, the balance sheet what stood", () => {
+    const year = fiscalYearFrom(2026, 4)
+    expect(during(year)).toBe("date:2026-04-01..2027-04-01")
+    // From the beginning of the books, not from the beginning of the year: a
+    // balance sheet asked for the year alone shows the change in what is owned.
+    expect(upTo(year)).toBe("date:..2027-04-01")
+  })
+})
+
+describe("a Japanese company's statements, laid out", () => {
+  const row = (account: string, amount: MixedAmount) => ({ prrName: account, prrTotal: amount })
+
+  const declared = declaredAcross({
+    "main.journal": [
+      "account 資産  ; type:A, jp:current-assets",
+      "account 資産:建物  ; type:A, jp:fixed-assets",
+      "account 負債  ; type:L, jp:current-liabilities",
+      "account 純資産  ; type:E, jp:shareholders-equity",
+      "account 収益  ; type:R, jp:revenue",
+      "account 費用  ; type:X, jp:sga",
+      "account 費用:仕入高  ; type:X, jp:cost-of-sales",
+      "account 費用:法人税等  ; type:X, jp:income-taxes",
+    ].join("\n"),
+  })
+
+  test("headings cut across the account tree without counting money twice", () => {
+    // 資産:現金 and 資産:建物 hang off one branch and print on two lines.
+    const sheet = balanceSheetFrom(
+      [
+        row("資産:現金", yen(300000)),
+        row("資産:建物", yen(2000000)),
+        row("負債:買掛金", yen(-500000)),
+        row("純資産:資本金", yen(-1800000)),
+      ],
+      declared,
+      {},
+      "2027-04-01",
+    )
+    const assets = sheet.parts.find((one) => one.part === "assets")
+    expect(formatMixed(assets?.total ?? [])).toBe("¥2300000")
+    expect(
+      assets?.headings.map((one) => [one.section, formatMixed(one.total)]),
+    ).toEqual([
+      ["current-assets", "¥300000"],
+      ["fixed-assets", "¥2000000"],
+      ["deferred-assets", "0"],
+    ])
+  })
+
+  test("what is owed and what is put in are printed as the amounts they are spoken of as", () => {
+    const sheet = balanceSheetFrom(
+      [row("負債:買掛金", yen(-500000)), row("純資産:資本金", yen(-1800000))],
+      declared,
+      {},
+      "2027-04-01",
+    )
+    expect(formatMixed(sheet.parts.find((one) => one.part === "liabilities")?.total ?? [])).toBe("¥500000")
+    expect(formatMixed(sheet.parts.find((one) => one.part === "equity")?.total ?? [])).toBe("¥1800000")
+    // And the figure as the books have it is kept beside it, for checking.
+    const line = sheet.parts.find((one) => one.part === "liabilities")?.headings[0]?.lines[0]
+    expect(formatMixed(line?.recorded ?? [])).toBe("¥-500000")
+  })
+
+  test("an account nobody placed is kept in sight rather than dropped from a total", () => {
+    const sheet = balanceSheetFrom([row("なにか:へん", yen(1234))], declared, {}, "2027-04-01")
+    expect(sheet.unplaced.lines.map((one) => one.account)).toEqual(["なにか:へん"])
+    expect(formatMixed(sheet.unplaced.total)).toBe("¥1234")
+    expect(sheet.parts.every((part) => isZero(part.total))).toBe(true)
+  })
+
+  test("the income statement is read down five figures", () => {
+    const pl = incomeStatementFrom(
+      [
+        row("収益:売上高", yen(-10000000)),
+        row("費用:仕入高", yen(4000000)),
+        row("費用:通信費", yen(1000000)),
+        row("費用:法人税等", yen(1200000)),
+      ],
+      declared,
+      {},
+      "2026-04-01",
+      "2027-04-01",
+    )
+    expect(pl.running.map((one) => [one.id, formatMixed(one.total)])).toEqual([
+      ["gross-profit", "¥6000000"],
+      ["operating-income", "¥5000000"],
+      ["ordinary-income", "¥5000000"],
+      ["pre-tax-income", "¥5000000"],
+      ["net-income", "¥3800000"],
+    ])
+  })
+
+  test("a heading nothing fell under is still a heading, coming to nothing", () => {
+    const pl = incomeStatementFrom([row("収益:売上高", yen(-100))], declared, {}, "a", "b")
+    expect(pl.headings.length).toBe(INCOME_SECTIONS.length)
+    expect(pl.headings.filter((one) => one.lines.length > 0).map((one) => one.section)).toEqual(["revenue"])
+  })
+
+  test("an account that came to nothing is not printed", () => {
+    const pl = incomeStatementFrom(
+      [row("収益:売上高", yen(0)), row("費用:通信費", yen(500))],
+      declared,
+      {},
+      "a",
+      "b",
+    )
+    expect(pl.headings.flatMap((one) => one.lines).map((one) => one.account)).toEqual(["費用:通信費"])
+  })
+
+  test("a balance sheet holds no income accounts and an income statement no balance ones", () => {
+    const rows = [row("資産:現金", yen(100)), row("収益:売上高", yen(-100))]
+    const sheet = balanceSheetFrom(rows, declared, {}, "x")
+    const pl = incomeStatementFrom(rows, declared, {}, "a", "b")
+    expect(sheet.parts.flatMap((p) => p.headings).flatMap((h) => h.lines).map((l) => l.account)).toEqual(["資産:現金"])
+    expect(pl.headings.flatMap((h) => h.lines).map((l) => l.account)).toEqual(["収益:売上高"])
   })
 })
 
