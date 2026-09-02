@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createResource, createSignal, type JSX } from "solid-js"
+import { For, Show, createEffect, createResource, createSignal, on, type JSX } from "solid-js"
 
 import { key, which } from "~/ai/kept"
 import { talkerFor } from "~/ai/talkers"
@@ -19,6 +19,8 @@ import {
 import type { Shown, Spent } from "~/ai/talker"
 import { wording } from "~/components/ai-key-panel"
 import { HitchNote } from "~/components/hitch-note"
+import { ProposalReview } from "~/components/proposal-review"
+import { underReview } from "~/journal/proposals"
 import type { Hitch } from "~/api/hitch"
 import { Button } from "~/components/ui/button"
 import { Ellipsis } from "~/lib/ui/ellipsis"
@@ -103,6 +105,7 @@ export function AiChat(): JSX.Element {
             <Show when={getOrUndefined(askingTrouble())}>
               {(went) => <p class="text-xs text-destructive">{wording(went())}</p>}
             </Show>
+            <Offered />
           </div>
         </Show>
         </Show>
@@ -306,6 +309,42 @@ function One(props: { beat: Beat }): JSX.Element {
         </div>
       )}
     </Show>
+  )
+}
+
+/**
+ * What came of the conversation, at the end of the conversation.
+ *
+ * A proposal used to take the panel, which put the reasoning that produced it
+ * behind the thing it produced: the reader was asked to decide about entries
+ * with no way back to what was said about them. It belongs here — the last
+ * thing in the working, under the words that led to it — and the panel is no
+ * longer something the two of them take turns at.
+ *
+ * Held back while the model is still writing, for the same reason the dock used
+ * to wait: something writing up a statement offers, reads back what it wrote,
+ * thinks better of it and offers again, and the one worth deciding about is the
+ * one it stopped on.
+ *
+ * Brought into view when it arrives, because nothing else here scrolls and a
+ * proposal at the foot of a long conversation would otherwise be a decision
+ * nobody was told they had. Watched as the object rather than by id: a proposal
+ * added to keeps its id and is still a longer thing to look at.
+ */
+function Offered(): JSX.Element {
+  let here: HTMLDivElement | undefined
+  createEffect(
+    on(underReview, (proposal) => {
+      if (proposal !== undefined && !sending()) here?.scrollIntoView({ block: "end" })
+    }),
+  )
+
+  return (
+    <div ref={here}>
+      <Show when={!sending()}>
+        <ProposalReview inline />
+      </Show>
+    </div>
   )
 }
 

@@ -391,15 +391,19 @@ test("a statement in the encoding a Japanese bank writes reaches the model reada
 
 /**
  * A model at work offers, reads back what it wrote, thinks better of it and
- * offers again. Each of those is a proposal, and the dock opening on every one
- * would flap through a run of states nobody was asked to decide about — which is
- * exactly what a page of bank statement produces. What is waited for is the one
- * it stopped on.
+ * offers again. Each of those is a proposal, and showing every one would flap
+ * through a run of states nobody was asked to decide about — which is exactly
+ * what a page of bank statement produces. What is waited for is the one it
+ * stopped on.
+ *
+ * Where it lands is the other half of this: at the end of the conversation that
+ * made it, not over the top of it. Being asked to decide about entries with the
+ * reasoning behind them put away is being asked to take a model's word for it.
  *
  * The last reply is held open so the assertion lands while the exchange is
  * genuinely still in flight, rather than in whatever gap happened to be there.
  */
-test("proposals made along the way do not open the dock; the one it stops on does", async ({
+test("proposals made along the way are not shown; the one it stops on joins the conversation", async ({
   page,
 }) => {
   const written = (payees: readonly string[]): unknown => ({
@@ -444,12 +448,21 @@ test("proposals made along the way do not open the dock; the one it stops on doe
   await expect.poll(async () => (await page.evaluate(() => window.choai.proposal.list({}))).ok
     ? (await page.evaluate(() => window.choai.proposal.list({})) as { value: readonly unknown[] }).value.length
     : 0).toBeGreaterThan(1)
-  await expect(page.getByText("Written, not yet kept")).toBeHidden()
+  await expect(page.getByRole("button", { name: /Add \d+ to the journal/ })).toBeHidden()
 
-  // Letting it finish is what opens the dock, and the dock opening is the proof
-  // it finished: a proposal takes the dock from the conversation that made it.
+  // Letting it finish is what shows the one it stopped on — the two it wrote
+  // last, offered where they were written.
   held.let_go()
-  await expect(page.getByText("Written, not yet kept")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Add 2 to the journal" })).toBeVisible()
+
+  // And the conversation is still the conversation: what was said and what was
+  // run are both still there, above the thing they produced.
+  await expect(page.getByText(SAID)).toBeVisible()
+  await expect(page.getByText("Looked at transaction.propose").first()).toBeVisible()
+
+  // The panel was never taken from it. That title is the dock's, and only the
+  // dock's, so its absence is the proposal not having claimed the space.
+  await expect(page.getByText("Written, not yet kept")).toBeHidden()
 })
 
 /**

@@ -247,13 +247,20 @@ export function Layout(props: ParentProps) {
   const renewal = createRenewal(60 * 60 * 1000)
 
   /**
-   * A proposal takes the dock when whatever wrote it has stopped writing.
+   * A proposal takes the dock when whatever wrote it has stopped writing — and
+   * not when the conversation has the dock, because the conversation shows it
+   * already.
+   *
+   * Taking it there would put the reasoning behind the thing it produced, which
+   * is the one place a reader needs both: what was proposed, and what was said
+   * about it. Anything proposing without a conversation on screen — a script, a
+   * test, a statement read while the panel was lent elsewhere — has nowhere
+   * else to be seen, so it still asks for the dock.
    *
    * Something writing up a statement offers, reads back what it wrote, thinks
    * better of it and offers again; opening on each of those would flap through a
    * run of states nobody was asked to decide about. The one worth showing is the
-   * one it stopped on — and anything proposing without a conversation in flight,
-   * a script or a test, is not waiting on anything.
+   * one it stopped on.
    *
    * Nothing here puts it back once it has been closed: this runs when a proposal
    * arrives and when the writing stops, and closing is neither.
@@ -264,7 +271,7 @@ export function Layout(props: ParentProps) {
         if (dock.is("reviewing")) dock.close()
         return
       }
-      if (!writing) dock.show("reviewing")
+      if (!writing && !dock.is("chatting")) dock.show("reviewing")
     }),
   )
 
