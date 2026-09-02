@@ -406,12 +406,13 @@ test("depreciation comes back as figures, and says so rather than writing them",
   const answer = await page.evaluate(() => window.choai.call("jp.depreciation", { year: 2026 }))
   if (!answer.ok) return
   const worked = answer.value as {
-    charges: readonly { assetId: string; charge: string; months: number }[]
+    charges: readonly { assetId: string; charge: { rendered: string }; months: number }[]
     howToWriteThem: string
   }
 
   // Nine months of a quarter of three hundred thousand.
-  expect(worked.charges[0]).toMatchObject({ assetId: "PC-2026-001", months: 9, charge: "56250" })
+  expect(worked.charges[0]).toMatchObject({ assetId: "PC-2026-001", months: 9 })
+  expect(worked.charges[0]?.charge.rendered).toBe("$56250")
   expect(worked.howToWriteThem).toContain("transaction.propose")
 
   // Asking did not write anything.
@@ -495,4 +496,117 @@ test("the rail carries the five screens under one heading, and each of them draw
     await expect(page.getByText(above).first()).toBeVisible()
     await expect(page.getByText(/Under Japanese tax|日本税制での扱い/).first()).toBeVisible()
   }
+})
+
+/**
+ * The provider, answered here rather than over the network.
+ *
+ * Only enough of one to see what was sent: a listing for the GET the settings
+ * screen makes, and one plain answer for the exchange. What is being checked is
+ * not the model — it is that this build told it how these books are kept.
+ */
+const NOT_A_KEY = "not-a-real-key"
+
+const MODELS = {
+  data: [
+    {
+      id: "claude-opus-5",
+      display_name: "Claude Opus 5",
+      capabilities: {
+        thinking: { supported: true, types: { adaptive: { supported: true }, enabled: { supported: false } } },
+        effort: { supported: true, medium: { supported: true } },
+        structured_outputs: { supported: true },
+        image_input: { supported: true },
+      },
+    },
+  ],
+}
+
+const ANSWERS = {
+  model: "claude-opus-5",
+  stop_reason: "end_turn",
+  content: [{ type: "text", text: "Nine transactions." }],
+  usage: { input_tokens: 1, output_tokens: 1 },
+}
+
+const askAndCatchWhatWasSent = async (page: Page): Promise<string> => {
+  const sent: { system?: readonly { text?: string }[] }[] = []
+
+  await page.route("**/api.anthropic.com/**", async (route) => {
+    const asJson = (body: unknown): Promise<void> =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
+    if (route.request().method() === "GET") return asJson(MODELS)
+    sent.push(route.request().postDataJSON() as { system?: readonly { text?: string }[] })
+    return asJson(ANSWERS)
+  })
+
+  await openTheDemo(page)
+
+  await page.goto("/settings")
+  await page.getByRole("button", { name: "Claude", exact: true }).click()
+  await page.getByLabel("API key").fill(NOT_A_KEY)
+  await page.getByRole("button", { name: "Save", exact: true }).click()
+  await expect(page.getByRole("button", { name: "Disconnect and forget the key" })).toBeVisible()
+
+  await page.goto("/")
+  await page.getByRole("button", { name: "Ask", exact: true }).first().click()
+  await page.getByPlaceholder("Ask about these books").fill("how many transactions are there")
+  await page.getByRole("button", { name: "Ask", exact: true }).last().click()
+
+  await expect.poll(() => sent.length).toBeGreaterThan(0)
+  return sent[0]?.system?.[0]?.text ?? ""
+}
+
+test("the model is told how these books are kept, not only what it may call", async ({ page }) => {
+  const system = await askAndCatchWhatWasSent(page)
+
+  // Core's own instructions are still there and still first.
+  expect(system).toContain("You are the reader's bookkeeper")
+  expect(system).toContain("transaction.propose")
+
+  // And after them, what this edition says. Without it a model writes entries
+  // with nothing for jp.consumptionTax to count, then is shown its own entries
+  // in the list of ones nobody has classified.
+  expect(system).toContain("tax:")
+  expect(system).toContain("taxable-purchase-10")
+  expect(system).toContain("taxable-sale-8")
+  expect(system).toContain("on the posting, not on the entry")
+
+  // The edition's paragraph comes after core's, never in place of it.
+  expect(system.indexOf("You are the reader's bookkeeper")).toBeLessThan(system.indexOf("tax:"))
+
+  // And this build's own tools are on the same request.
+  const tools = await page.evaluate(() => Object.keys(window.choai.describe().capabilities))
+  expect(tools).toContain("jp.consumptionTax")
+})
+
+test("a capability an edition adds is callable by its own name, not only through call", async ({ page }) => {
+  await openTheDemo(page)
+
+  const byName = await page.evaluate(() => window.choai.call("jp.consumptionTax", { year: 2026 }))
+  // The dotted name becomes a group on the object, built from the same list the
+  // manifest is. Nothing written against core can name it — half the builds do
+  // not have it — but it is there to be called.
+  const direct = await page.evaluate(() =>
+    (window.choai as unknown as {
+      jp: { consumptionTax: (args: unknown) => Promise<unknown> }
+    }).jp.consumptionTax({ year: 2026 }),
+  )
+  expect(direct).toEqual(byName)
+})
+
+test("a figure this edition worked out crosses as a figure, not as a string of one", async ({ page }) => {
+  await openTheDemo(page)
+  await registerAnAsset(page, "2026-07-10")
+
+  const answer = await page.evaluate(() => window.choai.call("jp.depreciation", { year: 2026 }))
+  expect(answer.ok).toBe(true)
+  if (!answer.ok) return
+
+  const charge = (answer.value as {
+    charges: readonly { charge: { amounts: readonly { mantissa: number; places: number }[]; rendered: string } }[]
+  }).charges[0]?.charge
+
+  expect(charge?.amounts[0]).toEqual({ commodity: "$", mantissa: 56250, places: 0, rendered: "$56250" })
+  expect(charge?.rendered).toBe("$56250")
 })

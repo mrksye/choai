@@ -3,8 +3,9 @@ import { describe, expect, test } from "bun:test"
 import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount, Posting, Tag, Transaction } from "~/core/hledger/wire"
 import { RULES, bandFor } from "~/editions/jp/rules"
+import { japaneseGuidance } from "~/editions/jp/guidance"
 import { japaneseTaxRules2026 } from "~/editions/jp/rules/2026"
-import { includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
+import { asFigure, includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
 import { said, toldOf } from "~/editions/jp/tags"
 import {
   TAX_CATEGORIES,
@@ -310,6 +311,34 @@ describe("adding up figures hledger was not asked to add up", () => {
     expect(formatMixed(includedAt(yen(1005), { over: 10, under: 100 }, "half-up"))).toBe("¥91")
     // A credit rounds towards zero too: a refund must not grow by being rounded.
     expect(formatMixed(includedAt(yen(-1005), { over: 10, under: 100 }, "down"))).toBe("¥-91")
+  })
+
+  test("a figure worked out here leaves in the shape everything published is in", () => {
+    // Not a string of a figure. A caller adding two of them together should not
+    // have to parse a decimal point back out of text.
+    const shown = asFigure(whole(56250), "¥", { symbol: "¥", side: "left", spaced: false })
+    expect(shown.amounts[0]).toEqual({
+      commodity: "¥",
+      mantissa: 56250,
+      places: 0,
+      rendered: "¥56250",
+    })
+    expect(shown.rendered).toBe("¥56250")
+  })
+
+  test("it is written the way the journal writes figures, where the journal says", () => {
+    const right = asFigure(whole(1200), "EUR", { symbol: "EUR", side: "right", spaced: true })
+    expect(right.rendered).toBe("1200 EUR")
+
+    // With nothing declared there is nothing to copy, so it is plain rather than
+    // pretending to a style the books never stated.
+    expect(asFigure(whole(1200), "¥").rendered).toBe("¥1200")
+  })
+
+  test("the scale it was worked out at is the scale it leaves at", () => {
+    const fractional = asFigure({ decimalMantissa: 123456, decimalPlaces: 2 }, "$")
+    expect(fractional.amounts[0]?.places).toBe(2)
+    expect(fractional.rendered).toBe("$1234.56")
   })
 
   test("turning a figure over turns every commodity over", () => {
@@ -1267,5 +1296,42 @@ describe("what is worth saying about a set of books, and how loudly", () => {
       ...checkChart(["なにか:へん"], new Map(), {}),
     ]
     expect(errorsAmong(judgements)).toEqual([])
+  })
+})
+
+describe("what a model is told about how these books are kept", () => {
+  const said = japaneseGuidance()
+
+  test("it names every category the code has, and none it does not", () => {
+    // The whole reason the text is composed from the constants rather than typed
+    // out beside them. A text that has fallen behind the code is worse than no
+    // text: the model follows it, and what it writes is wrong in a way that
+    // looks deliberate.
+    TAX_CATEGORIES.forEach((category) => expect(said).toContain(category))
+
+    const named = [...said.matchAll(/taxable-[a-z]+-\d+|non-taxable|tax-exempt|out-of-scope/g)].map(
+      (found) => found[0],
+    )
+    expect([...new Set(named)].sort()).toEqual([...TAX_CATEGORIES].sort())
+  })
+
+  test("it names every tag this edition writes into a journal", () => {
+    ;["tax", "invoice", "partner", "invoice-number", "evidence", "asset", "closing"].forEach(
+      (tag) => expect(said).toContain(`${tag}:`),
+    )
+  })
+
+  test("it says where a treatment goes, because a posting is not an entry", () => {
+    expect(said).toContain("on the posting, not on the entry")
+  })
+
+  test("it does not settle a question that is the reader's", () => {
+    // The one thing this must not do is decide. It says where a classification
+    // goes and what the words are; which one applies has tax law in it.
+    expect(said).toContain("confidence below 1")
+  })
+
+  test("it tells the model not to write the tags the screens write", () => {
+    expect(said).toContain("Do not write either")
   })
 })

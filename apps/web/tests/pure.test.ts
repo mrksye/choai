@@ -561,5 +561,22 @@ describe("what an edition joins on", () => {
     expect(GlobalEdition.id).toBe("global")
     expect(GlobalEdition.views).toEqual([])
     expect(Object.keys(GlobalEdition.capabilities)).toEqual([])
+    // Including the third table: it belongs to nowhere, so there are no local
+    // conventions for it to describe to a model.
+    expect(GlobalEdition.guidance).toBeUndefined()
+  })
+
+  test("what an edition says to a model is added to core's, never in place of it", () => {
+    // Held here rather than trusted to a reading of `prompt.ts`: an edition that
+    // could replace core's instructions could tell a model to write entries
+    // without showing them first, which is the one thing this app does not do.
+    const core = "core's instructions"
+    const together = (guidance: string | undefined): string =>
+      [core, ...(guidance === undefined || guidance.trim() === "" ? [] : ["", guidance])].join("\n")
+
+    expect(together(undefined)).toBe(core)
+    expect(together("   ")).toBe(core)
+    expect(together("what this build adds").startsWith(core)).toBe(true)
+    expect(together("what this build adds")).toBe(`${core}\n\nwhat this build adds`)
   })
 })
