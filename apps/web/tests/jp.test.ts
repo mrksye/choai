@@ -13,6 +13,7 @@ import {
   treatmentIn,
 } from "~/editions/jp/consumption-tax/category"
 import { normalize } from "~/editions/jp/consumption-tax/normalize"
+import { summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
 import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
 
 /**
@@ -249,6 +250,97 @@ describe("adding up figures hledger was not asked to add up", () => {
 
   test("turning a figure over turns every commodity over", () => {
     expect(formatMixed(negated(plus(yen(100), dollars(-250))))).toBe("¥-100, $2.50")
+  })
+})
+
+describe("what each band of the consumption tax came to", () => {
+  const TYPES = {
+    "収益:売上高": "Revenue",
+    "費用:仕入高": "Expense",
+    "費用:消耗品費": "Expense",
+    "資産:現金": "Asset",
+    "資産:普通預金": "Asset",
+  } as const
+
+  const books = normalize([
+    entry(1, "売上", [
+      posting("資産:普通預金", yen(4400000)),
+      posting("収益:売上高", yen(-4400000), [["tax", "taxable-sale-10"]]),
+    ]),
+    entry(2, "スーパー", [
+      posting("費用:仕入高", yen(1080), [["tax", "taxable-purchase-8"]]),
+      posting("費用:消耗品費", yen(1100), [["tax", "taxable-purchase-10"]]),
+      posting("資産:現金", yen(-2180)),
+    ]),
+    entry(3, "何も書いてない", [
+      posting("費用:消耗品費", yen(500)),
+      posting("資産:現金", yen(-500)),
+    ]),
+    entry(4, "打ち間違い", [
+      posting("費用:消耗品費", yen(300), [["tax", "taxable-purchse-10"]]),
+      posting("資産:現金", yen(-300)),
+    ]),
+  ])
+
+  const summary = summarizeConsumptionTax(books, RULES, TYPES)
+  const band = (category: string) => summary.bands.find((one) => one.category === category)
+
+  test("a sale is kept as recorded and also read the way it is spoken about", () => {
+    expect(formatMixed(band("taxable-sale-10")?.recorded ?? [])).toBe("¥-4400000")
+    expect(formatMixed(band("taxable-sale-10")?.total ?? [])).toBe("¥4400000")
+  })
+
+  test("a purchase is a debit already, so it is not turned over", () => {
+    expect(formatMixed(band("taxable-purchase-10")?.recorded ?? [])).toBe("¥1100")
+    expect(formatMixed(band("taxable-purchase-10")?.total ?? [])).toBe("¥1100")
+  })
+
+  test("the tax inside each band, at the rate the rules give it", () => {
+    expect(formatMixed(band("taxable-sale-10")?.taxWithin ?? [])).toBe("¥400000")
+    expect(formatMixed(band("taxable-purchase-10")?.taxWithin ?? [])).toBe("¥100")
+    expect(formatMixed(band("taxable-purchase-8")?.taxWithin ?? [])).toBe("¥80")
+  })
+
+  test("a band with no rate claims no tax inside it", () => {
+    expect(band("non-taxable")?.taxWithin).toBeUndefined()
+    expect(band("out-of-scope")?.taxWithin).toBeUndefined()
+  })
+
+  test("a band nothing fell into comes to nothing rather than going missing", () => {
+    expect(band("taxable-sale-8")?.postings).toBe(0)
+    expect(isZero(band("taxable-sale-8")?.total ?? [])).toBe(true)
+    expect(summary.bands.length).toBe(RULES.bands.length)
+  })
+
+  test("only what comes in and goes out is asked for a treatment", () => {
+    // The cash on the other side of every receipt is not nagged about, and the
+    // one expense nobody marked is.
+    expect(summary.unmarked.map((one) => one.account)).toEqual(["費用:消耗品費"])
+    expect(summary.unmarked[0]?.index).toBe(3)
+  })
+
+  test("where hledger could place nothing, nothing is expected of anything", () => {
+    expect(summarizeConsumptionTax(books, RULES).unmarked).toEqual([])
+  })
+
+  test("a misspelt category is reported as itself, not as an absence", () => {
+    expect(summary.unrecognised.map((one) => one.said)).toEqual(["taxable-purchse-10"])
+    expect(summary.unrecognised[0]?.description).toBe("打ち間違い")
+    // And it is in no band at all, rather than quietly in the one it resembles.
+    expect(band("taxable-purchase-10")?.postings).toBe(1)
+  })
+
+  test("it says which rules decided it, and what it did not work out", () => {
+    expect(summary.rules).toBe(RULES.named)
+    expect(summary.entries).toBe(4)
+    expect(summary.notWorkedOut.length).toBeGreaterThan(0)
+  })
+
+  test("nothing at all is an answer of zeroes, not an empty answer", () => {
+    const empty = summarizeConsumptionTax([], RULES, TYPES)
+    expect(empty.bands.length).toBe(RULES.bands.length)
+    expect(empty.bands.every((one) => isZero(one.total))).toBe(true)
+    expect(empty.entries).toBe(0)
   })
 })
 
