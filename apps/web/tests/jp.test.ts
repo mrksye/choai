@@ -32,6 +32,16 @@ import { inUseAt, registerFrom, type FixedAsset } from "~/editions/jp/fixed-asse
 import { depreciationFor, monthsInService } from "~/editions/jp/fixed-assets/depreciation"
 import { depreciationDraft, depreciationItems } from "~/editions/jp/fixed-assets/proposal"
 import { draftToJournal } from "~/core/compose/draft"
+import {
+  ACCRUALS,
+  closingDraft,
+  closingItems,
+  isAccrual,
+  isWritable,
+  whatIsWanting,
+  type Accrual,
+  type Adjustment,
+} from "~/editions/jp/closing/adjustments"
 
 /**
  * The Japan edition's arithmetic and its reading of a journal, as functions.
@@ -881,6 +891,84 @@ describe("a year's depreciation, offered rather than written", () => {
     }))
     expect(items.length).toBe(2)
     expect(items.every((one) => one.is === "add" && one.confidence === 1)).toBe(true)
+  })
+})
+
+describe("the entries a year is closed with", () => {
+  const of = (kind: Accrual, working: string, carried: string): Adjustment => ({
+    kind,
+    amount: "120000",
+    working,
+    carried,
+  })
+
+  const lines = (adjustment: Adjustment) =>
+    draftToJournal(closingDraft(adjustment, "2027-03-31", "決算整理"))
+      .split("\n")
+      .slice(1, 3)
+      .map((line) => line.trim())
+
+  test("what is owed for work already had is charged to the year and carried out of it", () => {
+    expect(lines(of("accrued-expense", "費用:支払手数料", "負債:未払費用"))).toEqual([
+      "費用:支払手数料  120000",
+      "負債:未払費用",
+    ])
+  })
+
+  test("what was paid for next year is taken back out of this one", () => {
+    expect(lines(of("prepaid-expense", "費用:支払手数料", "資産:前払費用"))).toEqual([
+      "資産:前払費用  120000",
+      "費用:支払手数料",
+    ])
+  })
+
+  test("what was earned and not yet received is brought into the year", () => {
+    expect(lines(of("accrued-revenue", "収益:売上高", "資産:未収収益"))).toEqual([
+      "資産:未収収益  120000",
+      "収益:売上高",
+    ])
+  })
+
+  test("what was received for next year is taken back out of this one", () => {
+    expect(lines(of("unearned-revenue", "収益:売上高", "負債:前受収益"))).toEqual([
+      "収益:売上高  120000",
+      "負債:前受収益",
+    ])
+  })
+
+  test("every kind is written one way round or the other, and none is left out", () => {
+    ACCRUALS.forEach((kind) => expect(isAccrual(kind)).toBe(true))
+    expect(isAccrual("something-else")).toBe(false)
+    expect(new Set(ACCRUALS).size).toBe(ACCRUALS.length)
+  })
+
+  test("each carries the tag that finds a year's adjustments again", () => {
+    const written = draftToJournal(
+      closingDraft(of("accrued-expense", "費用:支払手数料", "負債:未払費用"), "2027-03-31", "決算整理"),
+    )
+    expect(written).toContain("; closing:accrued-expense")
+  })
+
+  test("one side is left for hledger, so the two cannot fail to be equal", () => {
+    const draft = closingDraft(of("accrued-expense", "費用:支払手数料", "負債:未払費用"), "2027-03-31", "決算整理")
+    expect(draft.postings.map((one) => one.amount)).toEqual(["120000", ""])
+  })
+
+  test("an unfinished adjustment says what it is short of, and is not offered", () => {
+    const half = { ...of("accrued-expense", "", "負債:未払費用"), amount: " " }
+    expect(whatIsWanting(half)).toEqual(["amount", "working"])
+    expect(isWritable(half)).toBe(false)
+    expect(closingItems([half], "2027-03-31", () => "決算整理")).toEqual([])
+  })
+
+  test("the ready ones come out as one proposal", () => {
+    const items = closingItems(
+      [of("accrued-expense", "費用:支払手数料", "負債:未払費用"), of("prepaid-expense", "費用:地代家賃", "資産:前払費用")],
+      "2027-03-31",
+      () => "決算整理",
+    )
+    expect(items.length).toBe(2)
+    expect(items.every((one) => one.confidence === 1)).toBe(true)
   })
 })
 
