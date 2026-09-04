@@ -118,12 +118,23 @@ const en = {
     included: "Books kept tax-inclusive",
     rounding: "Fractions {{ how }}",
     notWorkedOut: "Not worked out here",
+    notChecked: "What the count of unclassified postings does not reach",
+    sales: "of which sales",
+    purchases: "of which purchases",
+    unplaced: "on accounts hledger could not place",
+    bySideLead: "Three of the categories say nothing about which side of the books a figure was on, so totalling them together nets a sale against a purchase — and the ratio of taxable sales to all sales cannot be worked out from a figure like that. Which side it was on is in the account, so it is read from there.",
     said: {
       "taxable-base": "The taxable base, which is rounded down to the nearest thousand yen.",
       "tax-payable":
         "The tax payable, which depends on whether it is worked out by aggregation or by invoice.",
       "simplified-basis": "The simplified basis, and the transitional twenty-percent rule.",
       "national-and-local": "The split between national and local consumption tax.",
+    },
+    checkSaid: {
+      "a purchase capitalised into an account these books have never classified — until one posting on that account is classified, nothing on it is asked about":
+        "A purchase capitalised into an account these books have never classified. Nothing on that account is asked about until one posting on it is classified.",
+      "accounts hledger could not place, which are in no count here at all":
+        "Accounts hledger could not place. They are in no count here at all.",
     },
     rounded: { down: "rounded down", up: "rounded up", "half-up": "rounded to the nearest" },
     category: {
@@ -345,11 +356,22 @@ const ja: typeof en = {
     included: "税込経理",
     rounding: "端数は{{ how }}",
     notWorkedOut: "ここでは算出しないもの",
+    notChecked: "未分類の検出が届かないもの",
+    sales: "うち売上側",
+    purchases: "うち仕入側",
+    unplaced: "hledger が種類を判定できない科目",
+    bySideLead: "非課税・免税・対象外の3区分は売上か仕入かを言わないので、合算すると売上と仕入が相殺されます ── その数字からは課税売上割合が出せません。どちらの側かは勘定科目が持っているので、そこから読みます。",
     said: {
       "taxable-base": "課税標準額（千円未満切捨て）",
       "tax-payable": "納付税額 ── 割戻し計算と積上げ計算のどちらによるかで変わります",
       "simplified-basis": "簡易課税、および2割特例",
       "national-and-local": "消費税と地方消費税の内訳",
+    },
+    checkSaid: {
+      "a purchase capitalised into an account these books have never classified — until one posting on that account is classified, nothing on it is asked about":
+        "これまで一度も分類されたことのない科目に資産計上された仕入 ── その科目の仕訳が一つ分類されるまで、何も問われません。",
+      "accounts hledger could not place, which are in no count here at all":
+        "hledger が種類を判定できなかった科目。ここのどの集計にも入りません。",
     },
     rounded: { down: "切り捨て", up: "切り上げ", "half-up": "四捨五入" },
     category: {

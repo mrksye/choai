@@ -124,6 +124,8 @@ export function ConsumptionTaxPage(): JSX.Element {
                     <tr>
                       <th class={HEAD}>{words().tax.band}</th>
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.total}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.sales}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.purchases}</th>
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.within}</th>
                     </tr>
                   </thead>
@@ -133,6 +135,14 @@ export function ConsumptionTaxPage(): JSX.Element {
                         <tr>
                           <td class={CELL}>{nameOf(band)}</td>
                           <td class={`${FIGURE} ${NARROW}`}>{formatMixed(band.total)}</td>
+                          <td class={`${FIGURE} ${NARROW} text-muted-foreground`}>
+                            {band.bySide.sales.postings === 0 ? "—" : formatMixed(band.bySide.sales.total)}
+                          </td>
+                          <td class={`${FIGURE} ${NARROW} text-muted-foreground`}>
+                            {band.bySide.purchases.postings === 0
+                              ? "—"
+                              : formatMixed(band.bySide.purchases.total)}
+                          </td>
                           <td class={`${FIGURE} ${NARROW}`}>
                             {band.taxWithin === undefined ? "—" : formatMixed(band.taxWithin)}
                           </td>
@@ -141,6 +151,11 @@ export function ConsumptionTaxPage(): JSX.Element {
                     </For>
                   </tbody>
                 </Figures>
+                <p class="text-xs text-muted-foreground">{words().tax.bySideLead}</p>
+
+                <Show when={found().bands.some((band) => band.bySide.unplaced.postings > 0)}>
+                  <p class="text-xs text-destructive">{words().tax.unplaced}</p>
+                </Show>
 
                 <div class="flex flex-col gap-1">
                   <h3 class="text-xs font-medium">{words().tax.notWorkedOut}</h3>
@@ -148,6 +163,19 @@ export function ConsumptionTaxPage(): JSX.Element {
                     <For each={found().notWorkedOut}>
                       {(what) => (
                         <li class="text-xs text-muted-foreground">{words().tax.said[what]}</li>
+                      )}
+                    </For>
+                  </ul>
+                </div>
+
+                {/* A limit nobody is told about is a limit that reads as a clean
+                    bill of health. */}
+                <div class="flex flex-col gap-1">
+                  <h3 class="text-xs font-medium">{words().tax.notChecked}</h3>
+                  <ul class="flex list-disc flex-col gap-0.5 pl-4">
+                    <For each={found().notChecked}>
+                      {(what) => (
+                        <li class="text-xs text-muted-foreground">{words().tax.checkSaid[what]}</li>
                       )}
                     </For>
                   </ul>

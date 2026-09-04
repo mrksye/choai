@@ -82,12 +82,44 @@ export interface BandTotal {
    */
   readonly total: MixedAmount
   /**
+   * The same band, split by which side of the books each posting was on.
+   *
+   * Three of the categories say nothing about the side — an exempt sale and an
+   * exempt purchase are both `tax-exempt` — and totalling them together nets one
+   * against the other. That is not a tidiness problem: the ratio of taxable
+   * sales to all sales is worked out from non-taxable **sales**, and a figure
+   * with purchases netted into it cannot produce it. A fee paid to a ministry
+   * and interest received are both `non-taxable`, and their sum is a number
+   * about nothing.
+   *
+   * Which side a posting was on is not in the tag and does not need to be: it is
+   * in the account, and hledger already says what kind each account is. So the
+   * split is read off the books rather than asked for, and it is done for every
+   * band — including the four that name their side, where the two answers
+   * disagreeing is worth seeing rather than hiding.
+   */
+  readonly bySide: Sided
+  /**
    * The consumption tax inside `total`, where the band carries a rate and the
    * books are kept tax-inclusive. A reference figure. See the note above.
    */
   readonly taxWithin?: MixedAmount
   /** The hledger query that selects exactly what this counted. */
   readonly query: string
+}
+
+/** One band's postings, told apart by the side of the books they were on. */
+export interface Sided {
+  readonly sales: Part
+  readonly purchases: Part
+  /** Postings on accounts hledger could not place, so neither can this. */
+  readonly unplaced: Part
+}
+
+export interface Part {
+  readonly postings: number
+  /** Read the way its side is read: a sale turned over, a purchase as recorded. */
+  readonly total: MixedAmount
 }
 
 export interface ConsumptionTaxSummary {
@@ -104,6 +136,8 @@ export interface ConsumptionTaxSummary {
   /** Postings marked with something that is not a category. */
   readonly unrecognised: readonly Mistyped[]
   readonly notWorkedOut: readonly NotWorkedOut[]
+  /** What the count of unclassified postings does not reach. */
+  readonly notChecked: readonly NotChecked[]
 }
 
 /**
@@ -118,16 +152,52 @@ export interface ConsumptionTaxSummary {
  * hledger could place nothing — a chart with no `account` directives — nothing
  * is expected of anything, which is a quiet screen rather than a false alarm on
  * a perfectly good journal. The screen that fixes that is core's own.
+ *
+ * **And whatever these books have classified before.** A taxable purchase does
+ * not have to be an expense: one capitalised into an asset — a fixed asset,
+ * formation costs, stock — is a purchase that never reaches the income
+ * statement, and asking only about income and expense would leave it out of
+ * every count for good. Nobody would be told, because the only thing that says
+ * an account can carry a treatment is that somebody once said so. So that is
+ * what is used: an account with a treatment anywhere in what was read is an
+ * account a treatment is expected on.
+ *
+ * It follows that the first one is never caught. That is a real limit and it is
+ * said out loud rather than left to be discovered — see `NOT_CHECKED`.
  */
 const WANTS_A_TREATMENT: readonly AccountType[] = ["Revenue", "Expense"]
+
+/** The accounts these books have put a treatment on, which is what makes one expected. */
+const classifiedAlready = (
+  every: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
+): ReadonlySet<string> =>
+  new Set(
+    every.flatMap(({ posting }) =>
+      posting.treatment.is === "categorised" ? [posting.account] : [],
+    ),
+  )
 
 const expectsTreatment = (
   account: string,
   types: Readonly<Record<string, AccountType>>,
+  classified: ReadonlySet<string>,
 ): boolean => {
+  if (classified.has(account)) return true
   const kind = types[account]
   return kind !== undefined && WANTS_A_TREATMENT.some((wanted) => wanted === kind)
 }
+
+/**
+ * What the count of unclassified postings does not cover, said in the answer.
+ *
+ * A limit nobody is told about is a limit that reads as a clean bill of health.
+ */
+export const NOT_CHECKED = [
+  "a purchase capitalised into an account these books have never classified — until one posting on that account is classified, nothing on it is asked about",
+  "accounts hledger could not place, which are in no count here at all",
+] as const
+
+export type NotChecked = (typeof NOT_CHECKED)[number]
 
 const looseAt = (entry: JapaneseTaxTransaction, posting: TaxPosting): Loose => ({
   index: entry.index,
@@ -151,6 +221,41 @@ const allPostings = (
  */
 const asRead = (side: Side, recorded: MixedAmount): MixedAmount =>
   side === "sale" ? negated(recorded) : recorded
+
+/**
+ * Which side of the books a posting was on, according to the books.
+ *
+ * Revenue is a sale and everything else that is not the money itself is a
+ * purchase — including an asset, because a purchase capitalised into one is
+ * still a purchase. An account hledger could not place is left unplaced rather
+ * than guessed at.
+ */
+const sideOf = (account: string, types: Readonly<Record<string, AccountType>>): Side | undefined => {
+  const kind = types[account]
+  if (kind === undefined) return undefined
+  return kind === "Revenue" ? "sale" : "purchase"
+}
+
+const partOf = (
+  fell: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
+  side: Side,
+): Part => ({
+  postings: fell.length,
+  total: asRead(side, sumOf(fell.map(({ posting }) => posting.amount))),
+})
+
+const splitBySide = (
+  fell: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
+  types: Readonly<Record<string, AccountType>>,
+): Sided => {
+  const on = (which: Side | undefined) =>
+    fell.filter(({ posting }) => sideOf(posting.account, types) === which)
+  return {
+    sales: partOf(on("sale"), "sale"),
+    purchases: partOf(on("purchase"), "purchase"),
+    unplaced: partOf(on(undefined), "neither"),
+  }
+}
 
 /**
  * The tax inside a total, where there is one to be had.
@@ -197,15 +302,18 @@ export const summarizeConsumptionTax = (
       postings: fell.length,
       recorded,
       total,
+      bySide: splitBySide(fell, types),
       ...(within === undefined ? {} : { taxWithin: within }),
       query: queryFor(band.category),
     }
   })
 
+  const classified = classifiedAlready(every)
   const unmarked = every
     .filter(
       ({ posting }) =>
-        posting.treatment.is === "unmarked" && expectsTreatment(posting.account, types),
+        posting.treatment.is === "unmarked" &&
+        expectsTreatment(posting.account, types, classified),
     )
     .map(({ entry, posting }) => looseAt(entry, posting))
 
@@ -225,5 +333,6 @@ export const summarizeConsumptionTax = (
     unmarked,
     unrecognised,
     notWorkedOut: NOT_WORKED_OUT,
+    notChecked: NOT_CHECKED,
   }
 }

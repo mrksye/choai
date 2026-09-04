@@ -77,6 +77,19 @@ export interface TaxBand {
   readonly postings: number
   readonly recorded: Figure
   readonly total: Figure
+  /**
+   * The same band, split by which side of the books each posting was on.
+   *
+   * Three of the categories say nothing about the side, so their total nets a
+   * sale against a purchase — and the ratio of taxable sales to all sales cannot
+   * be worked out from a figure like that. Which side it was on is in the
+   * account, so it is read from there rather than from the tag.
+   */
+  readonly bySide: {
+    readonly sales: { readonly postings: number; readonly total: Figure }
+    readonly purchases: { readonly postings: number; readonly total: Figure }
+    readonly unplaced: { readonly postings: number; readonly total: Figure }
+  }
   readonly taxWithin?: Figure
   readonly query: string
 }
@@ -92,6 +105,8 @@ export interface TaxAnswer {
   readonly unrecognised: readonly { readonly index: number; readonly account: string; readonly said: string }[]
   /** Said in the answer, not only on a screen. This is not a return. */
   readonly notWorkedOut: readonly string[]
+  /** What the count of unclassified postings does not reach. */
+  readonly notChecked: readonly string[]
 }
 
 /**
@@ -139,6 +154,17 @@ const consumptionTax = (args: {
         postings: band.postings,
         recorded: figureOf(band.recorded),
         total: figureOf(band.total),
+        bySide: {
+          sales: { postings: band.bySide.sales.postings, total: figureOf(band.bySide.sales.total) },
+          purchases: {
+            postings: band.bySide.purchases.postings,
+            total: figureOf(band.bySide.purchases.total),
+          },
+          unplaced: {
+            postings: band.bySide.unplaced.postings,
+            total: figureOf(band.bySide.unplaced.total),
+          },
+        },
         ...(band.taxWithin === undefined ? {} : { taxWithin: figureOf(band.taxWithin) }),
         query: band.query,
       })),
@@ -149,6 +175,7 @@ const consumptionTax = (args: {
         said: one.said,
       })),
       notWorkedOut: summary.notWorkedOut.map((one) => NOT_WORKED_OUT_SAID[one]),
+      notChecked: [...summary.notChecked],
     })
   })
 

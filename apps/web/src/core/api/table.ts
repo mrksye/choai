@@ -285,7 +285,8 @@ const CORE = {
   },
 
   "proposal.drop": {
-    summary: "Throw a proposal away without keeping any of it.",
+    summary:
+      "Throw away a proposal that has not been applied. This is not an undo: it forgets what was offered, and a proposal already kept by proposal.apply is in the journal and stays there — dropping its id afterwards fails, because there is nothing left standing under it. To take back an entry that was applied, offer its removal through transaction.propose and let a person see that too.",
     takes: fields({ id: text("The proposal's id.") }),
     writes: false,
     needsJournal: false,

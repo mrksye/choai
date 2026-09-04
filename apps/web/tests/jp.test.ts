@@ -19,7 +19,11 @@ import {
   treatmentIn,
 } from "~/editions/jp/consumption-tax/category"
 import { normalize } from "~/editions/jp/consumption-tax/normalize"
-import { NOT_WORKED_OUT, summarizeConsumptionTax } from "~/editions/jp/consumption-tax/summarize"
+import {
+  NOT_CHECKED,
+  NOT_WORKED_OUT,
+  summarizeConsumptionTax,
+} from "~/editions/jp/consumption-tax/summarize"
 import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
 import { evidenceAt, inRepository } from "~/editions/jp/invoice/where"
 import {
@@ -399,6 +403,72 @@ describe("what each band of the consumption tax came to", () => {
     expect(formatMixed(band("taxable-purchase-8")?.taxWithin ?? [])).toBe("¥80")
   })
 
+  test("a band that does not say its side is split by what the books say", () => {
+    // A fee paid to a ministry and interest received are both non-taxable, and
+    // their sum is a number about nothing — while the ratio of taxable sales to
+    // all sales is worked out from non-taxable sales alone.
+    const mixed = normalize([
+      entry(1, "法務省", [
+        posting("費用:租税公課", yen(8300), [["tax", "non-taxable"]]),
+        posting("資産:普通預金", yen(-8300)),
+      ]),
+      entry(2, "受取利息", [
+        posting("資産:普通預金", yen(5)),
+        posting("収益:受取利息", yen(-5), [["tax", "non-taxable"]]),
+      ]),
+    ])
+    const types = {
+      "費用:租税公課": "Expense",
+      "収益:受取利息": "Revenue",
+      "資産:普通預金": "Asset",
+    } as const
+
+    const band = summarizeConsumptionTax(mixed, RULES, types).bands.find(
+      (one) => one.category === "non-taxable",
+    )
+
+    // Netted together they come to ¥8,295, which answers nothing.
+    expect(formatMixed(band?.recorded ?? [])).toBe("¥8295")
+    // Apart, they are two figures a return can be worked out from.
+    expect(formatMixed(band?.bySide.purchases.total ?? [])).toBe("¥8300")
+    expect(formatMixed(band?.bySide.sales.total ?? [])).toBe("¥5")
+    expect(band?.bySide.sales.postings).toBe(1)
+    expect(band?.bySide.purchases.postings).toBe(1)
+  })
+
+  test("a band that names its side is split too, so the two can be seen to disagree", () => {
+    const wrongWay = normalize([
+      entry(1, "何か", [
+        posting("費用:消耗品費", yen(1100), [["tax", "taxable-sale-10"]]),
+        posting("資産:現金", yen(-1100)),
+      ]),
+    ])
+    const band = summarizeConsumptionTax(wrongWay, RULES, {
+      "費用:消耗品費": "Expense",
+      "資産:現金": "Asset",
+    } as const).bands.find((one) => one.category === "taxable-sale-10")
+
+    // Marked as a sale, sitting on an expense account. The band still totals it,
+    // and the split says where it actually was.
+    expect(band?.bySide.purchases.postings).toBe(1)
+    expect(band?.bySide.sales.postings).toBe(0)
+  })
+
+  test("an account hledger could not place is left unplaced rather than guessed at", () => {
+    const loose = normalize([
+      entry(1, "何か", [
+        posting("なにか:へん", yen(500), [["tax", "non-taxable"]]),
+        posting("資産:現金", yen(-500)),
+      ]),
+    ])
+    const band = summarizeConsumptionTax(loose, RULES, {}).bands.find(
+      (one) => one.category === "non-taxable",
+    )
+    expect(band?.bySide.unplaced.postings).toBe(1)
+    expect(band?.bySide.sales.postings).toBe(0)
+    expect(band?.bySide.purchases.postings).toBe(0)
+  })
+
   test("a band with no rate claims no tax inside it", () => {
     expect(band("non-taxable")?.taxWithin).toBeUndefined()
     expect(band("out-of-scope")?.taxWithin).toBeUndefined()
@@ -417,8 +487,40 @@ describe("what each band of the consumption tax came to", () => {
     expect(summary.unmarked[0]?.index).toBe(3)
   })
 
-  test("where hledger could place nothing, nothing is expected of anything", () => {
-    expect(summarizeConsumptionTax(books, RULES).unmarked).toEqual([])
+  test("where hledger could place nothing, what these books classified is still expected", () => {
+    // No account directives at all, so nothing is an expense as far as hledger
+    // is concerned — but 費用:消耗品費 carries a treatment on one entry, and that
+    // is what says it can carry one.
+    const found = summarizeConsumptionTax(books, RULES)
+    expect(found.unmarked.map((one) => one.account)).toEqual(["費用:消耗品費"])
+  })
+
+  test("a purchase capitalised into an asset is asked about once the account is known", () => {
+    // The failure this was written for: a taxable purchase does not have to be
+    // an expense. Capitalised into 資産:創業費 it never reaches the income
+    // statement, so asking only about income and expense left it out of every
+    // count for good — and nobody was told.
+    const capitalised = normalize([
+      entry(1, "設立費用", [
+        posting("資産:創業費", yen(360000), [["tax", "taxable-purchase-10"]]),
+        posting("資産:普通預金", yen(-360000)),
+      ]),
+      entry(2, "設立費用のつづき", [
+        posting("資産:創業費", yen(297000)),
+        posting("資産:普通預金", yen(-297000)),
+      ]),
+    ])
+    const types = { "資産:創業費": "Asset", "資産:普通預金": "Asset" } as const
+
+    const found = summarizeConsumptionTax(capitalised, RULES, types)
+    expect(found.unmarked.map((one) => one.account)).toEqual(["資産:創業費"])
+    expect(found.unmarked[0]?.index).toBe(2)
+    // And never the money on the other side of it.
+    expect(found.unmarked.some((one) => one.account === "資産:普通預金")).toBe(false)
+  })
+
+  test("it says what the count does not reach, rather than reading as a clean bill", () => {
+    expect(summary.notChecked.length).toBeGreaterThan(0)
   })
 
   test("a misspelt category is reported as itself, not as an absence", () => {
@@ -436,6 +538,13 @@ describe("what each band of the consumption tax came to", () => {
     NOT_WORKED_OUT.forEach((one) => {
       expect(japaneseWords().tax.said[one]).toBeTruthy()
       expect(englishWords().tax.said[one]).toBeTruthy()
+    })
+  })
+
+  test("every limit the count admits to has a sentence in both languages", () => {
+    NOT_CHECKED.forEach((one) => {
+      expect(japaneseWords().tax.checkSaid[one]).toBeTruthy()
+      expect(englishWords().tax.checkSaid[one]).toBeTruthy()
     })
   })
 

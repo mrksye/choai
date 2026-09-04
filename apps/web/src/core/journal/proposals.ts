@@ -139,6 +139,14 @@ const fresh = (): readonly Proposal[] => {
   return held().filter((one) => one.at > by)
 }
 
+/**
+ * Forget a proposal that has not been applied.
+ *
+ * Not an undo, and there is no undo. What has been applied is in the journal,
+ * which is the file somebody keeps in version control — taking it back is
+ * writing to it again, and writing to it again is a thing to be shown before it
+ * happens like every other. So the way back is another proposal.
+ */
 export const drop = (id: string): void => {
   setHeld((was) => was.filter((one) => one.id !== id))
 }
