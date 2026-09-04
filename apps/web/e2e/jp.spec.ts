@@ -86,6 +86,102 @@ const writeTaggedEntries = async (page: Page): Promise<void> => {
   expect(kept.ok).toBe(true)
 }
 
+/**
+ * `writes: false` is a claim about what a call does, and the only thing that had
+ * been holding it was reading the code. Every way of offering a change goes
+ * through here, and the journal is compared byte for byte on either side.
+ */
+test("offering a change writes nothing, whichever kind of change it is", async ({ page }) => {
+  await openTheDemo(page)
+
+  const text = async (): Promise<string> => {
+    const t = await page.evaluate(() => window.choai.journal.text({}))
+    return t.ok ? t.value.text : "unreadable"
+  }
+  const standing = async (): Promise<number> => {
+    const l = await page.evaluate(() => window.choai.proposal.list({}))
+    return l.ok ? l.value.length : -1
+  }
+
+  const before = await text()
+  const found = await page.evaluate(() => window.choai.report.entries({}))
+  expect(found.ok).toBe(true)
+  if (!found.ok) return
+  const [first, second] = found.value.items
+
+  const offered = await page.evaluate(
+    ([add, drop]) =>
+      window.choai.transaction.propose({
+        transactions: [
+          {
+            date: "2026-03-01",
+            payee: "offered and not kept",
+            postings: [
+              { account: "expenses:food", amount: "$1.00" },
+              { account: "assets:cash" },
+            ],
+          },
+        ],
+        remove: [{ index: drop }],
+        tag: [
+          {
+            index: add,
+            tags: [{ name: "invoice", value: "qualified" }],
+            postings: [{ at: 0, tags: [{ name: "tax", value: "taxable-purchase-10" }] }],
+          },
+        ],
+      } as never),
+    [first?.index ?? -1, second?.index ?? -1],
+  )
+  expect(offered.ok).toBe(true)
+  if (!offered.ok) return
+
+  // All three kinds, in one proposal, and every one of them still only an offer.
+  expect(offered.value.items.map((one) => one.is).sort()).toEqual(["add", "remove", "rewrite"])
+  expect(await text()).toBe(before)
+  expect(await standing()).toBe(1)
+
+  // Dropping it says it dropped something, and still nothing was written.
+  const dropped = await page.evaluate((id) => window.choai.proposal.drop({ id }), offered.value.id)
+  expect(dropped.ok).toBe(true)
+  expect(await text()).toBe(before)
+  expect(await standing()).toBe(0)
+
+  // And dropping it again says so, rather than agreeing a second time. An id
+  // with nothing under it is almost always one that was applied a moment ago,
+  // and answering "dropped" to that is telling somebody their change was undone.
+  const again = await page.evaluate((id) => window.choai.proposal.drop({ id }), offered.value.id)
+  expect(again.ok).toBe(false)
+  expect(!again.ok && again.error.at).toBe("no-such-proposal")
+})
+
+test("the tags these books are marked with are answerable, not only known to whoever wrote them", async ({
+  page,
+}) => {
+  await page.goto("/")
+  const said = await page.evaluate(() => window.choai.call("jp.conventions", {}))
+  expect(said.ok).toBe(true)
+  if (!said.ok) return
+
+  const vocabulary = said.value as {
+    tags: readonly { name: string; on: string; values: readonly string[] }[]
+    accountTag: { name: string }
+  }
+  const named = (name: string) => vocabulary.tags.find((one) => one.name === name)
+
+  // The four an invoice needs, which were in the guidance and nowhere a script
+  // or a person at the console could find them.
+  expect(named("invoice")?.values).toEqual(["qualified", "not-qualified", "unknown"])
+  expect(named("partner")?.on).toBe("entry")
+  expect(named("invoice-number")?.on).toBe("entry")
+  expect(named("evidence")?.on).toBe("entry")
+
+  // And the one that is not on an entry at all.
+  expect(named("tax")?.on).toBe("posting")
+  expect(named("tax")?.values).toContain("taxable-purchase-10")
+  expect(vocabulary.accountTag.name).toBe("jp")
+})
+
 test("this is the Japan edition, and it answers to its own names", async ({ page }) => {
   await page.goto("/")
   const manifest = await page.evaluate(() => window.choai.describe())
@@ -107,7 +203,8 @@ test("this is the Japan edition, and it answers to its own names", async ({ page
   const mine = Object.entries(manifest.capabilities).filter(([name]) => name.startsWith("jp."))
   expect(mine.every(([, told]) => !told.writes && !told.leaves)).toBe(true)
   expect(names).toContain("jp.recordAssets")
-  expect(mine.length).toBe(6)
+  expect(names).toContain("jp.conventions")
+  expect(mine.length).toBe(7)
 })
 
 test("a posting's tax tag survives being written to a journal and read back out", async ({ page }) => {

@@ -72,7 +72,7 @@ export const instructions = (): string =>
     "",
     "To correct an entry, find it with report.entries and offer its removal and the corrected one in the same transaction.propose call. They are shown together and kept together, so the journal is never briefly missing it. Never offer a removal you have not read first — the index means something only against the journal as it now stands.",
     "",
-    "Offering is not keeping. Stop after transaction.propose and say what you offered, unless the reader asked for the entries to be written — then call proposal.apply as well and say what was kept. If a proposal comes back not reading, fix it and offer again rather than trying to apply it.",
+    "Offering is not keeping, and the two never happen in one turn. Stop after transaction.propose and say what you offered. Call proposal.apply only after the reader has seen that offer and said to keep it — not because the thing they asked for was a change, and not because they said please write it: they said that before there was anything to look at, and the whole point of offering is that they look. If a proposal comes back not reading, fix it and offer again rather than trying to apply it.",
     "",
     "Deliver what was asked at the scope intended. If you think the question is the wrong one, say so in a sentence and answer it anyway.",
     // Last, and added rather than woven in: what an edition says about the

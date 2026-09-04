@@ -34,7 +34,10 @@ export const EVIDENCE = "evidence"
  */
 export type InvoiceStatus = "qualified" | "not-qualified" | "unknown"
 
-const STATUSES: readonly InvoiceStatus[] = ["qualified", "not-qualified", "unknown"]
+/** Exported, because what a tag may say is part of what this edition publishes. */
+export const INVOICE_STATUSES: readonly InvoiceStatus[] = ["qualified", "not-qualified", "unknown"]
+
+const STATUSES = INVOICE_STATUSES
 
 export type Stated =
   | { readonly is: "stated"; readonly status: InvoiceStatus }

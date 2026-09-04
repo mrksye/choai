@@ -146,9 +146,17 @@ const fresh = (): readonly Proposal[] => {
  * which is the file somebody keeps in version control — taking it back is
  * writing to it again, and writing to it again is a thing to be shown before it
  * happens like every other. So the way back is another proposal.
+ *
+ * Answers whether there was one to forget. That is not fussiness: an id with
+ * nothing under it is almost always one that was applied a moment ago, and
+ * saying "dropped" to that is telling somebody their change was undone when it
+ * is in the file. What it cost to say so anyway was a reader concluding, quite
+ * reasonably, that whatever had written the journal must have been the offer.
  */
-export const drop = (id: string): void => {
+export const drop = (id: string): boolean => {
+  const standing = held().some((one) => one.id === id)
   setHeld((was) => was.filter((one) => one.id !== id))
+  return standing
 }
 
 export const forgetAll = (): void => {

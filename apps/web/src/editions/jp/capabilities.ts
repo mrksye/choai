@@ -9,6 +9,11 @@ import { Err, Ok, digits, fields, listOf, nothing, spare, text, type Result } fr
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
+import { TAX, TAX_CATEGORIES } from "./consumption-tax/category"
+import { EVIDENCE, INVOICE, INVOICE_STATUSES, PARTNER, REGISTRATION } from "./invoice/note"
+import { ACCRUALS, CLOSING } from "./closing/adjustments"
+import { JP } from "./chart/mapping"
+import { SECTIONS } from "./chart/sections"
 import { summarizeConsumptionTax, type NotWorkedOut } from "./consumption-tax/summarize"
 import { depreciationFor } from "./fixed-assets/depreciation"
 import { readEvents } from "./fixed-assets/events"
@@ -503,6 +508,82 @@ const recordAssets = (args: {
       : Err(fromRefusal(made.error))
   })
 
+/**
+ * The vocabulary these books are marked with, as data.
+ *
+ * The guidance tells a model this in prose, which is right for a model and no
+ * use to anything else: a script, a test, or a person at the console reads
+ * `describe()` and finds `tax:` named in one summary and nothing at all about
+ * the invoice tags. That left the names in the author's head, which is where a
+ * convention goes to die.
+ *
+ * So they are answerable. Every name and every permitted value comes from the
+ * constant the code reads, so this cannot describe a vocabulary the code does
+ * not have.
+ */
+const conventions = async (): Promise<Result<Vocabulary, Hitch>> =>
+  Ok({
+    tags: [
+      {
+        name: TAX,
+        on: "posting",
+        values: [...TAX_CATEGORIES],
+        says: "How the figure is treated for consumption tax. On the posting, because one receipt can hold a line at each rate; on the entry it counts for every posting under it.",
+      },
+      {
+        name: INVOICE,
+        on: "entry",
+        values: [...INVOICE_STATUSES],
+        says: "Whether the document behind the entry is a qualified invoice. Unknown is not the same as not-qualified: one is a question nobody asked.",
+      },
+      { name: PARTNER, on: "entry", values: [], says: "Who it was with." },
+      {
+        name: REGISTRATION,
+        on: "entry",
+        values: [],
+        says: "The supplier's registration number, which is a T and thirteen digits. Keeping input tax deductible turns on holding one, so it belongs in the books beside the entry rather than only on the paper.",
+      },
+      {
+        name: EVIDENCE,
+        on: "entry",
+        values: [],
+        says: "Where the document itself is kept, as a path relative to the journal. The file stays a file; this only says where.",
+      },
+      {
+        name: ASSET,
+        on: "entry",
+        values: [],
+        says: "Which fixed asset an entry is about. Written from the register rather than by hand — an entry tagged by hand would be counted twice.",
+      },
+      {
+        name: CLOSING,
+        on: "entry",
+        values: [...ACCRUALS],
+        says: "That this is a year-end adjustment. Written from the year-end screen rather than by hand.",
+      },
+    ],
+    accountTag: {
+      name: JP,
+      values: [...SECTIONS],
+      says: "On an `account` directive rather than on an entry: which heading of a Japanese statement the account is printed under. Read out of the journal's own text, because hledger sends what kind an account is and nothing further.",
+    },
+  })
+
+export interface Vocabulary {
+  readonly tags: readonly {
+    readonly name: string
+    readonly on: "entry" | "posting"
+    /** The values this takes, where it takes a fixed set. Empty means free text. */
+    readonly values: readonly string[]
+    readonly says: string
+  }[]
+  readonly accountTag: {
+    readonly name: string
+    readonly values: readonly string[]
+    readonly says: string
+  }
+}
+
 export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
   [CAPABILITY.consumptionTax]: {
     summary:
@@ -573,6 +654,17 @@ export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
     leaves: false,
     offered: true,
     run: recordAssets,
+  },
+
+  [CAPABILITY.conventions]: {
+    summary:
+      "The tags these books are marked with: what each one is called, whether it goes on an entry or on a posting, and the values it takes. Read this before writing or classifying an entry here — a treatment written under a name this edition does not read is a treatment nothing counts, and the names are not guessable. Every one of them is ordinary hledger written into the journal, so anything that opens the file can see them too.",
+    takes: nothing,
+    writes: false,
+    needsJournal: false,
+    leaves: false,
+    offered: true,
+    run: conventions,
   },
 
   [CAPABILITY.check]: {

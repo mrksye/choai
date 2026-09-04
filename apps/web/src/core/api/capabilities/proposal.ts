@@ -50,7 +50,5 @@ export const apply = async (args: {
     : Err(fromRefusal(done.error))
 }
 
-export const drop = async (args: { readonly id: string }): Promise<Result<{ readonly dropped: string }, Hitch>> => {
-  dropProposal(args.id)
-  return Ok({ dropped: args.id })
-}
+export const drop = async (args: { readonly id: string }): Promise<Result<{ readonly dropped: string }, Hitch>> =>
+  dropProposal(args.id) ? Ok({ dropped: args.id }) : Err({ at: "no-such-proposal", id: args.id })
