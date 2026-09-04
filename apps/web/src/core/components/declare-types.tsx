@@ -2,7 +2,7 @@ import { For, Show, createResource, createSignal, type JSX } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
 import { journal, rewriteFile } from "~/core/journal/store"
-import { KINDS, declaring, directives, guess, unplaced, type Kind } from "~/core/journal/declarations"
+import { KINDS, declaring, guess, unplaced, type Kind } from "~/core/journal/declarations"
 import { getOrUndefined } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
 import { TroubleNote } from "~/core/components/trouble-note"
@@ -16,9 +16,11 @@ import { t } from "~/core/i18n"
  * absence is noticed — a balance sheet with nothing in it, from a journal full
  * of entries, is otherwise a mystery with no way in.
  *
- * What it writes are `account` directives at the top of the file: hledger's own
- * way of saying this, in the reader's own file, in a form that goes on working
- * outside this app.
+ * What it writes are `account` directives among whatever the file already
+ * declares: hledger's own way of saying this, in the reader's own file, in a
+ * form that goes on working outside this app. An account that is already
+ * declared is given the `type:` it was missing rather than declared a second
+ * time — see `declaring`.
  */
 export function DeclareTypes(): JSX.Element {
   const [types, { refetch }] = createResource(
@@ -55,7 +57,7 @@ export function DeclareTypes(): JSX.Element {
 
     setWriting(true)
     setTrouble(undefined)
-    const result = await rewriteFile(path, declaring(file, directives(decided(names))))
+    const result = await rewriteFile(path, declaring(file, decided(names)))
     setWriting(false)
     if (!result.ok) {
       setTrouble(result.error)

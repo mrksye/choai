@@ -10,7 +10,14 @@ import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
 import { saidIn } from "~/core/ai/talker"
 import { narrowed } from "~/core/reports/ask"
 import { PERIODS, TERMS, periodByTerm } from "~/core/reports/periods"
-import { CAME_AND_WENT, OWNED_AND_OWED, inChartOrder, ofKinds } from "~/core/journal/declarations"
+import {
+  CAME_AND_WENT,
+  OWNED_AND_OWED,
+  declarationsIn,
+  declaring,
+  inChartOrder,
+  ofKinds,
+} from "~/core/journal/declarations"
 import { capabilitiesWith, viewsWith, type View } from "~/edition/types"
 import { GlobalEdition } from "~/editions/global"
 import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
@@ -631,5 +638,47 @@ describe("what an edition joins on", () => {
     expect(together("   ")).toBe(core)
     expect(together("what this build adds").startsWith(core)).toBe(true)
     expect(together("what this build adds")).toBe(`${core}\n\nwhat this build adds`)
+  })
+})
+
+describe("telling hledger what kind of account each name is", () => {
+  const BOOK = [
+    "; 帳簿",
+    "",
+    "account 資産:創業費  ; jp:deferred-assets",
+    "account 資産:現金  ; type:A, jp:current-assets",
+    "",
+    "2026-01-01 x",
+    "    資産:創業費  ¥1",
+    "    資産:現金",
+    "",
+  ].join("\n")
+
+  test("an account already declared is given the kind it was missing, not a second line", () => {
+    // The failure this was written for: a declaration carrying a heading but no
+    // type: was declared all over again, so the file had two lines for one
+    // account and whichever was read last decided what it said.
+    const written = declaring(BOOK, new Map([["資産:創業費", "Asset"]]))
+
+    expect(declarationsIn(written).filter((one) => one.account === "資産:創業費").length).toBe(1)
+    expect(written).toContain("account 資産:創業費  ; jp:deferred-assets, type:A")
+  })
+
+  test("and nothing goes above the comment the journal calls itself by", () => {
+    const written = declaring(BOOK, new Map([["費用:通信費", "Expense"]]))
+    expect(written.split("\n")[0]).toBe("; 帳簿")
+  })
+
+  test("one that is not declared joins the others rather than the end of the file", () => {
+    const written = declaring(BOOK, new Map([["費用:通信費", "Expense"]]))
+    expect(written.split("\n").slice(2, 5)).toEqual([
+      "account 資産:創業費  ; jp:deferred-assets",
+      "account 資産:現金  ; type:A, jp:current-assets",
+      "account 費用:通信費  ; type:X",
+    ])
+  })
+
+  test("declaring nothing leaves the file alone", () => {
+    expect(declaring(BOOK, new Map())).toBe(BOOK)
   })
 })

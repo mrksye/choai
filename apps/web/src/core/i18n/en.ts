@@ -176,7 +176,7 @@ export const en = {
   declare: {
     title: "These accounts are not in any statement",
     why: "hledger works out what an account is from its name, but only for the English ones — assets, liabilities, equity, revenues, expenses. Say what these are and they will appear. Everything under them follows.",
-    where: "Written as account directives at the top of the journal.",
+    where: "Written as account directives, beside whatever the journal already declares.",
     write: "Write the declarations",
     asset: "Asset",
     liability: "Liability",

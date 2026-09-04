@@ -166,7 +166,7 @@ export const ja: Dictionary = {
   declare: {
     title: "この勘定科目は、どの財務諸表にも入っていません",
     why: "hledger は名前から科目の種類を判断しますが、英語名 (assets, liabilities, equity, revenues, expenses) しか知りません。ここで種類を指定すれば表に出ます。下位の科目は親の種類を継ぎます。",
-    where: "帳簿の先頭に account ディレクティブとして書き込みます。",
+    where: "帳簿がすでに宣言している account ディレクティブのそばに書き込みます。",
     write: "宣言を書き込む",
     asset: "資産",
     liability: "負債",
