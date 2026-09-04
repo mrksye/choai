@@ -509,29 +509,31 @@ describe("putting a tag on an entry already written", () => {
 
   test("a posting keeps its assertion, its comment and the status mark", () => {
     const out = withTag(ENTRY, { on: "posting", at: 0 }, { name: "tax", value: "taxable-purchase-10" })
-    expect(out?.split("\n")[2]).toBe(
-      "    expenses:supplies  $1100.00 = $1100.00  ; what it was for, tax:taxable-purchase-10",
-    )
+    expect(out?.split("\n")[2]).toBe(ENTRY.split("\n")[2])
+    expect(out?.split("\n")[3]).toBe("    ; tax:taxable-purchase-10")
     expect(out?.split("\n")[0]).toBe(ENTRY.split("\n")[0])
   })
   test("a posting with no comment gets one", () => {
     const out = withTag(ENTRY, { on: "posting", at: 1 }, { name: "tax", value: "out-of-scope" })
-    expect(out?.split("\n")[3]).toBe("    assets:cash  ; tax:out-of-scope")
+    expect(out?.split("\n")[3]).toBe("    assets:cash")
+    expect(out?.split("\n")[4]).toBe("    ; tax:out-of-scope")
   })
   test("the entry's own line, past its comment continuation", () => {
     const out = withTag(ENTRY, { on: "entry" }, { name: "invoice", value: "qualified" })
-    expect(out?.split("\n")[0]).toBe("2026-06-02 * a supplier  ; receipt:r-1, invoice:qualified")
+    expect(out?.split("\n")[0]).toBe(ENTRY.split("\n")[0])
+    expect(out?.split("\n")[2]).toBe("    ; invoice:qualified")
+  })
+  test("nothing that was already written moves", () => {
+    const out = withTag(ENTRY, { on: "posting", at: 0 }, { name: "tax", value: "taxable-purchase-10" })
+    const kept = (out ?? "").split("\n").filter((line) => ENTRY.split("\n").includes(line))
+    expect(kept).toEqual(ENTRY.split("\n"))
   })
   test("a tag already there is given its new value, not written twice", () => {
     const out = withTag(ENTRY, { on: "entry" }, { name: "receipt", value: "r-2" })
     expect(out?.split("\n")[0]).toBe("2026-06-02 * a supplier  ; receipt:r-2")
   })
   test("one hiding on a continuation line is found there", () => {
-    const with2 = withTag(ENTRY, { on: "entry" }, { name: "partner", value: "Old" }) ?? ""
-    const moved = with2.replace("  ; receipt:r-1, partner:Old", "  ; receipt:r-1").replace(
-      "    ; a note about it",
-      "    ; a note about it, partner:Old",
-    )
+    const moved = ENTRY.replace("    ; a note about it", "    ; a note about it, partner:Old")
     const out = withTag(moved, { on: "entry" }, { name: "partner", value: "New" })
     expect(out).toContain("; a note about it, partner:New")
     expect(out?.match(/partner:/g)?.length).toBe(1)

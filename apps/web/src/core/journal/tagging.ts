@@ -18,6 +18,11 @@ import type { Tag } from "~/core/compose/draft"
  * So the text is edited where it stands. A tag already there is given its new
  * value where it stands too, rather than written a second time — hledger would
  * read the first of two and the reader would see both.
+ *
+ * A tag that is not there yet is written on a line of its own. Both forms are
+ * hledger's, and comma-separated ones already in a book are read and rewritten
+ * as they are; what is *written* is one to a line, because the diff of a book is
+ * something people read. See `under`.
  */
 
 /** Which line of an entry a tag belongs on. */
@@ -65,11 +70,33 @@ const already = (name: string): RegExp =>
 
 const said = (tag: Tag): string => `${tag.name.trim()}:${tag.value.trim()}`
 
-/** The same line, carrying this tag — appended, or its value replaced where it stands. */
-const onto = (line: string, tag: Tag): string =>
-  COMMENT.test(line) || line.includes(";") || line.includes("#")
-    ? `${line}, ${said(tag)}`
-    : `${line}  ; ${said(tag)}`
+/** The indent this entry writes its own lines at, or the usual one. */
+const indentOf = (lines: readonly string[]): string => {
+  const found = lines.flatMap((line) => {
+    const [indent] = /^\s+(?=\S)/.exec(line) ?? []
+    return indent === undefined ? [] : [indent]
+  })
+  return found[0] ?? "    "
+}
+
+/**
+ * The entry with one more comment line under this place, holding the tag.
+ *
+ * A line of its own rather than a comma on the end of a line that is already
+ * there, which hledger reads identically — so the choice is made on what the
+ * diff looks like, and these books are kept in git. Extending a line makes
+ * adding a tag a change to a line somebody else wrote; a new line makes it an
+ * addition, and the entry as it stood reads unchanged beneath it. Over a book
+ * that gets a registration number corrected every time a supplier re-registers,
+ * that is the difference between a history that can be read and one that cannot.
+ *
+ * Below the comments already under the place, so tags stay in the order they
+ * were put there, and so nothing that is already written moves.
+ */
+const under = (lines: readonly string[], block: readonly number[], tag: Tag): readonly string[] => {
+  const last = block[block.length - 1] ?? 0
+  return [...lines.slice(0, last + 1), `${indentOf(lines)}; ${said(tag)}`, ...lines.slice(last + 1)]
+}
 
 /**
  * The entry with this tag on it.
@@ -96,7 +123,7 @@ export const withTag = (entry: string, where: Where, tag: Tag): string | undefin
       .join("\n")
   }
 
-  return lines.map((line, index) => (index === at ? onto(line, tag) : line)).join("\n")
+  return under(lines, through(lines, at), tag).join("\n")
 }
 
 /** The same, for several tags at once, each written the same way. */

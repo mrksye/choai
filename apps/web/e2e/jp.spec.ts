@@ -779,9 +779,25 @@ test("classifying an entry keeps everything a draft could not have held", async 
   expect(text.ok).toBe(true)
   if (!text.ok) return
 
-  // The tags arrived.
-  expect(text.value.text).toContain("; receipt:r-1, invoice:qualified")
-  expect(text.value.text).toContain("; what it was for, tax:taxable-purchase-10")
+  // The tags arrived, each on a line of its own — so the lines that were already
+  // there read in the diff exactly as they read before, and the change is an
+  // addition rather than an edit to somebody else's line.
+  expect(text.value.text).toContain("; a note somebody wrote\n    ; invoice:qualified")
+  expect(text.value.text).toContain("; what it was for\n    ; tax:taxable-purchase-10")
+
+  // And hledger reads them as tags of the thing they were written under, which
+  // is the only reading that matters: the shape above is a claim about the file,
+  // this is the claim about what the file now means.
+  const asked = await page.evaluate(() =>
+    Promise.all([
+      window.choai.report.entries({ query: "tag:invoice=qualified" }),
+      window.choai.report.entries({ query: "tag:tax=taxable-purchase-10" }),
+    ]),
+  )
+  expect(asked.map((one) => (one.ok ? one.value.items.map((e) => e.index) : ["failed"]))).toEqual([
+    [index],
+    [index],
+  ])
 
   // And nothing else moved: the status mark, the assertion, the comment line and
   // the alignment are all exactly as somebody wrote them. This is the whole
