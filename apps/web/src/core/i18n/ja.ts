@@ -286,6 +286,7 @@ export const ja: Dictionary = {
   },
   hitch: {
     noSuchCapability: "{{ name }} という呼び出しはありません。",
+    notOffered: "{{ name }} が呼ばれましたが、ここで渡しているものではありません。",
     badArguments: "引数が {{ count }} 箇所ちがいます:",
     noJournal: "対象の帳簿が開かれていませんでした。",
     incomplete: "仕訳にまだ足りません: {{ missing }}。",

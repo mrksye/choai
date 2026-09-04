@@ -357,6 +357,63 @@ test("a key that is not accepted is said so when it is checked", async ({ page }
 })
 
 /**
+ * The one capability a model is not given, asked for anyway.
+ *
+ * `transaction.create` writes an entry nobody saw first, and it is kept off the
+ * list of tools for exactly that reason — a reason that only holds if the list
+ * holds. Nothing about a model's answer is checked by the model: the name comes
+ * back as a string, and a string is what would have been run. It reaches here by
+ * a model inventing a plausible name, or by something it read telling it to, and
+ * either way the entry would be in the journal with no diff having existed.
+ */
+const WANTS_WHAT_IT_HAS_NOT = {
+  model: "claude-opus-5",
+  stop_reason: "tool_use",
+  content: [
+    { type: "thinking", thinking: "" },
+    {
+      type: "tool_use",
+      id: "toolu_9",
+      name: "transaction__create",
+      input: {
+        date: "2026-03-01",
+        payee: "nobody saw this",
+        postings: [{ account: "expenses:food", amount: "$1.00" }, { account: "assets:cash" }],
+      },
+    },
+  ],
+}
+
+test("a model asking for something it was never offered is refused, and writes nothing", async ({
+  page,
+}) => {
+  const asked = await answerWith(page, CLAUDE, (route, sofar) =>
+    asJson(route, sofar === 1 ? WANTS_WHAT_IT_HAS_NOT : CLAUDE.answers),
+  )
+
+  await connect(page, CLAUDE)
+  await openTheDemo(page)
+  await askThat(page, "write me an entry")
+  await expect(page.getByText(SAID)).toBeVisible()
+
+  // Refused as a refusal rather than as a name nobody has — the difference is
+  // the interesting one, and it goes back to the model as its call's result.
+  const back = JSON.stringify(asked[1])
+  expect(back).toContain("not-offered")
+  expect(back).toContain("transaction.create")
+
+  // And the journal is where it was.
+  const open = await page.evaluate(() => window.choai.journal.summary({}))
+  expect(open.ok && open.value.transactions).toBe(9)
+
+  // The list it was handed did not have it, which is the other half of the rule.
+  const tools = CLAUDE.toolNamesIn(asked[0] as never)
+  expect(tools).not.toContain("transaction__create")
+  expect(tools).toContain("transaction__propose")
+})
+
+
+/**
  * The encoding is decided rather than assumed, which matters because assuming
  * wrongly does not fail. A Japanese bank exports Shift_JIS; decoded as UTF-8 the
  * commas and the line endings survive, so it still reads as a table and still

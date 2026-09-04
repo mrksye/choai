@@ -52,6 +52,8 @@ export function HitchNote(props: { hitch: Hitch }): JSX.Element {
  */
 const headline = (hitch: Hitch): string => {
   switch (hitch.at) {
+    case "not-offered":
+      return t("hitch.notOffered", { name: hitch.name })
     case "no-such-capability":
       return t("hitch.noSuchCapability", { name: hitch.name })
     case "bad-arguments":

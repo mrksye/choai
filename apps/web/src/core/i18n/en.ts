@@ -297,6 +297,7 @@ export const en = {
   /** Why something did not work. The wording is chosen here, not passed up. */
   hitch: {
     noSuchCapability: "There is no {{ name }} to call.",
+    notOffered: "{{ name }} was asked for and is not one of the things offered here.",
     badArguments: "It was called with {{ count }} thing(s) wrong:",
     noJournal: "No journal was open to work on.",
     incomplete: "The entry is still missing: {{ missing }}.",

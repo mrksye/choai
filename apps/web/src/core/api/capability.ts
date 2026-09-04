@@ -40,6 +40,22 @@ export interface Capability<A, R> {
 }
 
 /**
+ * Whether a model may be given this — and therefore whether it may run it.
+ *
+ * One rule, read twice: once to build the list of tools a model is handed, and
+ * once to refuse a name that was not on it. Two readings of one sentence cannot
+ * come apart; two sentences saying the same thing would, and the way they would
+ * come apart is a model reaching something nobody meant it to have.
+ *
+ * `leaves` is in it because a tool list that excluded it and a guard that did
+ * not would be exactly that gap: `github.push` is withheld from a model for a
+ * different reason from `transaction.create`, and both reasons have to hold at
+ * both readings.
+ */
+export const isOffered = (told: { readonly offered: boolean; readonly leaves: boolean }): boolean =>
+  told.offered && !told.leaves
+
+/**
  * Any capability at all, for the table to be held as.
  *
  * Not `Capability<unknown, unknown>`, because the two halves pull opposite ways:

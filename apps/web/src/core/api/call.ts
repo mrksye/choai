@@ -1,6 +1,6 @@
 import { journal } from "~/core/journal/store"
 import { Err, getOrUndefined, type Result } from "~/core/lib/monad"
-import type { SomeCapability } from "./capability"
+import { isOffered, type SomeCapability } from "./capability"
 import type { Hitch } from "./hitch"
 import { CAPABILITIES, type Answer, type Args, type Name } from "./table"
 
@@ -26,7 +26,17 @@ import { CAPABILITIES, type Answer, type Args, type Name } from "./table"
 export const call = <K extends Name,>(name: K, args: Args<K>): Promise<Result<Answer<K>, Hitch>> =>
   callByName(name, args) as Promise<Result<Answer<K>, Hitch>>
 
-/** Run a capability named at the time — what something reading `describe` uses. */
+/**
+ * Run a capability named at the time — what something reading `describe` uses.
+ *
+ * This is the door a person and their own scripts come through, and it does not
+ * ask whether a capability is offered. `offered` is about what a model is handed
+ * and is not a lock on the owner of the books: they can write an entry from the
+ * console, and they can write one by typing it into the source editor, because
+ * they are the ones the journal belongs to.
+ *
+ * A model comes through `callAsOffered` instead, which does ask.
+ */
 export const callByName = async (name: string, args?: unknown): Promise<Result<unknown, Hitch>> => {
   const capability = capabilityNamed(name)
   if (capability === undefined) return Err({ at: "no-such-capability", name })
@@ -39,6 +49,27 @@ export const callByName = async (name: string, args?: unknown): Promise<Result<u
   }
 
   return run(capability, read.value)
+}
+
+/**
+ * The same, for something that may only run what it was given.
+ *
+ * A model is handed a list of tools and then asked what it wants to do. Nothing
+ * about the answer is checked by the model: a name it was never given — because
+ * it invented one, or because something it read told it to — arrived as a string
+ * and was run. `transaction.create` is the one that matters: it writes an entry
+ * nobody saw first, and it is kept off the list for exactly that reason, which
+ * is a reason that only holds if the list holds.
+ *
+ * So the list is checked on the way back in, against the same rule that built
+ * it. What is refused is refused as a refusal rather than as a name that does
+ * not exist, so the reader can see that something asked for a thing it had been
+ * told it could not have.
+ */
+export const callAsOffered = async (name: string, args?: unknown): Promise<Result<unknown, Hitch>> => {
+  const capability = capabilityNamed(name)
+  if (capability !== undefined && !isOffered(capability)) return Err({ at: "not-offered", name })
+  return callByName(name, args)
 }
 
 

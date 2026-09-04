@@ -20,6 +20,15 @@ import type { JsonSchema, Wrong } from "~/core/lib/monad"
  */
 export type Hitch =
   | { readonly at: "no-such-capability"; readonly name: string }
+  /**
+   * A capability that exists and was not offered to whoever asked for it.
+   *
+   * Its own case rather than "no such capability", because they are different
+   * facts and the difference is the interesting one: a name nobody has is a
+   * misspelling, and a name that was deliberately withheld and asked for anyway
+   * is worth being able to see.
+   */
+  | { readonly at: "not-offered"; readonly name: string }
   | {
       readonly at: "bad-arguments"
       readonly capability: string

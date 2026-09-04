@@ -1,4 +1,4 @@
-import { callByName } from "~/core/api/call"
+import { callAsOffered } from "~/core/api/call"
 import type { Hitch } from "~/core/api/hitch"
 import { Ok, type Result } from "~/core/lib/monad"
 import { capabilityOf } from "./naming"
@@ -161,7 +161,9 @@ const step = async (
   const answers = await Promise.all(
     asked.map(async (one) => {
       const capability = capabilityOf(one.name)
-      const answer = await callByName(capability, one.input)
+      // What a model may run is what it was offered. The name came back as a
+      // string and nothing about it was checked by the model itself.
+      const answer = await callAsOffered(capability, one.input)
       onBeat({ is: "ran", ran: { capability, args: one.input, answer } })
       return { id: one.id, name: one.name, answer }
     }),

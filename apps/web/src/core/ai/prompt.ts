@@ -1,4 +1,5 @@
 import { edition } from "~/edition"
+import { isOffered } from "~/core/api/capability"
 import { describe } from "~/core/api/manifest"
 import { amountExample } from "~/core/compose/hint"
 import type { OpenJournal } from "~/core/journal/store"
@@ -31,7 +32,7 @@ import { toolNameOf } from "./naming"
  */
 export const toolsOffered = (): readonly Tool[] =>
   Object.entries(describe().capabilities)
-    .filter(([, told]) => told.offered && !told.leaves)
+    .filter(([, told]) => isOffered(told))
     .map(([name, told]) => ({
       name: toolNameOf(name),
       description: told.summary,
