@@ -424,3 +424,89 @@ test("keeping everything marks the guesses, and hledger finds them again", async
   // Both went in; only the guess carries the tag.
   expect(kept).toEqual({ kept: 2, now: 11, found: ["Mystery Charge"] })
 })
+
+/**
+ * The same promise, for a change to an entry somebody already wrote.
+ *
+ * Classifying entries that are already in the books is the work least likely to
+ * be certain, so it is the work that most needs a composer to be able to say so.
+ * A doubt that is stated and then dropped is worse than one never stated: what
+ * goes into the journal is indistinguishable from a figure read off a receipt,
+ * and the reader has no way left to tell which is which.
+ */
+test("a doubtful change to an entry already written is tagged too", async ({ page }) => {
+  await openTheDemo(page)
+
+  const out = await page.evaluate(async () => {
+    const found = await window.choai.report.entries({})
+    if (!found.ok) return { failed: "entries" }
+    const [one] = found.value.items
+    if (one === undefined) return { failed: "nothing to tag" }
+
+    const made = await window.choai.transaction.propose({
+      tag: [
+        {
+          index: one.index,
+          confidence: 0.4,
+          why: "guessed from the payee",
+          postings: [{ at: 0, tags: [{ name: "tax", value: "taxable-purchase-10" }] }],
+        },
+      ],
+    } as never)
+    if (!made.ok) return { failed: JSON.stringify(made.error) }
+
+    const done = await window.choai.proposal.apply({ id: made.value.id, markUnsure: true })
+    if (!done.ok) return { failed: JSON.stringify(done.error) }
+
+    const flagged = await window.choai.report.entries({ query: "tag:needs-checking" })
+    const classified = await window.choai.report.entries({ query: "tag:tax" })
+    return {
+      flagged: flagged.ok ? flagged.value.items.map((e) => e.index) : [],
+      classified: classified.ok ? classified.value.items.map((e) => e.index) : [],
+      was: one.index,
+    }
+  })
+
+  // The change went in, and the doubt went in with it, on that same entry.
+  expect(out.failed).toBeUndefined()
+  expect(out.classified).toEqual([out.was])
+  expect(out.flagged).toEqual([out.was])
+})
+
+/**
+ * Every capability that says it does not write, taken at its word and checked.
+ *
+ * The targeted test above covers the ways of offering a change, which is where
+ * the risk was known to be. This one covers the ones nobody has thought about
+ * yet, including any added after this was written: the list is read from
+ * `describe()` at run time rather than typed out here, so a new capability is in
+ * it the day it exists and cannot be added without answering for this.
+ *
+ * Called with nothing, so what most of them do is refuse. That is the point —
+ * refusing is not writing either, and a capability that wrote before it looked
+ * at its arguments is exactly the shape of the fault this is here for.
+ */
+test("nothing that says it does not write, writes", async ({ page }) => {
+  await openTheDemo(page)
+
+  const out = await page.evaluate(async () => {
+    const before = await window.choai.journal.text({})
+    if (!before.ok) return { failed: "unreadable" }
+
+    const quiet = Object.entries(window.choai.describe().capabilities).flatMap(
+      ([name, told]) => (told.writes || told.leaves ? [] : [name]),
+    )
+
+    const wrote: string[] = []
+    for (const name of quiet) {
+      await window.choai.call(name, {})
+      const now = await window.choai.journal.text({})
+      if (!now.ok || now.value.text !== before.value.text) wrote.push(name)
+    }
+    return { checked: quiet.length, wrote }
+  })
+
+  expect(out.failed).toBeUndefined()
+  expect(out.wrote).toEqual([])
+  expect(out.checked ?? 0).toBeGreaterThan(10)
+})

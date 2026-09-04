@@ -5,6 +5,7 @@ import { appendToJournal, draftToJournal, type Draft } from "~/core/compose/draf
 import { Err, Ok, getOrUndefined, type Result } from "~/core/lib/monad"
 import { replaceAt, type Span } from "./lines"
 import { journal, putFiles, tryOut, type OpenJournal } from "./store"
+import { withTag } from "./tagging"
 
 /**
  * Changes written but not yet kept.
@@ -178,17 +179,38 @@ const chosen = (proposal: Proposal, only: readonly number[] | undefined): readon
     : only.flatMap((at) => (proposal.items[at] === undefined ? [] : [proposal.items[at]]))
 
 /**
- * A doubtful entry, with the doubt written on it.
+ * A doubtful change, with the doubt written on it.
  *
- * Only additions, and only the doubtful: an entry somebody was sure of is not
- * improved by being told to check it, and a removal has no entry left to carry
- * the tag. Adding it needs no fresh trial — hledger reads a tag out of a
- * comment, and a comment cannot stop the entry around it from parsing.
+ * Only the doubtful: a change somebody was sure of is not improved by being
+ * told to check it. Adding the tag needs no fresh trial — hledger reads a tag
+ * out of a comment, and a comment cannot stop the entry around it from parsing.
+ *
+ * Every kind that leaves an entry behind carries it, which is the whole of the
+ * point: what confidence is *for* is a composer saying it is not certain, and a
+ * kind that quietly dropped the tag would take a stated doubt and file it as a
+ * settled fact. A rewrite is the kind most of that happens through — classifying
+ * entries that are already written is exactly the work nobody can be sure of —
+ * so it is the one that could least afford to be left out. A removal is left
+ * out because there is no entry left to hold the tag, and an append because the
+ * file it lands in is not a journal and has no tags in it.
  */
-const marked = (item: Item): Item =>
-  item.is !== "add" || item.confidence >= SURE || item.draft.tags.some((tag) => tag.name === UNSETTLED)
-    ? item
-    : { ...item, draft: { ...item.draft, tags: [...item.draft.tags, { name: UNSETTLED, value: "" }] } }
+const marked = (item: Item): Item => {
+  if (item.confidence >= SURE) return item
+
+  switch (item.is) {
+    case "add":
+      return item.draft.tags.some((tag) => tag.name === UNSETTLED)
+        ? item
+        : { ...item, draft: { ...item.draft, tags: [...item.draft.tags, { name: UNSETTLED, value: "" }] } }
+    case "rewrite": {
+      const text = withTag(item.text, { on: "entry" }, { name: UNSETTLED, value: "" })
+      return text === undefined ? item : { ...item, text }
+    }
+    case "remove":
+    case "append":
+      return item
+  }
+}
 
 /** Where the entry file sits in `files`, which is without the leading slash. */
 const entryPath = (open: OpenJournal): string => open.source.entry.replace(/^\//, "")
