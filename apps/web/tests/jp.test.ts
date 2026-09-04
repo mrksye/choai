@@ -15,6 +15,7 @@ import { said, toldOf } from "~/editions/jp/tags"
 import {
   TAX_CATEGORIES,
   isTaxCategory,
+  deductibleIn,
   queryFor,
   treatmentIn,
 } from "~/editions/jp/consumption-tax/category"
@@ -143,9 +144,40 @@ describe("how a figure is treated for consumption tax", () => {
     TAX_CATEGORIES.forEach((category) => expect(bandFor(RULES, category)).toBeDefined())
   })
 
-  test("only the four taxable bands carry a rate at all", () => {
+  test("only the bands the tax actually reaches carry a rate", () => {
     const rated = RULES.bands.filter((band) => band.rate !== undefined).map((band) => band.category)
-    expect(rated).toEqual(["taxable-sale-10", "taxable-sale-8", "taxable-purchase-10", "taxable-purchase-8"])
+    expect(rated).toEqual([
+      "taxable-sale-10",
+      "taxable-sale-8",
+      "taxable-purchase-10",
+      "taxable-purchase-8",
+      "reverse-charge-10",
+      "reverse-charge-8",
+    ])
+    // The other three are not rates of zero: the tax does not reach them, which
+    // is a different fact and appears in a different box.
+    expect(RULES.bands.filter((band) => band.rate === undefined).map((one) => one.category)).toEqual([
+      "non-taxable",
+      "tax-exempt",
+      "out-of-scope",
+    ])
+  })
+
+  test("a specified taxable purchase is a purchase, not something outside the tax", () => {
+    expect(bandFor(RULES, "reverse-charge-10")?.side).toBe("purchase")
+    expect(bandFor(RULES, "reverse-charge-10")?.rate).toEqual({ over: 10, under: 100 })
+  })
+
+  test("what was said about deductibility is a second question, read apart", () => {
+    expect(deductibleIn([["deduct", "no"]])).toEqual({ is: "no" })
+    expect(deductibleIn([["deduct", "no:適格請求書なし"]])).toEqual({
+      is: "no",
+      why: "適格請求書なし",
+    })
+    expect(deductibleIn([["deduct", "yes"]])).toEqual({ is: "yes" })
+    // Nothing said is not the same as deductible, and is not read as either.
+    expect(deductibleIn([])).toEqual({ is: "unsaid" })
+    expect(deductibleIn([["deduct", "maybe"]])).toEqual({ is: "unrecognised", said: "maybe" })
   })
 
   test("a tag nobody recognises is said so, not read as nothing", () => {
@@ -467,6 +499,82 @@ describe("what each band of the consumption tax came to", () => {
     expect(band?.bySide.unplaced.postings).toBe(1)
     expect(band?.bySide.sales.postings).toBe(0)
     expect(band?.bySide.purchases.postings).toBe(0)
+  })
+
+  test("what cannot be deducted is split out, and the input tax follows the rest", () => {
+    // Contabo: a service over the internet from a provider outside Japan. Where
+    // it is supplied to a business here it is a domestic transaction, so it is a
+    // taxable purchase -- and whether the tax on it can be deducted is a second
+    // question with a second answer.
+    const abroad = normalize([
+      entry(1, "Contabo", [
+        posting("費用:通信費", yen(1650), [
+          ["tax", "taxable-purchase-10"],
+          ["deduct", "no:適格請求書発行事業者の登録なし"],
+        ]),
+        posting("資産:普通預金", yen(-1650)),
+      ]),
+      entry(2, "お名前.com", [
+        posting("費用:通信費", yen(873), [["tax", "taxable-purchase-10"]]),
+        posting("資産:普通預金", yen(-873)),
+      ]),
+    ])
+    const types = { "費用:通信費": "Expense", "資産:普通預金": "Asset" } as const
+
+    const band = summarizeConsumptionTax(abroad, RULES, types).bands.find(
+      (one) => one.category === "taxable-purchase-10",
+    )
+
+    expect(formatMixed(band?.total ?? [])).toBe("¥2523")
+    expect(formatMixed(band?.byDeduction.notDeductible.total ?? [])).toBe("¥1650")
+    expect(formatMixed(band?.byDeduction.deductible.total ?? [])).toBe("¥873")
+
+    // The input tax follows what may actually be deducted, not the whole band:
+    // 873 x 10/110 = 79, and not 2,523 x 10/110 = 229.
+    expect(formatMixed(band?.byDeduction.taxWithinDeductible ?? [])).toBe("¥79")
+    expect(formatMixed(band?.taxWithin ?? [])).toBe("¥229")
+
+    // Nothing said is counted as deductible and counted again on its own, so
+    // silence is not mistaken for a yes.
+    expect(band?.byDeduction.notSaid.postings).toBe(1)
+  })
+
+  test("a specified taxable purchase is its own band, and nothing here decides what becomes of it", () => {
+    const rc = normalize([
+      entry(1, "広告配信", [
+        posting("費用:広告宣伝費", yen(11000), [["tax", "reverse-charge-10"]]),
+        posting("資産:普通預金", yen(-11000)),
+      ]),
+    ])
+    const found = summarizeConsumptionTax(rc, RULES, {
+      "費用:広告宣伝費": "Expense",
+      "資産:普通預金": "Asset",
+    } as const)
+    const band = found.bands.find((one) => one.category === "reverse-charge-10")
+
+    expect(band?.postings).toBe(1)
+    expect(formatMixed(band?.total ?? [])).toBe("¥11000")
+    expect(band?.side).toBe("purchase")
+    // Whether it is treated as never having happened depends on a whole year's
+    // figures, so it is not among the things this works out.
+    expect(found.notWorkedOut.length).toBeGreaterThan(0)
+  })
+
+  test("a deduct value nobody recognises is an error, not a silent yes", () => {
+    const odd = normalize([
+      entry(1, "何か", [
+        posting("費用:通信費", yen(1100), [
+          ["tax", "taxable-purchase-10"],
+          ["deduct", "maybe"],
+        ]),
+        posting("資産:現金", yen(-1100)),
+      ]),
+    ])
+    const found = summarizeConsumptionTax(odd, RULES, { "費用:通信費": "Expense" } as const)
+    expect(found.unrecognisedDeduction.map((one) => one.said)).toEqual(["maybe"])
+    expect(errorsAmong(checkConsumptionTax(odd, found)).map((one) => one.is)).toContain(
+      "deduct-unrecognised",
+    )
   })
 
   test("a band with no rate claims no tax inside it", () => {
@@ -1441,9 +1549,9 @@ describe("what a model is told about how these books are kept", () => {
     // looks deliberate.
     TAX_CATEGORIES.forEach((category) => expect(said).toContain(category))
 
-    const named = [...said.matchAll(/taxable-[a-z]+-\d+|non-taxable|tax-exempt|out-of-scope/g)].map(
-      (found) => found[0],
-    )
+    const named = [
+      ...said.matchAll(/taxable-[a-z]+-\d+|reverse-charge-\d+|non-taxable|tax-exempt|out-of-scope/g),
+    ].map((found) => found[0])
     expect([...new Set(named)].sort()).toEqual([...TAX_CATEGORIES].sort())
   })
 

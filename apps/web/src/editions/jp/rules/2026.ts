@@ -103,6 +103,10 @@ export const japaneseTaxRules2026: JapaneseTaxRules = {
     { category: "taxable-sale-8", side: "sale", rate: { over: 8, under: 100 } },
     { category: "taxable-purchase-10", side: "purchase", rate: { over: 10, under: 100 } },
     { category: "taxable-purchase-8", side: "purchase", rate: { over: 8, under: 100 } },
+    // 特定課税仕入れ. A purchase at the same rates, on which this company rather
+    // than the supplier is the one that owes.
+    { category: "reverse-charge-10", side: "purchase", rate: { over: 10, under: 100 } },
+    { category: "reverse-charge-8", side: "purchase", rate: { over: 8, under: 100 } },
     // No rate on these three, and not a rate of zero: the tax does not reach
     // them, which is a different thing from reaching them and coming to nothing.
     { category: "non-taxable", side: "neither" },

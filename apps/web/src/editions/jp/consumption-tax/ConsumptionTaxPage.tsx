@@ -126,6 +126,7 @@ export function ConsumptionTaxPage(): JSX.Element {
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.total}</th>
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.sales}</th>
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.purchases}</th>
+                      <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.notDeductible}</th>
                       <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.within}</th>
                     </tr>
                   </thead>
@@ -144,7 +145,17 @@ export function ConsumptionTaxPage(): JSX.Element {
                               : formatMixed(band.bySide.purchases.total)}
                           </td>
                           <td class={`${FIGURE} ${NARROW}`}>
-                            {band.taxWithin === undefined ? "—" : formatMixed(band.taxWithin)}
+                            {band.byDeduction.notDeductible.postings === 0
+                              ? "—"
+                              : formatMixed(band.byDeduction.notDeductible.total)}
+                          </td>
+                          <td class={`${FIGURE} ${NARROW}`}>
+                            {/* The tax inside what may actually be deducted, which
+                                is not the tax inside the whole band once some of
+                                it cannot be. */}
+                            {band.byDeduction.taxWithinDeductible === undefined
+                              ? "—"
+                              : formatMixed(band.byDeduction.taxWithinDeductible)}
                           </td>
                         </tr>
                       )}
@@ -152,6 +163,28 @@ export function ConsumptionTaxPage(): JSX.Element {
                   </tbody>
                 </Figures>
                 <p class="text-xs text-muted-foreground">{words().tax.bySideLead}</p>
+                <p class="text-xs text-muted-foreground">{words().tax.deductLead}</p>
+
+                <Show
+                  when={found().bands.reduce(
+                    (so, band) => so + band.byDeduction.notSaid.postings,
+                    0,
+                  )}
+                >
+                  {(count) => (
+                    <p class="text-xs text-muted-foreground">
+                      {filled(words().tax.notSaid, { count: count() })}
+                    </p>
+                  )}
+                </Show>
+
+                <Show
+                  when={found().bands.some(
+                    (band) => band.category.startsWith("reverse-charge") && band.postings > 0,
+                  )}
+                >
+                  <p class="text-xs text-muted-foreground">{words().tax.reverseChargeLead}</p>
+                </Show>
 
                 <Show when={found().bands.some((band) => band.bySide.unplaced.postings > 0)}>
                   <p class="text-xs text-destructive">{words().tax.unplaced}</p>

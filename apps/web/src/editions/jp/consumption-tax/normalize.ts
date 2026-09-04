@@ -1,6 +1,6 @@
 import type { MixedAmount, Posting, Transaction } from "~/core/hledger/wire"
 import { noteIn, type InvoiceNote } from "../invoice/note"
-import { treatmentIn, type Treatment } from "./category"
+import { deductibleIn, treatmentIn, type Deductible, type Treatment } from "./category"
 
 /**
  * The journal, read as the thing a consumption tax return is worked out from.
@@ -21,6 +21,14 @@ export interface TaxPosting {
   /** The figure as the journal has it, untouched. */
   readonly amount: MixedAmount
   readonly treatment: Treatment
+  /**
+   * Whether the tax on it can be taken off what is owed.
+   *
+   * A second question rather than a finer answer to the first — see `DEDUCT`.
+   * Read from the same two places for the same reason: it belongs to a figure,
+   * and an entry saying it says it for every figure under it.
+   */
+  readonly deductible: Deductible
 }
 
 export interface JapaneseTaxTransaction {
@@ -44,6 +52,7 @@ const postingOf = (posting: Posting, transaction: Transaction): TaxPosting => ({
   account: posting.paccount,
   amount: posting.pamount,
   treatment: treatmentIn(posting.ptags, transaction.ttags),
+  deductible: deductibleIn(posting.ptags, transaction.ttags),
 })
 
 export const normalize = (

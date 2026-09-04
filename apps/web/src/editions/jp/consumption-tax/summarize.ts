@@ -100,6 +100,16 @@ export interface BandTotal {
    */
   readonly bySide: Sided
   /**
+   * The same band, split by whether the tax on it can be taken off what is owed.
+   *
+   * Deductibility is a second question and not a finer answer to the first, so
+   * it is a second split rather than more bands — see `DEDUCT`. Postings with
+   * nothing said are counted with the deductible ones, because that is the
+   * ordinary case, and counted again on their own so that "nobody has said" is
+   * not hidden inside "yes".
+   */
+  readonly byDeduction: Deducted
+  /**
    * The consumption tax inside `total`, where the band carries a rate and the
    * books are kept tax-inclusive. A reference figure. See the note above.
    */
@@ -122,6 +132,22 @@ export interface Part {
   readonly total: MixedAmount
 }
 
+export interface Deducted {
+  /** Said to be deductible, or not said — which is counted here and again below. */
+  readonly deductible: Part
+  readonly notDeductible: Part
+  /** Of the deductible figure, the part nobody has actually been asked about. */
+  readonly notSaid: Part
+  /**
+   * The tax inside the deductible part.
+   *
+   * The figure a return's input tax is worked out from, where the band carries a
+   * rate and the books are kept tax-inclusive. A reference figure like every
+   * other one here.
+   */
+  readonly taxWithinDeductible?: MixedAmount
+}
+
 export interface ConsumptionTaxSummary {
   /** Which rules decided every rate here. */
   readonly rules: string
@@ -135,6 +161,8 @@ export interface ConsumptionTaxSummary {
   readonly unmarked: readonly Loose[]
   /** Postings marked with something that is not a category. */
   readonly unrecognised: readonly Mistyped[]
+  /** Postings whose deduct: tag says something that is neither yes nor no. */
+  readonly unrecognisedDeduction: readonly Mistyped[]
   readonly notWorkedOut: readonly NotWorkedOut[]
   /** What the count of unclassified postings does not reach. */
   readonly notChecked: readonly NotChecked[]
@@ -244,6 +272,33 @@ const partOf = (
   total: asRead(side, sumOf(fell.map(({ posting }) => posting.amount))),
 })
 
+/**
+ * A band split by what was said about deducting the tax on it.
+ *
+ * Nothing said counts as deductible, because that is what an ordinary purchase
+ * is and because the alternative — counting silence as non-deductible — would
+ * write off input tax nobody had decided about. It is counted a second time on
+ * its own so the silence is visible rather than folded into a yes.
+ */
+const splitByDeduction = (
+  fell: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
+  side: Side,
+  rules: JapaneseTaxRules,
+  rate: Fraction | undefined,
+): Deducted => {
+  const on = (which: (one: TaxPosting) => boolean) => fell.filter(({ posting }) => which(posting))
+  const deductible = on((one) => one.deductible.is !== "no")
+  const part = partOf(deductible, side)
+  const within = taxWithin(rules, rate, part.total)
+
+  return {
+    deductible: part,
+    notDeductible: partOf(on((one) => one.deductible.is === "no"), side),
+    notSaid: partOf(on((one) => one.deductible.is === "unsaid"), side),
+    ...(within === undefined ? {} : { taxWithinDeductible: within }),
+  }
+}
+
 const splitBySide = (
   fell: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
   types: Readonly<Record<string, AccountType>>,
@@ -303,6 +358,7 @@ export const summarizeConsumptionTax = (
       recorded,
       total,
       bySide: splitBySide(fell, types),
+      byDeduction: splitByDeduction(fell, band.side, rules, band.rate),
       ...(within === undefined ? {} : { taxWithin: within }),
       query: queryFor(band.category),
     }
@@ -323,6 +379,12 @@ export const summarizeConsumptionTax = (
       : [],
   )
 
+  const unrecognisedDeduction = every.flatMap(({ entry, posting }) =>
+    posting.deductible.is === "unrecognised"
+      ? [{ ...looseAt(entry, posting), said: posting.deductible.said }]
+      : [],
+  )
+
   return {
     rules: rules.named,
     currentAt: rules.currentAt,
@@ -332,6 +394,7 @@ export const summarizeConsumptionTax = (
     bands,
     unmarked,
     unrecognised,
+    unrecognisedDeduction,
     notWorkedOut: NOT_WORKED_OUT,
     notChecked: NOT_CHECKED,
   }

@@ -9,7 +9,7 @@ import { Err, Ok, digits, fields, listOf, nothing, spare, text, type Result } fr
 import { declaredAcross } from "./chart/directives"
 import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
-import { TAX, TAX_CATEGORIES } from "./consumption-tax/category"
+import { DEDUCT, DEDUCT_VALUES, TAX, TAX_CATEGORIES } from "./consumption-tax/category"
 import { EVIDENCE, INVOICE, INVOICE_STATUSES, PARTNER, REGISTRATION } from "./invoice/note"
 import { ACCRUALS, CLOSING } from "./closing/adjustments"
 import { JP } from "./chart/mapping"
@@ -535,6 +535,12 @@ const conventions = async (): Promise<Result<Vocabulary, Hitch>> =>
         on: "entry",
         values: [...INVOICE_STATUSES],
         says: "Whether the document behind the entry is a qualified invoice. Unknown is not the same as not-qualified: one is a question nobody asked.",
+      },
+      {
+        name: DEDUCT,
+        on: "posting",
+        values: [...DEDUCT_VALUES],
+        says: "Whether the tax on this purchase can be taken off what is owed. A second question, not a finer answer to the tax band: it turns on whether a qualified invoice was kept, whether a provider abroad is registered, and what the purchase was for. Write the reason after a second colon, as deduct:no:… . Nothing said is counted as deductible, which is the ordinary case, and counted again on its own so the silence stays visible.",
       },
       { name: PARTNER, on: "entry", values: [], says: "Who it was with." },
       {

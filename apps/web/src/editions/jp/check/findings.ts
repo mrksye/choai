@@ -68,6 +68,8 @@ export type Particulars =
     }
   /** A `tax:` tag that is not one of the categories. */
   | { readonly is: "tax-unrecognised"; readonly index: number; readonly account: string; readonly said: string }
+  /** A `deduct:` tag that is neither yes nor no. */
+  | { readonly is: "deduct-unrecognised"; readonly index: number; readonly account: string; readonly said: string }
   /** Something that came in or went out with nothing said about its treatment. */
   | { readonly is: "tax-unmarked"; readonly index: number; readonly account: string; readonly description: string }
   /** A taxable purchase with nothing recorded about the document behind it. */
@@ -166,6 +168,9 @@ export const checkConsumptionTax = (
 ): readonly Finding[] => [
   ...summary.unrecognised.map((one) =>
     error({ is: "tax-unrecognised", index: one.index, account: one.account, said: one.said }),
+  ),
+  ...summary.unrecognisedDeduction.map((one) =>
+    error({ is: "deduct-unrecognised", index: one.index, account: one.account, said: one.said }),
   ),
   ...summary.unmarked.map((one) =>
     warning({

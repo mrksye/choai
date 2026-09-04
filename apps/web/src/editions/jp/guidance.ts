@@ -1,4 +1,4 @@
-import { TAX, TAX_CATEGORIES } from "./consumption-tax/category"
+import { DEDUCT, TAX, TAX_CATEGORIES } from "./consumption-tax/category"
 import { CLOSING } from "./closing/adjustments"
 import { EVIDENCE, INVOICE, PARTNER, REGISTRATION } from "./invoice/note"
 import { ASSET } from "./fixed-assets/register"
@@ -37,6 +37,10 @@ export const japaneseGuidance = (): string =>
     "These books are kept for a Japanese company, and entries in them carry classifications that reports here are worked out from. Write them as you write the entry; adding them afterwards means finding it again.",
     "",
     `Every posting that is a sale or a purchase takes a ${TAX}: tag saying how it is treated for consumption tax. The values are exactly: ${list([...TAX_CATEGORIES])}. Nothing else is a value — a misspelling is reported as a mistake rather than read as the nearest one. Put it on the posting, not on the entry: one receipt can hold a line at the standard rate and a line at the reduced rate. A ${TAX}: tag on the entry counts for every posting under it, which is the short way to write a receipt that is all one thing. The cash or bank posting on the other side takes no tag.`,
+    "",
+    `Whether the tax on a purchase can be taken off what is owed is a second question, written as a ${DEDUCT}: tag on the same posting — yes or no, with the reason after a second colon. It turns on things the band knows nothing about: whether a qualified invoice was kept, whether a provider outside Japan is registered here, what the purchase was for. Leave it out where you do not know; nothing said is counted as deductible, which is the ordinary case, and counted again on its own so that nobody mistakes silence for an answer.`,
+    "",
+    `A service bought over the internet from a provider outside Japan is not outside the tax. Where it is supplied to a business or a consumer in Japan it is a domestic transaction, however far away the supplier is, so ${TAX}:out-of-scope is the wrong answer for one. Where its nature means the buyer accounts for the tax rather than the seller, the band is reverse-charge-10 or reverse-charge-8; what becomes of it after that depends on a whole year's figures and is not yours or this app's to settle.`,
     "",
     `A taxable purchase does not have to be an expense. One capitalised into an asset — a fixed asset, formation costs, stock — is still a purchase and still takes a ${TAX}: tag, and it is the case nothing will remind you about: the count of unclassified postings only asks about income, expense, and accounts these books have classified before, so the first one missed on a new asset account is missed silently.`,
     "",
