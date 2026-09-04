@@ -804,10 +804,33 @@ describe("the account directives a journal carries", () => {
     expect(written.split("\n").filter((line) => line.trim() === "; jp:sga")).toEqual([])
   })
 
-  test("one that is not declared is added at the end, where it cannot displace the title", () => {
+  test("one that is not declared joins the others, not the end of the file", () => {
+    // A chart of accounts is a block somebody reads at a glance. hledger would
+    // take a declaration anywhere, so the only thing deciding this is that an
+    // account landing after the year's entries is one nobody can find.
     const written = declaringAccount(journal, "資産:現金", [["type", "A"]])
-    expect(written.split("\n")[0]).toBe("; 帳簿")
-    expect(written.trimEnd().endsWith("account 資産:現金  ; type:A")).toBe(true)
+    const lines = written.split("\n")
+
+    expect(lines[0]).toBe("; 帳簿")
+    const last = declarationsIn(journal)[declarationsIn(journal).length - 1]
+    expect(lines[(last?.at ?? 0) + (last?.lines ?? 0)]).toBe("account 資産:現金  ; type:A")
+
+    // Directly under it: these are a list, not a section of their own.
+    expect(written).not.toContain("\n\naccount 資産:現金")
+    expect(written.trimEnd().endsWith("account 資産:現金  ; type:A")).toBe(false)
+  })
+
+  test("the first one in a book that declares nothing goes above the entries", () => {
+    const bare = "; 帳簿\n\n2026-01-01 何か\n    費用:x  ¥1\n    資産:y\n"
+    const written = declaringAccount(bare, "資産:現金", [["type", "A"]])
+
+    expect(written.split("\n").slice(0, 5)).toEqual([
+      "; 帳簿",
+      "",
+      "account 資産:現金  ; type:A",
+      "",
+      "2026-01-01 何か",
+    ])
   })
 })
 
