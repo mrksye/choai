@@ -267,6 +267,88 @@ test("the bands are totalled from what hledger read, and are not a return", asyn
   expect(summary.notWorkedOut.length).toBeGreaterThan(0)
 })
 
+/**
+ * The one figure a caller will take for input tax, and the one it must not be.
+ *
+ * `taxWithin` is worked out over the whole band, deductible or not. A caller
+ * reading it as what can be claimed overstates the claim by exactly the tax on
+ * the postings that say in the journal they get no deduction — and that figure
+ * goes on a return. It was worked out correctly and simply never published,
+ * which is the same as not existing to anything driving this app.
+ */
+test("what can be claimed is published, not only what the band carried", async ({ page }) => {
+  await openTheDemo(page)
+
+  const written = await page.evaluate(() =>
+    window.choai.transaction.propose({
+      transactions: [
+        {
+          date: "2026-06-02",
+          payee: "a provider abroad",
+          postings: [
+            {
+              account: "expenses:supplies",
+              amount: "$1100.00",
+              tags: [
+                { name: "tax", value: "taxable-purchase-10" },
+                { name: "deduct", value: "no:not registered here" },
+              ],
+            },
+            { account: "assets:cash", amount: "$-1100.00" },
+          ],
+        },
+        {
+          date: "2026-06-03",
+          payee: "a supplier at home",
+          postings: [
+            {
+              account: "expenses:supplies",
+              amount: "$2200.00",
+              tags: [{ name: "tax", value: "taxable-purchase-10" }],
+            },
+            { account: "assets:cash", amount: "$-2200.00" },
+          ],
+        },
+      ],
+    } as never),
+  )
+  expect(written.ok).toBe(true)
+  if (!written.ok) return
+  const kept = await page.evaluate((id) => window.choai.proposal.apply({ id } as never), written.value.id)
+  expect(kept.ok).toBe(true)
+
+  const answer = await page.evaluate(() => window.choai.call("jp.consumptionTax", { year: 2026 }))
+  expect(answer.ok).toBe(true)
+  if (!answer.ok) return
+
+  const band = (answer.value as {
+    bands: readonly {
+      category: string
+      total: { rendered: string }
+      taxWithin?: { rendered: string }
+      taxDeductible?: { rendered: string }
+      byDeduction: {
+        deductible: { postings: number; total: { rendered: string } }
+        notDeductible: { postings: number; total: { rendered: string } }
+        notSaid: { postings: number }
+      }
+    }[]
+  }).bands.find((one) => one.category === "taxable-purchase-10")
+
+  expect(band?.total.rendered).toBe("$3,300.00")
+  expect(band?.byDeduction.notDeductible.total.rendered).toBe("$1,100.00")
+  expect(band?.byDeduction.deductible.total.rendered).toBe("$2,200.00")
+
+  // Nothing said counts as deductible, and is counted again so it stays visible.
+  expect(band?.byDeduction.notSaid.postings).toBe(1)
+
+  // 3,300 x 10/110 = 300 for the band; 2,200 x 10/110 = 200 for what may be
+  // claimed. The $100 between them is the tax on a purchase the journal says
+  // gets no deduction.
+  expect(band?.taxWithin?.rendered).toBe("$300.00")
+  expect(band?.taxDeductible?.rendered).toBe("$200.00")
+})
+
 test("a year is the one the company keeps, not the calendar's", async ({ page }) => {
   await openTheDemo(page)
   await writeTaggedEntries(page)

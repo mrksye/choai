@@ -95,7 +95,37 @@ export interface TaxBand {
     readonly purchases: { readonly postings: number; readonly total: Figure }
     readonly unplaced: { readonly postings: number; readonly total: Figure }
   }
+  /**
+   * The same band again, split by whether the tax on it can be deducted.
+   *
+   * A second axis rather than more bands, because taxable and deductible are
+   * different questions: a domestic purchase with no qualified invoice and a
+   * service from an unregistered provider abroad are both taxable purchases,
+   * and neither is deductible. Splitting the band by rate as well would have
+   * doubled the bands and still left nowhere to say which reason applied.
+   *
+   * Nothing said counts as deductible, which is the ordinary case, and is
+   * counted again in `notSaid` so the silence is visible rather than assumed.
+   */
+  readonly byDeduction: {
+    readonly deductible: { readonly postings: number; readonly total: Figure }
+    readonly notDeductible: { readonly postings: number; readonly total: Figure }
+    readonly notSaid: { readonly postings: number; readonly total: Figure }
+  }
+  /** The tax inside the whole band, deductible or not. Not what can be claimed. */
   readonly taxWithin?: Figure
+  /**
+   * The tax inside the deductible part, which is the figure input tax is worked
+   * out from.
+   *
+   * Beside `taxWithin` rather than instead of it, because they answer different
+   * questions and the difference between them is the point: `taxWithin` is what
+   * the band carried, and this is what is left after the postings that say they
+   * get no deduction. Reading the first as the second overstates what can be
+   * claimed by exactly the tax on those postings, which is a figure that goes
+   * on a return.
+   */
+  readonly taxDeductible?: Figure
   readonly query: string
 }
 
@@ -188,7 +218,24 @@ const consumptionTax = (args: {
             total: figureOf(band.bySide.unplaced.total),
           },
         },
+        byDeduction: {
+          deductible: {
+            postings: band.byDeduction.deductible.postings,
+            total: figureOf(band.byDeduction.deductible.total),
+          },
+          notDeductible: {
+            postings: band.byDeduction.notDeductible.postings,
+            total: figureOf(band.byDeduction.notDeductible.total),
+          },
+          notSaid: {
+            postings: band.byDeduction.notSaid.postings,
+            total: figureOf(band.byDeduction.notSaid.total),
+          },
+        },
         ...(band.taxWithin === undefined ? {} : { taxWithin: figureOf(band.taxWithin) }),
+        ...(band.byDeduction.taxWithinDeductible === undefined
+          ? {}
+          : { taxDeductible: figureOf(band.byDeduction.taxWithinDeductible) }),
         query: band.query,
       })),
       unmarked: summary.unmarked.map((one) => ({ index: one.index, account: one.account })),
@@ -636,7 +683,7 @@ export interface Vocabulary {
 export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
   [CAPABILITY.consumptionTax]: {
     summary:
-      "Consumption tax totals for a Japanese financial year, per band, worked out from the tax: tag on each posting. Every band carries the hledger query that selects exactly what it counted, so any figure can be checked against hledger directly. This is NOT a return: the taxable base, the tax payable, the simplified basis and the transitional rule are all deliberately not worked out, and the answer lists them. Do not present a band total as an amount of tax owed.",
+      "Consumption tax totals for a Japanese financial year, per band, worked out from the tax: tag on each posting. Every band carries the hledger query that selects exactly what it counted, so any figure can be checked against hledger directly. A band's taxWithin is the tax inside the whole band and is NOT what can be claimed; taxDeductible is the tax inside the part that says it is deductible, and byDeduction splits the band. Read coverage before reporting that nothing is left to classify: unmarked is empty whenever the question was narrow, and coverage.skipped names the accounts nothing was asked about with what sits on them. This is NOT a return: the taxable base, the tax payable, the simplified basis and the transitional rule are all deliberately not worked out, and the answer lists them. Do not present a band total as an amount of tax owed.",
     takes: fields(YEAR),
     writes: false,
     needsJournal: true,
