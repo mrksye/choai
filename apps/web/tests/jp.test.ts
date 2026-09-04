@@ -631,6 +631,42 @@ describe("what each band of the consumption tax came to", () => {
     expect(summary.notChecked.length).toBeGreaterThan(0)
   })
 
+  test("an account nothing was asked about is named, with what sits on it", () => {
+    // The other half of the sentence above. An empty `unmarked` reads as the
+    // work being finished, and it looks the same whether there was nothing left
+    // or whether the question was narrow — so what the question passed over is
+    // published with its figure, and a capitalised purchase nobody has
+    // classified stands out against the cash and bank accounts by having one.
+    const books = normalize([
+      entry(1, "設立費用", [
+        posting("資産:創業費", yen(360000)),
+        posting("資産:普通預金", yen(-360000)),
+      ]),
+      entry(2, "備品", [
+        posting("費用:消耗品費", yen(1100), [["tax", "taxable-purchase-10"]]),
+        posting("資産:普通預金", yen(-1100)),
+      ]),
+    ])
+    const types = { "資産:創業費": "Asset", "資産:普通預金": "Asset", "費用:消耗品費": "Expense" } as const
+
+    const found = summarizeConsumptionTax(books, RULES, types)
+
+    // Nothing is outstanding, and that is exactly when this matters.
+    expect(found.unmarked).toEqual([])
+    expect(found.coverage.examined).toBe(1)
+
+    const passed = Object.fromEntries(
+      found.coverage.skipped.map((one) => [one.account, one.postings]),
+    )
+    expect(passed).toEqual({ "資産:創業費": 1, "資産:普通預金": 2 })
+
+    // With the figure, which is the whole reason it is usable: ¥360,000 sitting
+    // on a name nobody recognises is the thing to go and look at.
+    const founding = found.coverage.skipped.find((one) => one.account === "資産:創業費")
+    expect(founding?.total.map((one) => one.aquantity.decimalMantissa)).toEqual([360000])
+    expect(founding?.type).toBe("Asset")
+  })
+
   test("a misspelt category is reported as itself, not as an absence", () => {
     expect(summary.unrecognised.map((one) => one.said)).toEqual(["taxable-purchse-10"])
     expect(summary.unrecognised[0]?.description).toBe("打ち間違い")

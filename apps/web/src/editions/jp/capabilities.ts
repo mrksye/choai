@@ -112,6 +112,24 @@ export interface TaxAnswer {
   readonly notWorkedOut: readonly string[]
   /** What the count of unclassified postings does not reach. */
   readonly notChecked: readonly string[]
+  /**
+   * What was asked about, and what was passed over.
+   *
+   * Published because `unmarked` being empty is what a caller will read as the
+   * work being finished, and an empty list looks the same whether there was
+   * nothing left or whether the question was narrow. The accounts holding money
+   * are on `skipped` and always will be; an account with an unfamiliar name and
+   * a real figure on it is the one to look at.
+   */
+  readonly coverage: {
+    readonly examined: number
+    readonly skipped: readonly {
+      readonly account: string
+      readonly type?: string
+      readonly postings: number
+      readonly total: Figure
+    }[]
+  }
 }
 
 /**
@@ -181,6 +199,15 @@ const consumptionTax = (args: {
       })),
       notWorkedOut: summary.notWorkedOut.map((one) => NOT_WORKED_OUT_SAID[one]),
       notChecked: [...summary.notChecked],
+      coverage: {
+        examined: summary.coverage.examined,
+        skipped: summary.coverage.skipped.map((one) => ({
+          account: one.account,
+          ...(one.type === undefined ? {} : { type: one.type }),
+          postings: one.postings,
+          total: figureOf(one.total),
+        })),
+      },
     })
   })
 

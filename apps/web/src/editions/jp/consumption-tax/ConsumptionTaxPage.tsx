@@ -212,6 +212,34 @@ export function ConsumptionTaxPage(): JSX.Element {
                       )}
                     </For>
                   </ul>
+                  {/* The sentences above say what the limit is; this says what it
+                      came to. The cash and bank accounts are always on it and are
+                      the noise — what to look at is an unfamiliar name carrying a
+                      real figure, which is the shape of a purchase capitalised
+                      into an account nobody has classified yet. */}
+                  <p class="text-xs text-muted-foreground">
+                    {filled(words().tax.examined, { count: found().coverage.examined })}
+                  </p>
+                  <Figures>
+                    <thead>
+                      <tr>
+                        <th class={HEAD}>{words().tax.skipped}</th>
+                        <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.postings}</th>
+                        <th class={`${HEAD} ${NARROW} text-right`}>{words().tax.recorded}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <For each={found().coverage.skipped}>
+                        {(one) => (
+                          <tr>
+                            <td class={CELL}>{one.account}</td>
+                            <td class={`${FIGURE} ${NARROW}`}>{one.postings}</td>
+                            <td class={`${FIGURE} ${NARROW}`}>{formatMixed(one.total)}</td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </Figures>
                 </div>
 
                 <Purchases entries={read() ?? []} />

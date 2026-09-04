@@ -166,6 +166,38 @@ export interface ConsumptionTaxSummary {
   readonly notWorkedOut: readonly NotWorkedOut[]
   /** What the count of unclassified postings does not reach. */
   readonly notChecked: readonly NotChecked[]
+  /** What was asked about, and what was passed over. See `Coverage`. */
+  readonly coverage: Coverage
+}
+
+/**
+ * An account nothing was asked about, and what sits on it.
+ *
+ * `unmarked` being empty is the sentence a reader — and a model driving this —
+ * will take as the work being finished, so it has to be read next to what was
+ * never in the question. An empty list and a narrow question look identical
+ * from outside, and the difference between them is somebody's deduction.
+ *
+ * By account and with the total, because that is what makes it usable rather
+ * than merely honest: the cash and bank accounts are on this list too and always
+ * will be, and they are the noise. What stands out against them is an account
+ * with an unfamiliar name carrying a real figure — formation costs, a fixed
+ * asset, stock — which is exactly the shape of the thing that would otherwise
+ * have gone uncounted.
+ */
+export interface Skipped {
+  readonly account: string
+  /** What hledger places it as, where it places it at all. */
+  readonly type?: AccountType
+  readonly postings: number
+  readonly total: MixedAmount
+}
+
+export interface Coverage {
+  /** Postings a treatment was expected on, whether or not one was written. */
+  readonly examined: number
+  /** Postings passed over, gathered by the account they sit on. */
+  readonly skipped: readonly Skipped[]
 }
 
 /**
@@ -219,6 +251,8 @@ const expectsTreatment = (
  * What the count of unclassified postings does not cover, said in the answer.
  *
  * A limit nobody is told about is a limit that reads as a clean bill of health.
+ * These two sentences say what the limit is; `Skipped` says what it came to in
+ * these particular books, which is the part a reader can act on.
  */
 export const NOT_CHECKED = [
   "a purchase capitalised into an account these books have never classified — until one posting on that account is classified, nothing on it is asked about",
@@ -234,6 +268,28 @@ const looseAt = (entry: JapaneseTaxTransaction, posting: TaxPosting): Loose => (
   account: posting.account,
   amount: posting.amount,
 })
+
+/** The accounts nothing was asked about, biggest figure first so the odd one shows. */
+const skippedBy = (
+  over: readonly { entry: JapaneseTaxTransaction; posting: TaxPosting }[],
+  types: Readonly<Record<string, AccountType>>,
+): readonly Skipped[] => {
+  const byAccount = over.reduce<ReadonlyMap<string, readonly TaxPosting[]>>(
+    (so, { posting }) =>
+      new Map(so).set(posting.account, [...(so.get(posting.account) ?? []), posting]),
+    new Map(),
+  )
+
+  return [...byAccount].map(([account, postings]) => {
+    const kind = types[account]
+    return {
+      account,
+      ...(kind === undefined ? {} : { type: kind }),
+      postings: postings.length,
+      total: sumOf(postings.map((one) => one.amount)),
+    }
+  })
+}
 
 /** Every posting of every entry, each still knowing which entry it came from. */
 const allPostings = (
@@ -365,6 +421,7 @@ export const summarizeConsumptionTax = (
   })
 
   const classified = classifiedAlready(every)
+  const asked = every.filter(({ posting }) => expectsTreatment(posting.account, types, classified))
   const unmarked = every
     .filter(
       ({ posting }) =>
@@ -397,5 +454,12 @@ export const summarizeConsumptionTax = (
     unrecognisedDeduction,
     notWorkedOut: NOT_WORKED_OUT,
     notChecked: NOT_CHECKED,
+    coverage: {
+      examined: asked.length,
+      skipped: skippedBy(
+        every.filter(({ posting }) => !expectsTreatment(posting.account, types, classified)),
+        types,
+      ),
+    },
   }
 }
