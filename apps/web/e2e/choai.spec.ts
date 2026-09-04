@@ -474,6 +474,73 @@ test("a doubtful change to an entry already written is tagged too", async ({ pag
 })
 
 /**
+ * What kind of doubt it was, kept in the journal rather than only in the review.
+ *
+ * `why` is prose and stays prose: hledger reads a tag's value to the first
+ * comma, so a phrase written as one would be cut in half at the first comma
+ * somebody used. But six entries carrying needs-checking months later all read
+ * the same, and what has to be done about each is different — a number inferred
+ * from a public register is settled by looking it up, one whose paper has never
+ * been read is settled by reading it. The kinds are few, so they are a list, and
+ * the list can be queried.
+ */
+test("what kind of doubt it was can be gathered afterwards", async ({ page }) => {
+  await openTheDemo(page)
+
+  const out = await page.evaluate(async () => {
+    const made = await window.choai.transaction.propose({
+      transactions: [
+        {
+          date: "2026-07-01",
+          payee: "a supplier",
+          confidence: 0.4,
+          why: "worked out from the register, not read off the invoice",
+          doubt: "inferred",
+          postings: [
+            { account: "expenses:food", amount: "$10.00" },
+            { account: "assets:cash" },
+          ],
+        },
+        {
+          date: "2026-07-02",
+          payee: "another",
+          confidence: 0.4,
+          doubt: "unread",
+          postings: [
+            { account: "expenses:food", amount: "$20.00" },
+            { account: "assets:cash" },
+          ],
+        },
+      ],
+    } as never)
+    if (!made.ok) return { failed: JSON.stringify(made.error) }
+
+    const done = await window.choai.proposal.apply({ id: made.value.id, markUnsure: true })
+    if (!done.ok) return { failed: JSON.stringify(done.error) }
+
+    const asked = async (query: string) => {
+      const found = await window.choai.report.entries({ query })
+      return found.ok ? found.value.items.map((one) => one.description) : ["failed"]
+    }
+    const text = await window.choai.journal.text({})
+    return {
+      unsettled: (await asked("tag:needs-checking")).sort(),
+      inferred: await asked("tag:checked-why=inferred"),
+      unread: await asked("tag:checked-why=unread"),
+      // The prose is for the review and does not reach the file, where a comma
+      // in it would have cut the tag in half.
+      prose: text.ok && text.value.text.includes("not read off the invoice"),
+    }
+  })
+
+  expect(out.failed).toBeUndefined()
+  expect(out.unsettled).toEqual(["a supplier", "another"])
+  expect(out.inferred).toEqual(["a supplier"])
+  expect(out.unread).toEqual(["another"])
+  expect(out.prose).toBe(false)
+})
+
+/**
  * Every capability that says it does not write, taken at its word and checked.
  *
  * The targeted test above covers the ways of offering a change, which is where

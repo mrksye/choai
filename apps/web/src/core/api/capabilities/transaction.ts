@@ -4,7 +4,7 @@ import { ask } from "~/core/hledger/client"
 import type { DefaultCommodity, Transaction } from "~/core/hledger/wire"
 import { spanOf, textAt } from "~/core/journal/lines"
 import { withTags } from "~/core/journal/tagging"
-import { propose, textOf, type Item, type Proposal } from "~/core/journal/proposals"
+import { propose, textOf, type Doubt, type Item, type Proposal } from "~/core/journal/proposals"
 import { declaredCommodity, type OpenJournal } from "~/core/journal/store"
 import { Err, Ok, type Result } from "~/core/lib/monad"
 import { fromHledger, fromRefusal, type Hitch } from "../hitch"
@@ -34,6 +34,7 @@ export interface Written {
 export interface Suggested extends Written {
   readonly confidence?: number
   readonly why?: string
+  readonly doubt?: Doubt
 }
 
 /** One entry to take out, named the way report.entries names it. */
@@ -41,6 +42,7 @@ export interface Dropped {
   readonly index: number
   readonly confidence?: number
   readonly why?: string
+  readonly doubt?: Doubt
 }
 
 /**
@@ -67,6 +69,7 @@ export interface Tagged {
   }[]
   readonly confidence?: number
   readonly why?: string
+  readonly doubt?: Doubt
 }
 
 const tagsOf = (given: Written["tags"]): readonly Tag[] =>
@@ -124,6 +127,7 @@ export interface Offered {
   readonly text: string
   readonly confidence: number
   readonly why?: string
+  readonly doubt?: Doubt
   readonly missing: readonly string[]
 }
 
@@ -143,6 +147,7 @@ export const shapeOf = (proposal: Proposal, declared: DefaultCommodity | undefin
     text: textOf(item, declared),
     confidence: item.confidence,
     ...(item.why === undefined ? {} : { why: item.why }),
+    ...(item.doubt === undefined ? {} : { doubt: item.doubt }),
     missing: item.is === "add" ? whatIsMissing(item.draft) : [],
   })),
   reads: proposal.reads.ok,
@@ -198,6 +203,7 @@ const removalsFor = (
         was: textAt(file, at),
         confidence: one.confidence ?? 1,
         ...(one.why === undefined ? {} : { why: one.why }),
+        ...(one.doubt === undefined ? {} : { doubt: one.doubt }),
       },
     ]
   })
@@ -243,6 +249,7 @@ const rewritesFor = (
         text,
         confidence: one.confidence ?? 1,
         ...(one.why === undefined ? {} : { why: one.why }),
+        ...(one.doubt === undefined ? {} : { doubt: one.doubt }),
       },
     ]
   })
@@ -271,6 +278,7 @@ export const offer = (args: {
         draft: draftOf(one),
         confidence: one.confidence ?? 1,
         ...(one.why === undefined ? {} : { why: one.why }),
+        ...(one.doubt === undefined ? {} : { doubt: one.doubt }),
       })),
     ]
 

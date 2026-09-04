@@ -1,11 +1,11 @@
 import { createRoot, createSignal, type Accessor } from "solid-js"
 
 import type { DefaultCommodity, JournalSummary, Trouble } from "~/core/hledger/wire"
-import { appendToJournal, draftToJournal, type Draft } from "~/core/compose/draft"
+import { appendToJournal, draftToJournal, type Draft, type Tag } from "~/core/compose/draft"
 import { Err, Ok, getOrUndefined, type Result } from "~/core/lib/monad"
 import { replaceAt, type Span } from "./lines"
 import { journal, putFiles, tryOut, type OpenJournal } from "./store"
-import { withTag } from "./tagging"
+import { withTags } from "./tagging"
 
 /**
  * Changes written but not yet kept.
@@ -25,7 +25,13 @@ import { withTag } from "./tagging"
  */
 
 /** One change of a proposal, and how sure whatever wrote it was. */
-export type Item = { readonly confidence: number; readonly why?: string } & (
+export type Item = {
+  readonly confidence: number
+  /** For the person reviewing it. Never written into the journal — see `DOUBTS`. */
+  readonly why?: string
+  /** For whoever gathers them afterwards. Written in, where the doubt is kept. */
+  readonly doubt?: Doubt
+} & (
   | { readonly is: "add"; readonly draft: Draft }
   | {
       readonly is: "remove"
@@ -126,6 +132,30 @@ export const sureIn = (proposal: Proposal): readonly number[] =>
  */
 export const UNSETTLED = "needs-checking"
 
+/**
+ * Why something is doubted, in the few words a query can be run on.
+ *
+ * `why` is a phrase for a person and it stays a phrase for a person: it is shown
+ * beside the change while it is being reviewed, and it does not go into the
+ * journal. hledger reads a tag's value up to the first comma, so prose written
+ * as one would be cut in half at the first comma somebody used, and the half
+ * left behind would look like the whole of it.
+ *
+ * This is the other half of the same thought. A doubt kept only as prose is a
+ * doubt nobody can gather: six entries carrying `needs-checking` six months
+ * later all read the same, and what to do next is different for each — a number
+ * inferred from a public register is confirmed by looking it up, one whose paper
+ * has never been read is confirmed by reading it, and one the paper does not
+ * settle needs somebody to decide. The kinds are few and they are not going to
+ * multiply, so they are a list and the list goes in the journal.
+ */
+export const DOUBTS = ["inferred", "unread", "ambiguous"] as const
+
+export type Doubt = (typeof DOUBTS)[number]
+
+/** The tag that carries it, beside `needs-checking` rather than instead of it. */
+export const WHY_UNSETTLED = "checked-why"
+
 const [held, setHeld] = createRoot(() => createSignal<readonly Proposal[]>([]))
 
 export const proposals: Accessor<readonly Proposal[]> = held
@@ -197,13 +227,21 @@ const chosen = (proposal: Proposal, only: readonly number[] | undefined): readon
 const marked = (item: Item): Item => {
   if (item.confidence >= SURE) return item
 
+  const doubted: readonly Tag[] = [
+    { name: UNSETTLED, value: "" },
+    ...(item.doubt === undefined ? [] : [{ name: WHY_UNSETTLED, value: item.doubt }]),
+  ]
+
   switch (item.is) {
     case "add":
       return item.draft.tags.some((tag) => tag.name === UNSETTLED)
         ? item
-        : { ...item, draft: { ...item.draft, tags: [...item.draft.tags, { name: UNSETTLED, value: "" }] } }
+        : { ...item, draft: { ...item.draft, tags: [...item.draft.tags, ...doubted] } }
     case "rewrite": {
-      const text = withTag(item.text, { on: "entry" }, { name: UNSETTLED, value: "" })
+      const text = withTags(
+        item.text,
+        doubted.map((tag) => ({ where: { on: "entry" } as const, tag })),
+      )
       return text === undefined ? item : { ...item, text }
     }
     case "remove":

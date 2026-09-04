@@ -1,6 +1,7 @@
 import { edition } from "~/edition"
 import { capabilitiesWith } from "~/edition/types"
-import { digits, fields, flag, listOf, nothing, spare, text, type Result, type Shape } from "~/core/lib/monad"
+import { digits, fields, flag, listOf, nothing, oneOf, spare, text, type Result, type Shape } from "~/core/lib/monad"
+import { DOUBTS } from "~/core/journal/proposals"
 import * as book from "./capabilities/journal"
 import * as proposal from "./capabilities/proposal"
 import * as remote from "./capabilities/remote"
@@ -62,6 +63,12 @@ const SUGGESTED = {
     digits("How sure you are, from 0 to 1. Anything below 1 is set aside for a person to look at."),
   ),
   why: spare(text("Why these accounts, in a phrase. Shown beside the entry when it is reviewed.")),
+  doubt: spare(
+    oneOf(
+      "What kind of doubt it is, where there is one. Written into the entry beside needs-checking when the change is kept with markUnsure, so the entries can be gathered by it later; `why` is prose for the person reviewing and is never written in. inferred: worked out from a public register or another entry rather than read off the document. unread: the document exists and has not been read. ambiguous: the document has been read and does not settle it.",
+      DOUBTS,
+    ),
+  ),
 }
 
 /**
@@ -208,6 +215,12 @@ const CORE = {
             index: digits("The entry's index, as report.entries reported it."),
             confidence: spare(digits("How sure you are, from 0 to 1.")),
             why: spare(text("Why it should go, in a phrase.")),
+            doubt: spare(
+              oneOf(
+                "What kind of doubt it is, where there is one. Written into the entry beside needs-checking when the change is kept with markUnsure, so the entries can be gathered by it later; `why` is prose for the person reviewing and is never written in. inferred: worked out from a public register or another entry rather than read off the document. unread: the document exists and has not been read. ambiguous: the document has been read and does not settle it.",
+                DOUBTS,
+              ),
+            ),
           }),
         ),
       ),
@@ -228,6 +241,12 @@ const CORE = {
             ),
             confidence: spare(digits("How sure you are, from 0 to 1.")),
             why: spare(text("Why this classification, in a phrase.")),
+            doubt: spare(
+              oneOf(
+                "What kind of doubt it is, where there is one. Written into the entry beside needs-checking when the change is kept with markUnsure, so the entries can be gathered by it later; `why` is prose for the person reviewing and is never written in. inferred: worked out from a public register or another entry rather than read off the document. unread: the document exists and has not been read. ambiguous: the document has been read and does not settle it.",
+                DOUBTS,
+              ),
+            ),
           }),
         ),
       ),
@@ -273,7 +292,7 @@ const CORE = {
       only: spare(listOf("Which entries to keep, by their `at` number. All of them if left out.", digits("An entry's `at` number."))),
       markUnsure: spare(
         flag(
-          "Tag the doubtful ones `needs-checking` as they go in, instead of holding them back. Use this when the reader would rather have the whole statement in the journal now and settle the guesses later — they are found again with the query tag:needs-checking. Entries you were sure of are left unmarked.",
+          "Tag the doubtful ones `needs-checking` as they go in, instead of holding them back. Use this when the reader would rather have the whole statement in the journal now and settle the guesses later — they are found again with the query tag:needs-checking. Any `doubt` stated when the change was offered is written beside it as checked-why, so six of them months later can be told apart by what has to be done about each. Entries you were sure of are left unmarked. This applies to a change to an entry that was already written as much as to a new one.",
         ),
       ),
     }),
