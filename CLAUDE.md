@@ -345,6 +345,50 @@ three tsconfigs agree on where the seam resolves.
 - **Money is never a float** — rendered from mantissa and scale in
   `core/hledger/amount.ts`; hledger's float field is left out of `Quantity`.
 
+## What this app promises whoever is driving it
+
+This app is meant to be operated by something that is not a person, and what
+that thing knows about it is `describe()` and nothing else. It does not read this
+file, or `README.md`, or the conversation the decision was taken in. So a rule
+that lives only in prose is a rule that does not reach the one door most of the
+writing now comes through. These are held by tests for that reason, and the
+tests are the statement — if one fails, the implementation is what moved.
+
+- **`writes` is a claim, and it is checked by being taken at its word.** An e2e
+  reads the capability list out of `describe()` at run time, calls every one that
+  says it does not write, and compares the journal byte for byte on either side.
+  A capability added later is in that sweep the day it exists.
+- **What can write is a list, not a habit.** Four functions in
+  `journal/store.ts` write, and `tests/boundary.test.ts` names every module that
+  reaches one. Nothing under `core/api/` or `core/ai/` is on it, and that absence
+  is the point: everything a script or a model touches writes only through
+  `compose/commit.ts` and `journal/proposals.ts`, so a change without a diff is
+  not something that can be reached from there. Adding a name is a decision;
+  the list exists so it cannot be taken by accident.
+- **`isOffered` is one sentence read twice** — once to build the tool list a
+  model is handed, once to refuse a name that was not on it. Two sentences saying
+  the same thing would come apart, and the way they would come apart is a model
+  reaching something nobody meant it to have.
+- **A stated doubt reaches the books.** A composer that says it is unsure is
+  saying the one thing this app cannot work out for itself, and `markUnsure`
+  writes it onto whatever kind of change it was. Dropping it silently is worse
+  than never having asked: what lands is then indistinguishable from a figure
+  read off a receipt.
+- **A convention a caller must follow belongs in `describe()`.** A tag name that
+  a check demands and the manifest never mentions is a name that has to be
+  guessed, and a guess that misses writes a meaningless tag into somebody's
+  books. The JP edition answers this with `jp.conventions`.
+- **Classify by adding a tag, never by removing and writing again.** A report
+  does not carry a status mark, a posting's own date, a balance assertion or the
+  sentence somebody wrote after the amount, so an entry that went out as a report
+  and came back as a draft comes back smaller. `journal/tagging.ts` edits the
+  text where it stands, and writes a new tag on a line of its own so the diff is
+  an addition rather than an edit to a line somebody else wrote.
+- **What is counted and what is chased must share their predicate.** Detection
+  narrower than aggregation reports nothing left to do while the total quietly
+  omits things, which is the one failure here that looks exactly like success.
+  Where a check cannot cover everything it counts, it says so in its own answer
+  rather than leaving an empty list to be read as an all-clear.
+
 Commit subjects say what the app now does, not what was touched: "Let the journal
 be edited as the text it is".
-

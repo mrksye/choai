@@ -109,3 +109,61 @@ describe("every edition", () => {
     )
   })
 })
+
+/**
+ * Which modules can write to the books.
+ *
+ * `writes: false` on a capability is a claim, and the e2e checks it by calling
+ * every capability that makes it and comparing the journal byte for byte. This
+ * is the other half, and the half that catches a fault before it can be run: the
+ * ways of writing are four functions in `journal/store.ts`, and the modules that
+ * reach for one of them are named here.
+ *
+ * A list rather than a type because the write path in this app is not a handle
+ * that gets passed to whoever is allowed one — it is module state, reached by
+ * importing it, and an import is not something a type can refuse. So the refusal
+ * is here. Adding a name to this list is the decision; the point of the list is
+ * that the decision cannot be taken by accident, in a file nobody was reading.
+ *
+ * `core/api/` is deliberately absent, and that absence is most of the value.
+ * Everything a script or a model can reach goes through there, and it writes
+ * only by way of `compose/commit.ts` and `journal/proposals.ts` — the two doors
+ * that trial a change and, in the second case, hold it until somebody has seen
+ * it. A capability that imported `putFiles` for itself would be a way to change
+ * the books with no diff ever existing, and it would look like ordinary code.
+ */
+describe("writing to the journal", () => {
+  const WAYS = ["appendToEntry", "rewriteFile", "rewriteFiles", "putFiles"] as const
+
+  /** Every module that names one of the four, wherever in it the name appears. */
+  const writers = (): readonly string[] =>
+    modules()
+      .filter((path) => path !== "core/journal/store.ts")
+      .filter((path) => {
+        const source = readFileSync(SRC + path, "utf8")
+        return WAYS.some((way) => new RegExp(`\\b${way}\\b`).test(source))
+      })
+
+  test("is done by these modules and no others", () => {
+    expect(writers()).toEqual([
+      // The screens that are themselves an edit somebody is making.
+      "core/components/declare-types.tsx",
+      "core/routes/source.tsx",
+      // The two doors everything without a screen goes through.
+      "core/compose/commit.ts",
+      "core/journal/proposals.ts",
+      // Pulling from GitHub, which is the one write whose text came from away.
+      "core/github/sync.ts",
+      // One edition's own screens, on the same footing as core's.
+      "editions/jp/ui/writing.ts",
+    ].sort())
+  })
+
+  test("is not done anywhere under core/api", () => {
+    expect(writers().filter((path) => path.startsWith("core/api/"))).toEqual([])
+  })
+
+  test("is not done anywhere under core/ai", () => {
+    expect(writers().filter((path) => path.startsWith("core/ai/"))).toEqual([])
+  })
+})
