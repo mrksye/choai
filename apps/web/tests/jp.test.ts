@@ -13,6 +13,8 @@ import { japaneseTaxRules2026 } from "~/editions/jp/rules/2026"
 import { asFigure, includedAt, isZero, negated, plus, sumOf, times, whole, writeDecimal } from "~/editions/jp/money"
 import { said, toldOf } from "~/editions/jp/tags"
 import {
+  DEDUCT,
+  TAX,
   TAX_CATEGORIES,
   isTaxCategory,
   deductibleIn,
@@ -25,7 +27,15 @@ import {
   NOT_WORKED_OUT,
   summarizeConsumptionTax,
 } from "~/editions/jp/consumption-tax/summarize"
-import { looksLikeRegistration, noteIn, saysSomething } from "~/editions/jp/invoice/note"
+import {
+  EVIDENCE,
+  INVOICE,
+  PARTNER,
+  REGISTRATION,
+  looksLikeRegistration,
+  noteIn,
+  saysSomething,
+} from "~/editions/jp/invoice/note"
 import { evidenceAt, inRepository } from "~/editions/jp/invoice/where"
 import {
   declarationsIn,
@@ -58,6 +68,7 @@ import {
 import {
   checkChart,
   checkConsumptionTax,
+  settledBy,
   checkRegister,
   errorsAmong,
   warningsAmong,
@@ -665,6 +676,33 @@ describe("what each band of the consumption tax came to", () => {
     const founding = found.coverage.skipped.find((one) => one.account === "資産:創業費")
     expect(founding?.total.map((one) => one.aquantity.decimalMantissa)).toEqual([360000])
     expect(founding?.type).toBe("Asset")
+  })
+
+  test("a finding that a tag would settle names that tag", () => {
+    // The failure this was written for: a check that says invoice-unstated and
+    // never says the tag is called `invoice` leaves the reader to invent a name.
+    // Inventing one wrong writes a tag nothing reads into somebody's books,
+    // which is worse than the warning it was answering.
+    expect(settledBy({ is: "invoice-unstated", index: 1, description: "x" })).toContain("invoice")
+    expect(settledBy({ is: "tax-unmarked", index: 1, account: "a", description: "x" })).toEqual(["tax"])
+    expect(settledBy({ is: "deduct-unrecognised", index: 1, account: "a", said: "maybe" })).toEqual(["deduct"])
+
+    // And a finding a tag would not settle says so rather than pointing anywhere.
+    expect(settledBy({ is: "register-line", line: 1, said: "x", why: "y" })).toEqual([])
+  })
+
+  test("every tag a finding names is one the conventions publish", () => {
+    // Otherwise the answer sends a caller to a name that is not in the table it
+    // is told to read, which is the same dead end by a longer route.
+    const published = new Set([TAX, DEDUCT, INVOICE, PARTNER, REGISTRATION, EVIDENCE])
+    const kinds: Parameters<typeof settledBy>[0][] = [
+      { is: "invoice-unstated", index: 1, description: "x" },
+      { is: "invoice-number-shape", index: 1, said: "T1" },
+      { is: "tax-unmarked", index: 1, account: "a", description: "x" },
+      { is: "tax-unrecognised", index: 1, account: "a", said: "x" },
+      { is: "deduct-unrecognised", index: 1, account: "a", said: "x" },
+    ]
+    kinds.flatMap(settledBy).forEach((name) => expect(published.has(name)).toBe(true))
   })
 
   test("a misspelt category is reported as itself, not as an absence", () => {

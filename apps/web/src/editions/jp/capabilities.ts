@@ -7,7 +7,7 @@ import { ask } from "~/core/hledger/client"
 import { askTrialBalance } from "~/core/reports/ask"
 import { Err, Ok, digits, fields, listOf, nothing, spare, text, type Result } from "~/core/lib/monad"
 import { declaredAcross } from "./chart/directives"
-import { checkChart, checkConsumptionTax, checkRegister, type Finding } from "./check/findings"
+import { checkChart, checkConsumptionTax, checkRegister, settledBy, type Finding } from "./check/findings"
 import { normalize } from "./consumption-tax/normalize"
 import { DEDUCT, DEDUCT_VALUES, TAX, TAX_CATEGORIES } from "./consumption-tax/category"
 import { EVIDENCE, INVOICE, INVOICE_STATUSES, PARTNER, REGISTRATION } from "./invoice/note"
@@ -425,9 +425,20 @@ const depreciation = (args: {
     })
   })
 
+/**
+ * A finding, with the way to act on it beside it.
+ *
+ * `settledBy` names the tags that would put it right, and nothing more — what
+ * each may say is `jp.conventions`, which is the one table that has the values.
+ * A caller told only that an invoice is unstated would have to invent the name
+ * `invoice` and hope, and a name invented wrong writes a tag nothing reads into
+ * somebody's books. Empty where a tag is not what settles it.
+ */
+export type Reported = Finding & { readonly settledBy: readonly string[] }
+
 export interface CheckAnswer {
-  readonly errors: readonly Finding[]
-  readonly warnings: readonly Finding[]
+  readonly errors: readonly Reported[]
+  readonly warnings: readonly Reported[]
 }
 
 const check = (args: {
@@ -457,9 +468,14 @@ const check = (args: {
       ...checkChart(open.summary.accounts, declared, types.value),
     ]
 
+    // Each finding carries the names of the tags that would settle it, so
+    // whoever is reading this does not have to guess one — a tag guessed wrong
+    // is a tag nothing reads, written into somebody's books.
+    const said = (one: Finding) => ({ ...one, settledBy: settledBy(one) })
+
     return Ok({
-      errors: found.filter((one) => one.severity === "error"),
-      warnings: found.filter((one) => one.severity === "warning"),
+      errors: found.filter((one) => one.severity === "error").map(said),
+      warnings: found.filter((one) => one.severity === "warning").map(said),
     })
   })
 
@@ -702,7 +718,7 @@ export const JAPAN_CAPABILITIES: Readonly<Record<string, SomeCapability>> = {
 
   [CAPABILITY.check]: {
     summary:
-      "What is worth saying about these books for Japanese purposes, split into errors and warnings. An error is something that does not hold together and no figure resting on it means anything. A warning is a place where a person has to decide — a purchase with no invoice details may be perfectly deductible — so do not report a warning as a mistake.",
+      "What is worth saying about these books for Japanese purposes, split into errors and warnings. An error is something that does not hold together and no figure resting on it means anything. A warning is a place where a person has to decide — a purchase with no invoice details may be perfectly deductible — so do not report a warning as a mistake. Each finding carries settledBy, the names of the tags that would put it right; jp.conventions says what each of those may hold. Do not guess a tag name from the name of a finding.",
     takes: fields(YEAR),
     writes: false,
     needsJournal: true,

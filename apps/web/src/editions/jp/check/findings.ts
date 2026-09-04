@@ -2,7 +2,8 @@ import type { AccountType, Tag } from "~/core/hledger/wire"
 import type { JapaneseTaxTransaction } from "../consumption-tax/normalize"
 import type { ConsumptionTaxSummary } from "../consumption-tax/summarize"
 import { placementOf } from "../chart/mapping"
-import { looksLikeRegistration, saysSomething } from "../invoice/note"
+import { EVIDENCE, INVOICE, looksLikeRegistration, REGISTRATION, saysSomething } from "../invoice/note"
+import { DEDUCT, TAX } from "../consumption-tax/category"
 import type { Reading } from "../fixed-assets/events"
 import type { Register } from "../fixed-assets/register"
 import { readDecimal } from "../money"
@@ -88,6 +89,51 @@ const WORKED_OUT: readonly DepreciationMethod[] = ["straight-line", "declining-b
 
 const error = (what: Particulars): Finding => ({ severity: "error", ...what })
 const warning = (what: Particulars): Finding => ({ severity: "warning", ...what })
+
+/**
+ * Which tag would settle a finding, where a tag is what settles it.
+ *
+ * A check that names a fault a caller cannot act on is a check that makes work
+ * rather than saving it, and the names here are not guessable: something told
+ * only that an invoice is unstated has to invent `invoice` and hope. Guessing
+ * wrong writes a tag nothing reads into somebody's books, which is worse than
+ * the warning it was answering.
+ *
+ * Names only. What each one may say is `jp.conventions`, and duplicating the
+ * values here would be a second copy to go stale — a caller follows the name to
+ * the one table that has them.
+ *
+ * Exhaustive over the union on purpose: a finding added later cannot compile
+ * without answering this, and answering it with nothing is an answer.
+ */
+export const settledBy = (finding: Particulars): readonly string[] => {
+  switch (finding.is) {
+    case "tax-unmarked":
+    case "tax-unrecognised":
+      return [TAX]
+    case "deduct-unrecognised":
+      return [DEDUCT]
+    case "invoice-unstated":
+      return [INVOICE, REGISTRATION, EVIDENCE]
+    case "invoice-number-shape":
+      return [REGISTRATION]
+    // The register and the chart of accounts are not put right by tagging an
+    // entry: one is a line in a file, the other is a declaration at the top of
+    // the journal.
+    case "account-heading":
+    case "account-unplaced":
+    case "asset-account-unknown":
+    case "asset-behind-schedule":
+    case "asset-commodity":
+    case "asset-cost":
+    case "asset-in-service-early":
+    case "asset-method":
+    case "asset-unknown":
+    case "asset-useful-life":
+    case "register-line":
+      return []
+  }
+}
 
 export const errorsAmong = (findings: readonly Finding[]): readonly Finding[] =>
   findings.filter((one) => one.severity === "error")

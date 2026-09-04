@@ -1,6 +1,6 @@
 import { For, Show, type JSX } from "solid-js"
 
-import { errorsAmong, warningsAmong, type Finding } from "../check/findings"
+import { errorsAmong, settledBy, warningsAmong, type Finding } from "../check/findings"
 import { filled, words } from "../words"
 
 /**
@@ -69,6 +69,18 @@ function Kind(props: {
                       {filled(words().check.entry, { index: index() })}
                     </span>
                   )}
+                </Show>
+                {/* The tag that would settle it, named. A reader told only that
+                    something is missing still has to find out what to write. */}
+                <Show when={settledBy(finding).length > 0}>
+                  <span class="text-muted-foreground">
+                    {" — "}
+                    {filled(words().check.settledBy, {
+                      tags: settledBy(finding)
+                        .map((name) => `${name}:`)
+                        .join(" / "),
+                    })}
+                  </span>
                 </Show>
               </li>
             )}
