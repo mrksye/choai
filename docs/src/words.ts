@@ -11,6 +11,12 @@ export const en = {
   lang: "en",
   /** What the other language is called in it. Where it is, is worked out from here. */
   other: { label: "日本語" },
+  /**
+   * The card a link to this page unfurls into, drawn in the language the page
+   * is in. Held here rather than worked out from the language in the frame, so
+   * that a language added later cannot arrive without one.
+   */
+  image: "/og.png",
   title: "choai — your hledger journal, in the browser",
   description:
     "Keep hledger journals in a private GitHub repository, from a phone or a desktop. hledger itself does the accounting, compiled to WebAssembly. Free, without advertising.",
@@ -67,6 +73,7 @@ export type Words = typeof en
 export const ja: Words = {
   lang: "ja",
   other: { label: "English" },
+  image: "/og-ja.png",
   title: "choai — hledger の帳簿を、ブラウザで",
   description:
     "hledger の帳簿を private な GitHub リポジトリに置いて、スマホからでもパソコンからでも。計算しているのは hledger 本体を WebAssembly にしたものです。無料、広告なし。",

@@ -18,6 +18,15 @@ bun run dev     # :45720
 bun run build   # -> dist, served at the root of docs.choai.dev
 ```
 
+The card a shared link unfurls into is drawn from `art/`, one per language, and
+committed alongside as PNG because that is the only form the services that
+unfurl a link will read. Redraw either after editing its source:
+
+```sh
+rsvg-convert -w 1200 -h 630 art/og-en.svg -o public/og.png
+rsvg-convert -w 1200 -h 630 art/og-ja.svg -o public/og-ja.png
+```
+
 `PUBLIC_APP` in `.env` says where the app is, so a page built here links to the
 published app and a page run here links to the one on this machine. It is the
 only setting there is.

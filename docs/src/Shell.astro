@@ -22,9 +22,15 @@ interface Props {
   words: Words
   /** Named for pages that are not the front one; it goes before the app's name. */
   heading?: string
+  /**
+   * What the page is, said to a cataloguer rather than to a reader. Only the
+   * front page carries one: the same statement repeated under every reading
+   * describes the app six times over, and none of the readings is the app.
+   */
+  schema?: object
 }
 
-const { words, heading } = Astro.props
+const { words, heading, schema } = Astro.props
 
 /** Where all of this is, app and site together, for anyone who wants to read it
  * or run their own. */
@@ -74,6 +80,21 @@ const runs = [
     <meta property="og:title" content={title} />
     <meta property="og:description" content={words.description} />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="choai" />
+    <meta property="og:url" content={absolute(here)} />
+    {/* Said as a whole address here too: a card is unfurled by something that
+        fetched the page from somewhere else, and has no page of its own to
+        resolve a path against. */}
+    <meta property="og:image" content={absolute(words.image)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={words.tagline} />
+    <meta property="og:locale" content={ja ? "ja_JP" : "en_US"} />
+    <meta property="og:locale:alternate" content={ja ? "en_US" : "ja_JP"} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={words.description} />
+    <meta name="twitter:image" content={absolute(words.image)} />
     {/* One address for a page that answers to two: the host serves both
         spellings of a path, which is two addresses for one page as far as
         anything cataloguing it is concerned. */}
@@ -81,6 +102,7 @@ const runs = [
     <link rel="alternate" hreflang="en" href={absolute(inEnglish)} />
     <link rel="alternate" hreflang="ja" href={absolute(`/ja${inEnglish}`)} />
     <link rel="alternate" hreflang="x-default" href={absolute(inEnglish)} />
+    {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />}
   </head>
   <body>
     {/* Outside main, so that the banner is a banner and the reading is the

@@ -23,9 +23,33 @@ const APP =
 
 const ja = words.lang === "ja"
 const at = (path: string): string => (path.startsWith("/") && ja ? `/ja${path}` : path)
+
+/**
+ * The app, described to whatever catalogues software.
+ *
+ * It names the app's own address rather than this one, because the thing being
+ * described is the app and this site only explains it — said here, the two
+ * names are one piece of software with somewhere to read about it, rather than
+ * two sites that happen to share a word. Every claim is one the repository
+ * already makes: free, GPL, and running in a browser.
+ */
+const SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "choai",
+  url: APP,
+  description: words.description,
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web browser",
+  inLanguage: ["en", "ja"],
+  isAccessibleForFree: true,
+  license: "https://www.gnu.org/licenses/gpl-3.0.html",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  sameAs: ["https://github.com/mrksye/choai"],
+}
 ---
 
-<Shell words={words}>
+<Shell words={words} schema={SCHEMA}>
   <h1>{words.tagline}</h1>
   <p class="lead">{words.lead}</p>
 
