@@ -1,4 +1,5 @@
 // @ts-check
+import sitemap from "@astrojs/sitemap"
 import { defineConfig } from "astro/config"
 
 /**
@@ -20,4 +21,14 @@ export default defineConfig({
   // them starting with a 4 is as much room as there is. The app next door plays
   // the same game in Japanese with 8396, for Haskell.
   server: { port: 45720, host: false },
+  // A catalogue of the pages, written from the ones actually built, so a page
+  // added here is listed without anybody remembering to list it. The two
+  // languages are declared rather than left to be guessed from the addresses:
+  // told which is which, it writes each page's counterpart beside it, which is
+  // the same pairing the head of every page already states.
+  integrations: [
+    sitemap({
+      i18n: { defaultLocale: "en", locales: { en: "en", ja: "ja" } },
+    }),
+  ],
 })

@@ -1,0 +1,7 @@
+# Everything here is meant to be read, by people and by anything cataloguing
+# pages for them. Nothing is kept back: there is no account area, no search
+# results and no staging copy on this name.
+User-agent: *
+Allow: /
+
+Sitemap: https://docs.choai.dev/sitemap-index.xml
