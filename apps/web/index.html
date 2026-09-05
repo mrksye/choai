@@ -7,8 +7,14 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#000031" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>choai</title>
+    <title>%CHOAI_NAME%</title>
     <meta name="description" content="Your hledger journal, in the browser." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%CHOAI_NAME%" />
+    <meta property="og:title" content="%CHOAI_NAME%" />
+    <meta property="og:description" content="Your hledger journal, in the browser." />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- The scheme has to be settled before the first paint, or a dark screen
          opens white and then turns. That is early enough that no module has
          loaded yet, so the stored choice is read here as well as in

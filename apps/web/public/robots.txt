@@ -1,0 +1,6 @@
+# The app is a program, not a set of pages: every path is drawn in the browser
+# and there is nothing behind one that a catalogue could read. The front door is
+# the only address worth listing, and the page says so itself with a canonical
+# link. What the app is, is explained on the site that explains it.
+User-agent: *
+Allow: /

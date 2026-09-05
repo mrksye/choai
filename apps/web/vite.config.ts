@@ -48,6 +48,31 @@ export default defineConfig({
     ],
   },
   plugins: [
+    {
+      // What the page says about itself: the name this edition goes by, and the
+      // one address worth cataloguing.
+      //
+      // The manifest already reads the name from the roll; leaving the title
+      // spelled out in the HTML would mean a Japan build published under the
+      // global build's name, and a tab that disagrees with the icon beside it.
+      //
+      // The canonical link is written here rather than in the HTML because the
+      // build reads every `link` in the page as a reference to a file to be
+      // hashed and copied, and this one points at a directory — the front door,
+      // which is not a file. Written afterwards, it is left as it is. Relative
+      // on purpose: every path here is the app drawn in the page, so the paths
+      // a crawler invents are one program at many addresses, and naming the
+      // host it was served from is how a fork answers for itself instead of
+      // announcing that the real copy is ours.
+      name: "choai-page-identity",
+      transformIndexHtml: {
+        order: "post" as const,
+        handler: (html: string): string =>
+          html
+            .replaceAll("%CHOAI_NAME%", nameOf(EDITION))
+            .replace("</head>", `  <link rel="canonical" href="/" />\n  </head>`),
+      },
+    },
     solid(),
     tailwindcss(),
     VitePWA({
