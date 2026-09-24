@@ -79,6 +79,46 @@ test("with no journal at all, connecting and taking makes one", async ({ page })
     .toBe(2)
 })
 
+test("a book taken from a repository is still here when the app is opened again at once", async ({ page }) => {
+  await answerGitHub(page)
+  // A slow device, made slower: every opening of the database answers late, so
+  // keeping the book takes longer than everything else taking it does. Taking
+  // that said it was done before the book was kept would be caught here.
+  await page.addInitScript(() => {
+    const open = IDBFactory.prototype.open
+    IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<IDBFactory["open"]>) {
+      const request = open.apply(this, args)
+      Object.defineProperty(request, "onsuccess", {
+        set(handler: (event: Event) => void) {
+          request.addEventListener("success", (event) => setTimeout(() => handler.call(request, event), 150))
+        },
+      })
+      return request
+    }
+  })
+
+  await page.goto("/git#connection")
+  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Owner", "mrksye")
+  await fill(page, "Repository", "books")
+  await fill(page, "Path to the journal", "books/main.journal")
+  await page.getByRole("button", { name: "Save and check", exact: true }).click()
+  await expect(page.getByText("Connected as mrksye")).toBeVisible()
+
+  // Reloaded the moment taking says it is done, with nothing in between to
+  // give the device time to catch up.
+  await page.getByRole("button", { name: "Take from GitHub as a new journal" }).click()
+  await page.getByText(/^Taken:/).waitFor()
+  await page.reload()
+
+  await expect
+    .poll(async () => {
+      const open = await page.evaluate(() => window.choai.journal.summary({}))
+      return open.ok ? open.value.transactions : 0
+    })
+    .toBe(2)
+})
+
 /**
  * A repository holding a journal and a file the journal says belongs with it.
  *

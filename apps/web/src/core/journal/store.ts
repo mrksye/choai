@@ -5,8 +5,9 @@ import { missingFile } from "~/core/hledger/diagnose"
 import type { DefaultCommodity, JournalSummary, Trouble } from "~/core/hledger/wire"
 import { deferred } from "~/core/lib/deferred"
 import { readText } from "~/core/lib/text"
+import { createGate } from "~/core/lib/gate"
 import { createTask } from "~/core/lib/pending"
-import { Err, None, Ok, Some, getOrUndefined, match, type Option, type Result } from "~/core/lib/monad"
+import { Err, None, Ok, Some, getOrUndefined, type Option, type Result } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 import { atTheJournal } from "~/core/hledger/turn"
 import { demoJournal } from "./demo"
@@ -87,26 +88,20 @@ const restock = async (): Promise<void> => {
 export const startBook = async (
   source: Source,
   remote?: Remote,
-): Promise<Result<OpenJournal, Trouble>> =>
-  match(await attempt(source), {
-    Ok: (summary) => remember({ bookId: crypto.randomUUID(), source, remote, summary }),
-    Err: forget,
-  })
+): Promise<Result<OpenJournal, Trouble>> => {
+  const read = await attempt(source)
+  return read.ok ? remember({ bookId: crypto.randomUUID(), source, remote, summary: read.value }) : forget(read.error)
+}
 
 /** Open a book already on this device, and make it the one that is open. */
 export const openBook = async (id: string): Promise<Result<OpenJournal, Trouble>> => {
   const kept = await bookWithFiles(id)
   if (kept === undefined) return Err({ kind: "no-journal" })
-  return match(await attempt({ label: kept.name, files: kept.files, entry: kept.entry }), {
-    Ok: (summary) =>
-      remember({
-        bookId: kept.id,
-        source: { label: kept.name, files: kept.files, entry: kept.entry },
-        remote: kept.remote,
-        summary,
-      }),
-    Err: forget,
-  })
+  const source = { label: kept.name, files: kept.files, entry: kept.entry }
+  const read = await attempt(source)
+  return read.ok
+    ? remember({ bookId: kept.id, source, remote: kept.remote, summary: read.value })
+    : forget(read.error)
 }
 
 /**
@@ -122,11 +117,18 @@ const attempt = (source: Source): Promise<Result<JournalSummary, Trouble>> =>
     .through(() => task.run(() => openJournal(source.files, source.entry)))
     .catch((cause: unknown) => Err<Trouble, JournalSummary>({ kind: "unreachable", detail: String(cause) }))
 
-const remember = (raw: OpenJournal): Result<OpenJournal, Trouble> => {
+/**
+ * Put a journal on screen, and answer once it is kept on this device.
+ *
+ * Answering before it was kept left a moment in which the books were open and
+ * nowhere else: a page loaded then — the app opened again straight after
+ * taking a copy from GitHub, say — came back without them.
+ */
+const remember = async (raw: OpenJournal): Promise<Result<OpenJournal, Trouble>> => {
   const open = { ...raw, source: { ...raw.source, label: nameOf(raw.source) } }
   setOpened(Some(open))
   setTrouble(None)
-  void keepOnThisDevice(open)
+  await keepOnThisDevice(open)
   return Ok(open)
 }
 
@@ -138,6 +140,13 @@ const nameOf = (source: Source): string =>
   titleOf(source.files[source.entry.replace(/^\//, "")] ?? "") ?? source.label
 
 /**
+ * One copy kept at a time, in the order they were made. Two changes in quick
+ * succession are two copies of the book, and each is written in several steps;
+ * let them overlap and the older could be the one left on the device.
+ */
+const keeping = createRoot(() => createGate())
+
+/**
  * Kept only once hledger has read it.
  *
  * Whatever fails to read is put back by whoever tried it, and putting it back
@@ -146,7 +155,9 @@ const nameOf = (source: Source): string =>
  * journal in hand still works, and the next open tries again — so it is caught
  * here and goes no further.
  */
-const keepOnThisDevice = async (open: OpenJournal): Promise<void> => {
+const keepOnThisDevice = (open: OpenJournal): Promise<void> => keeping.through(() => keep(open))
+
+const keep = async (open: OpenJournal): Promise<void> => {
   try {
     await keepBook({
       id: open.bookId,
