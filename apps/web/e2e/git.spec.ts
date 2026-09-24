@@ -104,7 +104,7 @@ const fill = async (page: Page, label: string, value: string): Promise<void> => 
  */
 const takeTheBooks = async (page: Page): Promise<void> => {
   await page.goto("/git#connection")
-  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Personal access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
   await fill(page, "Path to the journal", "books/main.journal")
@@ -121,7 +121,7 @@ const takeTheBooks = async (page: Page): Promise<void> => {
 
 test("with nothing connected, the screen is the connection, and the sidebar says so", async ({ page }) => {
   await page.goto("/git")
-  await expect(page.getByLabel("Access token", { exact: true })).toBeVisible()
+  await expect(page.getByLabel("Personal access token", { exact: true })).toBeVisible()
   await expect(page.getByRole("button", { name: "Connect to GitHub" })).toBeVisible()
 })
 

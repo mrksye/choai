@@ -57,7 +57,7 @@ test("with no journal at all, connecting and taking makes one", async ({ page })
   await answerGitHub(page)
 
   await page.goto("/git#connection")
-  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Personal access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
   await fill(page, "Path to the journal", "books/main.journal")
@@ -98,7 +98,7 @@ test("a book taken from a repository is still here when the app is opened again 
   })
 
   await page.goto("/git#connection")
-  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Personal access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
   await fill(page, "Path to the journal", "books/main.journal")
@@ -161,7 +161,7 @@ test("a file the journal says belongs beside it comes back with the journal", as
   await answerGitHubWithCompanion(page)
 
   await page.goto("/git#connection")
-  await fill(page, "Access token", NOT_A_TOKEN)
+  await fill(page, "Personal access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
   await fill(page, "Path to the journal", "books/main.journal")
