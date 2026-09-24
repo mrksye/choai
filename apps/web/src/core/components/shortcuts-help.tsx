@@ -2,7 +2,7 @@ import { For, Show, createSignal, type JSX } from "solid-js"
 
 import { HelpIcon, XIcon } from "~/core/lib/ui/icons"
 import { SHORTCUTS, shortcutKeys } from "~/core/lib/shortcuts"
-import { t } from "~/core/i18n"
+import { locale, t, type Locale } from "~/core/i18n"
 
 /**
  * What the keyboard can do here, from the end of the top bar.
@@ -15,7 +15,17 @@ import { t } from "~/core/i18n"
  * where it was rather than being replaced by the card — in a bar of buttons, one
  * that vanished when pressed would take the row's shape with it — and the card
  * hangs from it, carrying its own ✕ so the way out is where the way in was.
+ * Below the keys, set off by a rule, is the way to the page that explains the app.
  */
+/**
+ * The page that explains the app, in the language the app is speaking — the
+ * site keeps English at its root and every other language under its own name.
+ */
+const DOCS: Readonly<Record<Locale, string>> = {
+  en: "https://docs.choai.dev/",
+  ja: "https://docs.choai.dev/ja/",
+}
+
 export function ShortcutsHelp(): JSX.Element {
   const [open, setOpen] = createSignal(false)
   return (
@@ -58,6 +68,16 @@ export function ShortcutsHelp(): JSX.Element {
               )}
             </For>
           </dl>
+          <div class="mt-3 border-t border-border pt-2 text-right">
+            <a
+              href={DOCS[locale()]}
+              target="_blank"
+              rel="noreferrer"
+              class="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {t("shortcuts.docs")} ↗
+            </a>
+          </div>
         </div>
       </Show>
     </div>

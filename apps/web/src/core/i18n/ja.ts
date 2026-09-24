@@ -143,6 +143,7 @@ export const ja: Dictionary = {
     togglePanels: "サイドバーの表示切替",
     close: "パネルを閉じる",
     hide: "閉じる",
+    docs: "choai について",
   },
   settings: {
     language: "言語",

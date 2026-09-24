@@ -152,6 +152,7 @@ export const en = {
     togglePanels: "Show or hide the sidebars",
     close: "Close the panel",
     hide: "Close",
+    docs: "About choai",
   },
   settings: {
     language: "Language",
