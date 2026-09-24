@@ -23,6 +23,8 @@ import { GlobalEdition } from "~/editions/global"
 import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
 import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
 import { withTag, withTags } from "~/core/journal/tagging"
+import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
+import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
 
 /**
  * The parts that are only functions, checked as functions.
@@ -680,5 +682,110 @@ describe("telling hledger what kind of account each name is", () => {
 
   test("declaring nothing leaves the file alone", () => {
     expect(declaring(BOOK, new Map())).toBe(BOOK)
+  })
+})
+
+describe("what changed since the file was last sent", () => {
+  test("an entry added at the end is only added lines", () => {
+    const before = "2026-01-01 Shop\n  expenses:food  5\n  assets:cash\n"
+    const after = `${before}\n2026-01-02 Bus\n  expenses:travel  2\n  assets:cash\n`
+    const lines = lineDiff(before, after)
+    expect(changes(lines)).toEqual({ added: 4, removed: 0 })
+    expect(lines.at(-1)).toEqual({ kind: "added", text: "  assets:cash", after: 7 })
+  })
+
+  test("a line rewritten in the middle is taken out and written again, in place", () => {
+    const lines = lineDiff("a\nb\nc\n", "a\nB\nc\n")
+    expect(lines).toEqual([
+      { kind: "same", text: "a", before: 1, after: 1 },
+      { kind: "removed", text: "b", before: 2 },
+      { kind: "added", text: "B", after: 2 },
+      { kind: "same", text: "c", before: 3, after: 3 },
+    ])
+  })
+
+  test("a file the repository never had is every line added", () => {
+    expect(changes(lineDiff("", "one\ntwo\n"))).toEqual({ added: 2, removed: 0 })
+  })
+
+  test("lines far from any change are counted, not dropped", () => {
+    const before = Array.from({ length: 20 }, (_, at) => `line ${at}`).join("\n")
+    const after = before.replace("line 10", "LINE 10")
+    const shown = aroundChanges(lineDiff(before, after), 2)
+    expect(shown[0]).toEqual({ kind: "gap", hidden: 8 })
+    expect(shown.at(-1)).toEqual({ kind: "gap", hidden: 7 })
+    expect(shown.filter((line) => line.kind !== "gap")).toHaveLength(6)
+  })
+})
+
+describe("a patch GitHub sends", () => {
+  test("is read into numbered lines, with its hunk header kept", () => {
+    const patch = "@@ -3,2 +3,3 @@ title\n a\n-b\n+B\n+c\n\\ No newline at end of file"
+    expect(fromPatch(patch)).toEqual([
+      { kind: "hunk", header: "@@ -3,2 +3,3 @@ title" },
+      { kind: "same", text: "a", before: 3, after: 3 },
+      { kind: "removed", text: "b", before: 4 },
+      { kind: "added", text: "B", after: 4 },
+      { kind: "added", text: "c", after: 5 },
+    ])
+  })
+})
+
+describe("the commit graph", () => {
+  const commit = (sha: string, parents: readonly string[], at: number) => ({ sha, parents, at })
+
+  test("children come before their parents whatever the clocks said", () => {
+    const shas = ordered([commit("parent", [], 200), commit("child", ["parent"], 100)]).map((each) => each.sha)
+    expect(shas).toEqual(["child", "parent"])
+  })
+
+  test("a straight history stays in one lane", () => {
+    const rows = laid([commit("c", ["b"], 3), commit("b", ["a"], 2), commit("a", [], 1)])
+    expect(rows.map((row) => row.lane)).toEqual([0, 0, 0])
+    expect(widthOf(rows)).toBe(1)
+  })
+
+  test("a branch and its merge take a second lane and give it back", () => {
+    const rows = laid(
+      ordered([
+        commit("merge", ["main", "side"], 4),
+        commit("main", ["base"], 3),
+        commit("side", ["base"], 2),
+        commit("base", [], 1),
+      ]),
+    )
+    expect(rows.map((row) => [row.sha, row.lane])).toEqual([
+      ["merge", 0],
+      ["main", 0],
+      ["side", 1],
+      ["base", 0],
+    ])
+    expect(rows[0].below).toEqual(["main", "side"])
+    expect(rows.at(-1)?.above).toEqual(["base", "base"])
+    expect(rows.at(-1)?.below).toEqual([])
+  })
+
+  test("a merge draws a line out of the commit into the lane it opened", () => {
+    const [merge] = laid([commit("merge", ["main", "side"], 2)])
+    expect(strokes(merge)).toEqual([
+      { from: { lane: 0, y: 0.5 }, to: { lane: 0, y: 1 }, of: 0 },
+      { from: { lane: 0, y: 0.5 }, to: { lane: 1, y: 1 }, of: 1 },
+    ])
+  })
+
+  test("two lanes waiting for the same commit meet at it", () => {
+    const rows = laid(
+      ordered([
+        commit("merge", ["main", "side"], 4),
+        commit("main", ["base"], 3),
+        commit("side", ["base"], 2),
+        commit("base", [], 1),
+      ]),
+    )
+    const base = rows.at(-1)
+    expect(base === undefined ? [] : strokes(base)).toEqual([
+      { from: { lane: 0, y: 0 }, to: { lane: 0, y: 0.5 }, of: 0 },
+      { from: { lane: 1, y: 0 }, to: { lane: 0, y: 0.5 }, of: 1 },
+    ])
   })
 })
