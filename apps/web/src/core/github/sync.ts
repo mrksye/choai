@@ -53,7 +53,7 @@ const where = (remote: Remote, path: string): Where => ({
  * Two different absences, because they are fixed in two different screens — the
  * token once for the account, the place for this book.
  */
-const reachable = async (): Promise<Result<{ token: string; open: OpenJournal }, Snag>> => {
+export const reachable = async (): Promise<Result<{ token: string; open: OpenJournal }, Snag>> => {
   const key = await token()
   if (key === undefined || key === "") return Err({ at: "not-connected" })
   const open = getOrUndefined(journal())
@@ -174,7 +174,31 @@ const changedFiles = async (
   return all.filter((file) => file.agreed?.baseText !== file.text)
 }
 
-export const push = async (): Promise<Result<Outcome, Snag>> => {
+/** One file a push would send, beside what it was when the two sides last agreed. */
+export interface Unsent {
+  readonly path: string
+  /** Empty for a file the repository has never had. */
+  readonly before: string
+  readonly after: string
+  readonly isNew: boolean
+}
+
+/** What a push of this book would send now. */
+export const unsent = async (open: OpenJournal): Promise<readonly Unsent[]> =>
+  (await changedFiles(open.bookId, open.source.files)).map((file) => ({
+    path: file.path,
+    before: file.agreed?.baseText ?? "",
+    after: file.text,
+    isNew: file.agreed === undefined,
+  }))
+
+/**
+ * Send whatever has changed here.
+ *
+ * `message` is what each commit is called; left out, each is named after the
+ * file it writes, which is what every push said before anyone could say more.
+ */
+export const push = async (message?: string): Promise<Result<Outcome, Snag>> => {
   const reach = await reachable()
   if (!reach.ok) return reach
   const { token: key, open } = reach.value
@@ -185,7 +209,7 @@ export const push = async (): Promise<Result<Outcome, Snag>> => {
 
   const results = []
   for (const file of changed) {
-    const result = await send(key, open.bookId, remote, file.path, file.text, file.agreed)
+    const result = await send(key, open.bookId, remote, file.path, file.text, file.agreed, message)
     if (!result.ok) return result
     results.push(result.value)
   }
@@ -206,9 +230,10 @@ const send = async (
   path: string,
   text: string,
   agreed: Agreed | undefined,
+  message: string | undefined,
 ): Promise<Result<"pushed" | "merged", Snag>> => {
   const repoPath = agreed?.repoPath ?? `${directoryOf(remote.path)}${path}`
-  const written = await putFile(key, where(remote, repoPath), text, agreed?.sha, `Update ${repoPath}`)
+  const written = await putFile(key, where(remote, repoPath), text, agreed?.sha, message ?? `Update ${repoPath}`)
   if (written.ok) {
     await agree(book, { path, repoPath, sha: written.value.sha, baseText: text, at: Date.now() })
     return Ok("pushed")

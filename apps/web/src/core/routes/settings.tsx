@@ -6,7 +6,6 @@ import { Button } from "~/core/components/ui/button"
 import { TextField, TextFieldInput } from "~/core/components/ui/text-field"
 import { journal, removeBook, renameBook } from "~/core/journal/store"
 import { AiKeyPanel } from "~/core/components/ai-key-panel"
-import { GitHubPanel } from "~/core/components/github-panel"
 import { handOver } from "~/core/journal/handover"
 import { keptForGood } from "~/core/journal/kept"
 import { getOrUndefined } from "~/core/lib/monad"
@@ -39,7 +38,6 @@ export const SECTIONS: readonly Section[] = [
   { id: "language", name: () => t("settings.language") },
   { id: "appearance", name: () => t("settings.appearance") },
   { id: "library", name: () => t("library.title"), when: inHand },
-  { id: "github", name: () => t("github.title") },
   { id: "ai", name: () => t("ai.title") },
   { id: "licenses", name: () => t("licenses.title") },
 ]
@@ -111,7 +109,6 @@ export default function Settings(): JSX.Element {
         <p class="text-xs text-muted-foreground">{t("settings.appearanceHint")}</p>
       </section>
       <Library />
-      <GitHubPanel id="github" />
       <AiKeyPanel id="ai" />
       <section id="licenses" class="flex flex-col gap-2">
         <h2 class="text-sm font-medium">{t("licenses.title")}</h2>

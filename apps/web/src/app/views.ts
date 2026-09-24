@@ -2,13 +2,15 @@ import { edition } from "~/edition"
 import { viewsWith, type View } from "~/edition/types"
 import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
 import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
+import { GitExplorer } from "~/core/explorer/GitExplorer"
 import { JournalExplorer } from "~/core/explorer/JournalExplorer"
 import { SettingsExplorer } from "~/core/explorer/SettingsExplorer"
 import { TrialBalanceExplorer } from "~/core/explorer/TrialBalanceExplorer"
 import { t } from "~/core/i18n"
-import { BookOpenIcon, ReceiptIcon, ScaleIcon, SettingsIcon, TrendingUpIcon } from "~/core/lib/ui/icons"
+import { BookOpenIcon, GitBranchIcon, ReceiptIcon, ScaleIcon, SettingsIcon, TrendingUpIcon } from "~/core/lib/ui/icons"
 import Add from "~/core/routes/add"
 import BalanceSheet from "~/core/routes/balance-sheet"
+import Git from "~/core/routes/git"
 import IncomeStatement from "~/core/routes/income-statement"
 import Journal from "~/core/routes/journal"
 import Licenses from "~/core/routes/licenses"
@@ -67,9 +69,18 @@ const CORE: readonly View[] = [
     writes: false,
     reached: { from: "rail" },
   },
-  // Settings are not one of the books, so they sit at the foot of the rail,
-  // apart from the views and where the editor this shell is shaped after keeps
-  // them.
+  // Neither is one of the books, so both sit at the foot of the rail,
+  // apart from the views — source control above settings, as the editor this
+  // shell is shaped after keeps them.
+  {
+    href: "/git",
+    label: () => t("nav.git"),
+    Icon: GitBranchIcon,
+    Explorer: GitExplorer,
+    page: Git,
+    writes: false,
+    reached: { from: "foot" },
+  },
   {
     href: "/settings",
     label: () => t("nav.settings"),

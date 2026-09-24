@@ -17,6 +17,8 @@
  * of one side being told to give way.
  */
 
+import { createSignal, type Accessor } from "solid-js"
+
 import { STORE, rowsOf, within } from "~/core/lib/idb"
 
 /** What the two sides last agreed on, for one file of one book. */
@@ -37,6 +39,20 @@ interface Row {
   readonly agreed?: Agreed
 }
 
+const [told, tell] = createSignal(0)
+
+/**
+ * A count that moves every time what is agreed on changes here.
+ *
+ * What was agreed lives in the database, which nothing can watch; a screen that
+ * shows what is waiting to be sent reads this to know it has to look again.
+ */
+export const agreements: Accessor<number> = told
+
+const moved = (): void => {
+  tell((count) => count + 1)
+}
+
 const keyOf = (book: string, path: string): string => `agreed:${book}:${path}`
 
 /** The token, if one has been saved. */
@@ -51,6 +67,7 @@ export const keepToken = async (value: string): Promise<void> => {
   await within("readwrite", [REMOTE], (transaction) => {
     transaction.objectStore(REMOTE).put({ id: TOKEN, token: value })
   })
+  moved()
 }
 
 /**
@@ -63,6 +80,7 @@ export const forgetToken = async (): Promise<void> => {
   await within("readwrite", [REMOTE], (transaction) => {
     transaction.objectStore(REMOTE).clear()
   })
+  moved()
 }
 
 export const agreedOn = async (book: string, path: string): Promise<Agreed | undefined> => {
@@ -76,6 +94,7 @@ export const agree = async (book: string, agreed: Agreed): Promise<void> => {
   await within("readwrite", [REMOTE], (transaction) => {
     transaction.objectStore(REMOTE).put({ id: keyOf(book, agreed.path), agreed })
   })
+  moved()
 }
 
 /** Whether anything has been agreed for this book, which is what "sent before" means. */

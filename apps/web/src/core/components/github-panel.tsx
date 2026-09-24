@@ -20,10 +20,7 @@ const NOWHERE: Remote = { owner: "", repo: "", branch: "", path: "" }
  * api.github.com, nowhere else — which is said on the page, since a box asking
  * for a token deserves to say where it goes.
  */
-export function GitHubPanel(props: {
-  /** The name the list beside this page uses to jump here. */
-  readonly id?: string
-}): JSX.Element {
+export function GitHubPanel(): JSX.Element {
   const [saved, { refetch }] = createResource(token)
   const [typed, setTyped] = createSignal<string | undefined>(undefined)
   const [edited, setEdited] = createSignal<Remote | undefined>(undefined)
@@ -93,7 +90,7 @@ export function GitHubPanel(props: {
       setSnag(result.error)
       return
     }
-    setSaid(describe(result.value))
+    setSaid(outcomeWords(result.value))
   }
 
   const drop = (): Promise<void> =>
@@ -107,7 +104,7 @@ export function GitHubPanel(props: {
     place().owner !== "" && place().repo !== "" && place().path !== "" && key() !== ""
 
   return (
-    <section id={props.id} class="flex flex-col gap-2">
+    <section class="flex flex-col gap-2">
       <h2 class="text-sm font-medium">{t("github.title")}</h2>
       <p class="text-xs text-muted-foreground">{t("github.lead")}</p>
       {/* The token comes first because nothing below it can be checked without
@@ -252,7 +249,7 @@ function Field(props: {
 }
 
 /** hledger's own troubles are already explained; the rest are said here. */
-function SnagNote(props: { snag: Snag }): JSX.Element {
+export function SnagNote(props: { snag: Snag }): JSX.Element {
   return (
     <Show when={props.snag.at === "hledger" ? props.snag.trouble : undefined} fallback={<p class="text-xs text-error-foreground">{snagWords(props.snag)}</p>}>
       {(trouble) => <TroubleNote trouble={trouble()} />}
@@ -260,7 +257,8 @@ function SnagNote(props: { snag: Snag }): JSX.Element {
   )
 }
 
-const describe = (outcome: Outcome): string => {
+/** Exported for the source control screen, which syncs the same way. */
+export const outcomeWords = (outcome: Outcome): string => {
   switch (outcome.did) {
     case "pulled":
       return t("github.pulled", { files: outcome.files })

@@ -50,7 +50,7 @@ export function TakeFromGitHub(): JSX.Element {
           <div class="flex flex-col items-start gap-1">
             <p class="text-xs text-muted-foreground">{t("books.needsToken")}</p>
             <A
-              href="/settings"
+              href="/git#connection"
               class="text-xs font-medium underline underline-offset-2 hover:text-foreground"
             >
               {t("books.goAndSaveOne")}

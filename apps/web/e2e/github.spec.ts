@@ -56,7 +56,7 @@ const fill = async (page: Page, label: string, value: string): Promise<void> => 
 test("with no journal at all, connecting and taking makes one", async ({ page }) => {
   await answerGitHub(page)
 
-  await page.goto("/settings")
+  await page.goto("/git#connection")
   await fill(page, "Access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
@@ -120,7 +120,7 @@ const answerGitHubWithCompanion = async (page: Page): Promise<void> => {
 test("a file the journal says belongs beside it comes back with the journal", async ({ page }) => {
   await answerGitHubWithCompanion(page)
 
-  await page.goto("/settings")
+  await page.goto("/git#connection")
   await fill(page, "Access token", NOT_A_TOKEN)
   await fill(page, "Owner", "mrksye")
   await fill(page, "Repository", "books")
