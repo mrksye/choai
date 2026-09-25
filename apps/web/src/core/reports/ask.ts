@@ -1,5 +1,7 @@
 import { ask, type Reply } from "~/core/hledger/client"
 import type { BalanceReport, TrialBalance } from "~/core/hledger/wire"
+import { Ok } from "~/core/lib/monad"
+import { ledgerOf, type LedgerLine } from "./ledger"
 
 /**
  * Any of hledger's balance reports that come out as a tree.
@@ -40,3 +42,29 @@ export const askTrialBalance = (query: string): Promise<Reply<TrialBalance>> =>
  */
 export const narrowed = (...parts: readonly (string | undefined)[]): string =>
   parts.filter((part) => part !== undefined && part !== "").join(" ")
+
+/** How many of an account's latest movements a ledger shows. */
+export const LEDGER_LIMIT = 500
+
+export interface Ledger {
+  readonly lines: readonly LedgerLine[]
+  /** How many movements there were in all, of which the latest `LEDGER_LIMIT` are shown. */
+  readonly total: number
+}
+
+/**
+ * One account's movements and its balance after each, from hledger's register.
+ *
+ * The entries are asked for under the same query only to say where each
+ * movement's other side went; every figure is the register's.
+ */
+export const askLedger = async (account: string, query: string): Promise<Reply<Ledger>> => {
+  const register = await ask({ kind: "register", query, limit: LEDGER_LIMIT, offset: 0 })
+  if (!register.ok) return register
+  const entries = await ask({ kind: "entries", query, limit: LEDGER_LIMIT, offset: 0 })
+  if (!entries.ok) return entries
+  return Ok({
+    lines: ledgerOf(register.value.items, entries.value.items, account),
+    total: register.value.total,
+  })
+}

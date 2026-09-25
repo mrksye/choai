@@ -61,6 +61,15 @@ export const ja: Dictionary = {
     debit: "借方",
     credit: "貸方",
   },
+  ledger: {
+    lead: "この勘定科目と、その下の科目の動きを古い順に並べ、その時点の残高を添えたものです。hledger の register がそのまま元になっています。",
+    back: "すべての科目",
+    date: "日付",
+    description: "摘要",
+    balance: "残高",
+    empty: "この勘定科目にはまだ動きがありません。",
+    latest: "最新の {{ shown }} 件を表示しています（全 {{ total }} 件）。",
+  },
   report: {
     total: "合計",
     working: "計算中…",

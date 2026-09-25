@@ -25,6 +25,9 @@ import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journ
 import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { byTop } from "~/core/explorer/tree"
+import { accountChosenIn, accountQuery } from "~/core/journal/account-query"
+import { counterpartsOf, ledgerOf, within } from "~/core/reports/ledger"
+import type { RegisterRow, Transaction } from "~/core/hledger/wire"
 import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
@@ -889,5 +892,53 @@ describe("where the app is, as the address says it", () => {
     expect(arrivalsAt(readAddress("/?q=food")).map(writeAddress)).toEqual(["/journal?q=food", "/journal?q=food#work"])
     expect(arrivalsAt(readAddress("/#work+chat")).map(writeAddress)).toEqual(["/journal#work+chat"])
     expect(arrivalsAt(readAddress("/settings"))).toEqual([])
+  })
+})
+
+describe("an account's ledger", () => {
+  test("a query is one account's only where it is exactly what choosing one writes", () => {
+    expect(accountChosenIn(accountQuery("assets:bank"))).toBe("assets:bank")
+    expect(accountChosenIn(accountQuery("assets:my bank"))).toBe("assets:my bank")
+    expect(accountChosenIn("acct:assets date:2026")).toBeUndefined()
+    expect(accountChosenIn("food")).toBeUndefined()
+    expect(accountChosenIn("")).toBeUndefined()
+  })
+
+  test("a sub-account is within its parent, and a sibling sharing its start is not", () => {
+    expect(within("assets:bank", "assets:bank")).toBe(true)
+    expect(within("assets:bank", "assets:bank:checking")).toBe(true)
+    expect(within("assets:bank", "assets:banknotes")).toBe(false)
+  })
+
+  const posting = (paccount: string, index: string) => ({
+    paccount,
+    pamount: [],
+    pcomment: "",
+    pdate: null,
+    pstatus: "Unmarked",
+    ptags: [],
+    ptransaction_: index,
+  })
+  const entry = (tindex: number, accounts: readonly string[]): Transaction =>
+    ({ tindex, tpostings: accounts.map((one) => posting(one, String(tindex))) }) as unknown as Transaction
+
+  test("the other side is every account outside the one chosen, each once", () => {
+    const split = entry(1, ["assets:bank", "assets:cash", "equity:opening", "equity:opening"])
+    expect(counterpartsOf(split, "assets")).toEqual(["equity:opening"])
+    expect(counterpartsOf(split, "assets:bank")).toEqual(["assets:cash", "equity:opening"])
+    expect(counterpartsOf(undefined, "assets")).toEqual([])
+  })
+
+  test("the register is read oldest first, with its own balances and absences carried", () => {
+    const rows: readonly RegisterRow[] = [
+      ["2026-02-01", null, "rent", posting("assets:bank", "2"), [{ n: 2 }] as never],
+      [null, null, null, posting("assets:cash", "1"), [{ n: 1 }] as never],
+      ["2026-01-01", null, "opening", posting("assets:bank", "1"), [{ n: 0 }] as never],
+    ]
+    const lines = ledgerOf(rows, [entry(1, ["assets:bank", "assets:cash", "equity:opening"]), entry(2, ["assets:bank", "expenses:rent"])], "assets")
+    expect(lines.map((line) => line.date)).toEqual(["2026-01-01", undefined, "2026-02-01"])
+    expect(lines.map((line) => line.balance)).toEqual([[{ n: 0 }], [{ n: 1 }], [{ n: 2 }]] as never)
+    expect(lines[1]).not.toHaveProperty("description")
+    expect(lines[2]?.counterparts).toEqual(["expenses:rent"])
   })
 })

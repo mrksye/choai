@@ -111,6 +111,21 @@ export interface TrialBalance {
   readonly credits: MixedAmount
 }
 
+/**
+ * One line of hledger's register: a posting, and the running total after it.
+ *
+ * The date and the description are there only on the first of a transaction's
+ * postings, which is how hledger's own register prints them. The running total
+ * is hledger's, added up in the order the postings were dated.
+ */
+export type RegisterRow = readonly [
+  date: string | null,
+  period: unknown,
+  description: string | null,
+  posting: Posting & { readonly ptransaction_: string },
+  running: MixedAmount,
+]
+
 /** A window onto a report with many rows, and how many rows there were in all. */
 export interface Page<T> {
   readonly items: readonly T[]
@@ -168,7 +183,7 @@ export type AccountType = "Asset" | "Liability" | "Equity" | "Revenue" | "Expens
 /** What each request answers with. */
 export interface Answer {
   entries: Page<Transaction>
-  register: Page<unknown>
+  register: Page<RegisterRow>
   balance: BalanceReport
   balancesheet: BalanceReport
   incomestatement: BalanceReport

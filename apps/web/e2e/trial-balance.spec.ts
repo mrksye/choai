@@ -191,3 +191,41 @@ test("the trial balance is what the fourth view is, in name and on screen", asyn
   await expect(total.getByRole("cell").nth(1)).toHaveText("$10,769.15")
   await expect(total.getByRole("cell").nth(2)).toHaveText("$10,769.15")
 })
+
+/**
+ * A report narrowed to one account is one line, which says what the account
+ * comes to and nothing of how. Choosing an account beside any of the three
+ * reports shows its ledger instead: hledger's register, oldest first, each
+ * movement with the balance after it and where its other side went.
+ */
+for (const report of [
+  { path: "/trial-balance", leaf: "food", account: "expenses:food", heading: "Account" },
+  { path: "/balance-sheet", leaf: "card", account: "liabilities:card", heading: undefined },
+  { path: "/income-statement", leaf: "food", account: "expenses:food", heading: undefined },
+]) {
+  test(`choosing an account beside ${report.path} shows its ledger`, async ({ page }) => {
+    await openTheDemo(page)
+    await page.goto(`${report.path}#work`)
+
+    await page.getByRole("button", { name: report.leaf, exact: true }).click()
+    await expect(page.getByRole("heading", { name: report.account })).toBeVisible()
+    await expect(page.getByRole("columnheader", { name: "Balance" })).toBeVisible()
+    await expect(page.locator("tbody tr").nth(1)).toBeVisible()
+
+    await page.getByRole("button", { name: "All accounts" }).last().click()
+    await expect(page.getByRole("heading", { name: report.account })).toBeHidden()
+    if (report.heading !== undefined) await expect(page.getByRole("columnheader", { name: report.heading })).toBeVisible()
+  })
+}
+
+test("a ledger's balances are hledger's running totals, and its other side is named", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/trial-balance?q=acct%3Aexpenses%3Afood#work")
+
+  const rows = page.locator("tbody tr")
+  await expect(rows).toHaveCount(3)
+  await expect(rows.nth(0)).toContainText("2026-01-07")
+  await expect(rows.nth(0)).toContainText("↔ liabilities:card")
+  await expect(rows.nth(2)).toContainText("↔ assets:bank:checking")
+  await expect(rows.nth(2).locator("td").last()).toHaveText("$247.15")
+})

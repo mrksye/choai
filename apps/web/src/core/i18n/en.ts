@@ -70,6 +70,15 @@ export const en = {
     debit: "Debit",
     credit: "Credit",
   },
+  ledger: {
+    lead: "Every movement in this account and the ones under it, oldest first, with the balance after each — hledger's register.",
+    back: "All accounts",
+    date: "Date",
+    description: "Description",
+    balance: "Balance",
+    empty: "Nothing has moved in this account.",
+    latest: "The latest {{ shown }} of {{ total }} movements.",
+  },
   report: {
     total: "Total",
     working: "Working…",
