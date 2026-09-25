@@ -41,20 +41,20 @@ export function EntryEditor(): JSX.Element {
           />
 
           <div class="flex flex-wrap items-center gap-2">
-            <Button size="sm" disabled={entrySaving()} onClick={() => void saveEntry(entryDraft())}>
-              {t("edit.save")}
-            </Button>
-            <Button variant="ghost" size="sm" disabled={entrySaving()} onClick={stopEditingEntry}>
-              {t("edit.cancel")}
-            </Button>
             <Button
               variant="ghost"
               size="sm"
-              class="ml-auto text-error-foreground"
+              class="text-error-foreground"
               disabled={entrySaving()}
               onClick={() => void removeEntry()}
             >
               {t("edit.remove")}
+            </Button>
+            <Button variant="ghost" size="sm" class="ml-auto" disabled={entrySaving()} onClick={stopEditingEntry}>
+              {t("edit.cancel")}
+            </Button>
+            <Button size="sm" disabled={entrySaving()} onClick={() => void saveEntry(entryDraft())}>
+              {t("edit.save")}
             </Button>
           </div>
 
