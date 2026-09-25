@@ -5,6 +5,7 @@ import { accountQuery, useQuery } from "~/core/journal/query"
 import { inChartOrderNow } from "~/core/journal/chart"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
+import { byTop, depthOf, leafOf } from "~/core/explorer/tree"
 
 /**
  * The explorer beside the journal.
@@ -48,18 +49,28 @@ export function JournalExplorer(props: {
           >
             {t("accounts.all")}
           </button>
-          <For each={inChartOrderNow(open().summary.accounts)}>
-            {(account) => (
-              <button
-                type="button"
-                onClick={() => choose(account)}
-                title={account}
-                class="w-full truncate px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-                classList={{ "bg-accent text-accent-foreground": chosen(account) }}
-                style={{ "padding-left": `${0.75 + depthOf(account) * 0.75}rem` }}
-              >
-                {leafOf(account)}
-              </button>
+          <For each={byTop(inChartOrderNow(open().summary.accounts))}>
+            {(branch) => (
+              <div>
+                <For each={branch.accounts}>
+                  {(account) => (
+                    <button
+                      type="button"
+                      onClick={() => choose(account)}
+                      title={account}
+                      class="w-full truncate px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                      classList={{
+                        "bg-accent text-accent-foreground": chosen(account),
+                        "sticky top-0 z-10 font-medium": depthOf(account) === 0,
+                        "bg-card": depthOf(account) === 0 && !chosen(account),
+                      }}
+                      style={{ "padding-left": `${0.75 + depthOf(account) * 0.75}rem` }}
+                    >
+                      {leafOf(account)}
+                    </button>
+                  )}
+                </For>
+              </div>
             )}
           </For>
         </div>
@@ -67,7 +78,3 @@ export function JournalExplorer(props: {
     </Show>
   )
 }
-
-/** hledger names accounts with colons, so the colons are the tree. */
-const depthOf = (account: string): number => account.split(":").length - 1
-const leafOf = (account: string): string => account.slice(account.lastIndexOf(":") + 1)

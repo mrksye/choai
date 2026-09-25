@@ -6,6 +6,7 @@ import { ofKindsNow } from "~/core/journal/chart"
 import { CAME_AND_WENT } from "~/core/journal/declarations"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
+import { byTop, depthOf, leafOf } from "~/core/explorer/tree"
 
 /**
  * The explorer beside the income statement.
@@ -49,18 +50,28 @@ export function IncomeStatementExplorer(props: {
           >
             {t("accounts.all")}
           </button>
-          <For each={ofKindsNow(open().summary.accounts, CAME_AND_WENT)}>
-            {(account) => (
-              <button
-                type="button"
-                onClick={() => choose(account)}
-                title={account}
-                class="w-full truncate px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-                classList={{ "bg-accent text-accent-foreground": chosen(account) }}
-                style={{ "padding-left": `${0.75 + depthOf(account) * 0.75}rem` }}
-              >
-                {leafOf(account)}
-              </button>
+          <For each={byTop(ofKindsNow(open().summary.accounts, CAME_AND_WENT))}>
+            {(branch) => (
+              <div>
+                <For each={branch.accounts}>
+                  {(account) => (
+                    <button
+                      type="button"
+                      onClick={() => choose(account)}
+                      title={account}
+                      class="w-full truncate px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                      classList={{
+                        "bg-accent text-accent-foreground": chosen(account),
+                        "sticky top-0 z-10 font-medium": depthOf(account) === 0,
+                        "bg-card": depthOf(account) === 0 && !chosen(account),
+                      }}
+                      style={{ "padding-left": `${0.75 + depthOf(account) * 0.75}rem` }}
+                    >
+                      {leafOf(account)}
+                    </button>
+                  )}
+                </For>
+              </div>
             )}
           </For>
         </div>
@@ -68,7 +79,3 @@ export function IncomeStatementExplorer(props: {
     </Show>
   )
 }
-
-/** hledger names accounts with colons, so the colons are the tree. */
-const depthOf = (account: string): number => account.split(":").length - 1
-const leafOf = (account: string): string => account.slice(account.lastIndexOf(":") + 1)

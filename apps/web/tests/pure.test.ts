@@ -24,6 +24,7 @@ import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
 import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
 import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
+import { byTop } from "~/core/explorer/tree"
 import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
@@ -820,6 +821,17 @@ describe("entries under the days they fall on", () => {
     expect(weekdayOf("2026-08-29", "ja")).toBe("土")
     expect(weekdayOf("2026-08-20", "en")).toBe("Thu")
     expect(weekdayOf("someday", "en")).toBeUndefined()
+  })
+})
+
+describe("accounts under the top-level names they begin with", () => {
+  test("gathers neighbours only, keeping the chart's order", () => {
+    const branches = byTop(["資産", "資産:現金", "負債", "負債:未払金", "資産:預金"])
+    expect(branches).toEqual([
+      { top: "資産", accounts: ["資産", "資産:現金"] },
+      { top: "負債", accounts: ["負債", "負債:未払金"] },
+      { top: "資産", accounts: ["資産:預金"] },
+    ])
   })
 })
 
