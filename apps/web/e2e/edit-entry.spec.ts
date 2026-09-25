@@ -9,7 +9,7 @@ declare global {
 }
 
 /**
- * The panel that opens on a row, and the three ways out of it.
+ * The panel that opens on an entry, and the three ways out of it.
  *
  * The panel is not the editor: it draws whatever the dock is lent to, and the
  * editor draws nothing without an entry. So every way of finishing with an
@@ -30,7 +30,7 @@ const openTheDemo = async (page: Page): Promise<void> => {
 }
 
 const theEditor = (page: Page) => page.getByRole("button", { name: "Save", exact: true })
-const aRow = (page: Page) => page.getByRole("row").filter({ hasText: "landlord" }).first()
+const anEntry = (page: Page) => page.getByRole("button").filter({ hasText: "landlord" }).first()
 
 /** Whatever the dock is lent to draws something; nothing at all is the fault. */
 const dockIsEmpty = async (page: Page): Promise<boolean> => {
@@ -40,19 +40,19 @@ const dockIsEmpty = async (page: Page): Promise<boolean> => {
 
 test("cancelling gives the panel back and leaves the journal as it was", async ({ page }) => {
   await openTheDemo(page)
-  await aRow(page).click()
+  await anEntry(page).click()
   await expect(theEditor(page)).toBeVisible()
 
   await page.getByRole("button", { name: "Cancel", exact: true }).click()
 
   await expect(theEditor(page)).toBeHidden()
   expect(await dockIsEmpty(page)).toBe(false)
-  await expect(aRow(page)).toBeVisible()
+  await expect(anEntry(page)).toBeVisible()
 })
 
 test("saving gives the panel back", async ({ page }) => {
   await openTheDemo(page)
-  await aRow(page).click()
+  await anEntry(page).click()
   await expect(theEditor(page)).toBeVisible()
 
   await page.getByRole("button", { name: "Save", exact: true }).click()
@@ -67,7 +67,7 @@ test("saving gives the panel back", async ({ page }) => {
 
 test("deleting gives the panel back, and the entry is gone from the list", async ({ page }) => {
   await openTheDemo(page)
-  await aRow(page).click()
+  await anEntry(page).click()
   await expect(theEditor(page)).toBeVisible()
 
   await page.getByRole("button", { name: "Delete", exact: true }).click()
@@ -93,7 +93,7 @@ test("a proposal taking the panel keeps it, rather than being closed by the entr
   page,
 }) => {
   await openTheDemo(page)
-  await aRow(page).click()
+  await anEntry(page).click()
   await expect(theEditor(page)).toBeVisible()
 
   const offered = await page.evaluate(() =>

@@ -32,6 +32,22 @@ export const LETTER: Readonly<Record<Kind, string>> = {
 export const topOf = (account: string): string => account.split(":")[0] ?? account
 
 /**
+ * An account without the name at the top of its tree, where that name only
+ * says which of the five kinds it is.
+ *
+ * Asked of the kinds hledger places rather than of a list of words, so it holds
+ * for `expenses:food` and `費用:食費` alike, and for a book in any language whose
+ * top names are declared. A name with nothing beneath it is kept whole, since
+ * taking the kind away would leave nothing.
+ */
+export const withoutKind = (account: string, types: Readonly<Record<string, AccountType>>): string => {
+  const top = topOf(account)
+  const kind = types[top]
+  const isKind = kind !== undefined && KINDS.some((known) => known === kind)
+  return isKind && account.length > top.length ? account.slice(top.length + 1) : account
+}
+
+/**
  * The branches of the tree that no statement will show.
  *
  * A kind travels down from a parent to its children, never up, so a journal that

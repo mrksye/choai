@@ -23,6 +23,8 @@ import { GlobalEdition } from "~/editions/global"
 import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
 import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
 import { withTag, withTags } from "~/core/journal/tagging"
+import { byDay, weekdayOf } from "~/core/journal/days"
+import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
 
@@ -787,5 +789,37 @@ describe("the commit graph", () => {
       { from: { lane: 0, y: 0 }, to: { lane: 0, y: 0.5 }, of: 0 },
       { from: { lane: 1, y: 0 }, to: { lane: 0, y: 0.5 }, of: 1 },
     ])
+  })
+})
+
+describe("entries under the days they fall on", () => {
+  test("gathers neighbours only, keeping the order given", () => {
+    const days = byDay([{ tdate: "2026-08-29" }, { tdate: "2026-08-29" }, { tdate: "2026-08-20" }, { tdate: "2026-08-29" }])
+    expect(days.map((day) => [day.date, day.entries.length])).toEqual([
+      ["2026-08-29", 2],
+      ["2026-08-20", 1],
+      ["2026-08-29", 1],
+    ])
+  })
+
+  test("names the weekday in the language asked for, whatever the time zone", () => {
+    expect(weekdayOf("2026-08-29", "ja")).toBe("土")
+    expect(weekdayOf("2026-08-20", "en")).toBe("Thu")
+    expect(weekdayOf("someday", "en")).toBeUndefined()
+  })
+})
+
+describe("an account without its kind", () => {
+  const types = { 費用: "Expense", expenses: "Expense", assets: "Cash" } as const
+
+  test("drops a top name hledger places as one of the five kinds", () => {
+    expect(withoutKind("費用:食費", types)).toBe("食費")
+    expect(withoutKind("expenses:food:lunch", types)).toBe("food:lunch")
+  })
+
+  test("keeps what is unplaced, what is only a kind, and a kind outside the five", () => {
+    expect(withoutKind("資産:現金", types)).toBe("資産:現金")
+    expect(withoutKind("費用", types)).toBe("費用")
+    expect(withoutKind("assets:cash", types)).toBe("assets:cash")
   })
 })
