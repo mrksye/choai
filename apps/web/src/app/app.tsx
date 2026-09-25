@@ -579,11 +579,15 @@ export function Layout(props: ParentProps) {
             height it has can take it with flex-1 — the text editor does — while
             one taller than the screen still grows and scrolls as it always
             did. */}
-        <div class="flex min-h-full flex-col">
+        <div
+          class="flex min-h-full flex-col"
+          style={{ "--stuck-above": snapped() && !chromeShowing() ? "2.25rem" : "0px" }}
+        >
           {/* Above the work rather than in it, and only where the work is a
               screen of its own: with the rail and the explorer put away there
               is nothing else on this screen that leads back to them. Sticky,
-              because the work below it scrolls. */}
+              because the work below it scrolls, and its height is what
+              --stuck-above tells the work to pin its own headings under. */}
           <Show when={snapped() && !chromeShowing()}>
             <button
               type="button"

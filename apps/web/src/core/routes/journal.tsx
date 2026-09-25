@@ -86,14 +86,21 @@ const describeRange = (offset: number, total: number): string =>
     ? t("journal.nothingMatches")
     : t("journal.range", { from: offset + 1, to: Math.min(offset + PAGE, total), total })
 
-/** The entries under a heading per day, with the day of the week beside the date. */
+/**
+ * The entries under a heading per day, with the day of the week beside the date.
+ *
+ * The heading stays pinned while its day scrolls under it, below whatever the
+ * shell has already pinned above the work (`--stuck-above`).
+ */
 function Days(props: { entries: readonly Transaction[]; types: Types }): JSX.Element {
   return (
     <div class="flex flex-col gap-4">
       <For each={byDay(props.entries)}>
         {(day) => (
           <section class="flex flex-col gap-2">
-            <h3 class="font-mono text-xs text-muted-foreground">{headingOf(day.date)}</h3>
+            <h3 class="sticky top-[var(--stuck-above,0px)] z-[5] bg-background py-1 font-mono text-xs text-muted-foreground">
+              {headingOf(day.date)}
+            </h3>
             <For each={day.entries}>{(entry) => <EntryCard transaction={entry} types={props.types} />}</For>
           </section>
         )}
