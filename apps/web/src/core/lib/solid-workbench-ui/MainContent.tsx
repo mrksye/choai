@@ -17,7 +17,7 @@ const OVERLAY_SELECTOR = '[role="menu"],[role="menuitem"],[role="dialog"],[role=
 export function MainContent(props: { children?: JSX.Element; onBackgroundClick?: () => void }): JSX.Element {
   return (
     <main
-      class="min-w-0 flex-1 overflow-auto bg-background"
+      class="min-w-0 flex-1 overflow-auto bg-background [scrollbar-gutter:stable]"
       onClick={(e) => {
         if (!(e.target as HTMLElement).closest(OVERLAY_SELECTOR)) props.onBackgroundClick?.()
       }}

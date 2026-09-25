@@ -571,7 +571,9 @@ export function Layout(props: ParentProps) {
               <span class="truncate">{current().label()}</span>
             </button>
           </Show>
-          <div class="flex flex-1 flex-col p-4">{props.children}</div>
+          {/* A phone has no width to spare, and the scrollbar already keeps
+              the right edge off the glass, so the gutter there is its own. */}
+          <div class={`flex flex-1 flex-col ${snapped() ? "py-4 pl-2 pr-0" : "p-4"}`}>{props.children}</div>
         </div>
       </Shell>
     </>
