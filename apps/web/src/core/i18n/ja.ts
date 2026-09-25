@@ -89,7 +89,7 @@ export const ja: Dictionary = {
     lead: "この帳簿について文章で尋ねると、hledger が答えます。キーはこのブラウザに保管され、ブラウザが {{ host }} と直接やりとりします。こちらのサーバーを経由するものはありません。",
     provider: "尋ねる相手",
     freeIsRead: "Gemini の無料枠が無料なのは、送った内容を Google が製品改善に使い、レビュアーが読むことがあるからです。対象はこの帳簿です。有料枠では使われません。",
-    noPhotos: "DeepSeek は画像を受け取れないので、レシートの写真は読み取れません。それ以外の機能は他と同じように使えます。",
+    photosOnFlashOnly: "DeepSeek で画像を受け取れるのは deepseek-flash だけです。deepseek-v4-pro ではレシートの写真は読み取れません。それ以外の機能はどちらでも使えます。",
     key: "API キー",
     keyHint: "{{ provider }} のキー。このブラウザだけに保管されます。保存する前に検証します。",
     getKey: "キーの取得先",

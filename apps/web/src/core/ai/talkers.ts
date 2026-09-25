@@ -22,10 +22,10 @@ const deepseek = speaksOpenAI({
   label: "DeepSeek",
   host: "api.deepseek.com",
   root: "https://api.deepseek.com/v1",
-  caveat: () => t("ai.noPhotos"),
+  caveat: () => t("ai.photosOnFlashOnly"),
   keysFrom: "https://platform.deepseek.com/api_keys",
   modelsFrom: "https://api-docs.deepseek.com/quick_start/pricing",
-  defaultModel: "deepseek-chat",
+  defaultModel: "deepseek-flash",
 })
 
 const qwen = speaksOpenAI({

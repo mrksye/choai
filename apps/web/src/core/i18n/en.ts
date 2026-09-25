@@ -98,7 +98,7 @@ export const en = {
     lead: "Ask about these books in a sentence, and have hledger answer. The key is kept in this browser and the browser talks to {{ host }} directly; nothing passes through a server of ours.",
     provider: "Who to ask",
     freeIsRead: "Gemini's free tier is free because Google uses what you send to improve its products, and its reviewers may read it. That would be this journal. Their paid tier does not.",
-    noPhotos: "DeepSeek does not take images, so a photographed receipt cannot be read here. Everything else works as it does elsewhere.",
+    photosOnFlashOnly: "Of DeepSeek's models, only deepseek-flash takes images: with deepseek-v4-pro a photographed receipt cannot be read. Everything else works with either.",
     key: "API key",
     keyHint: "A {{ provider }} key, kept in this browser only. It is checked before it is saved.",
     getKey: "Where to get one",

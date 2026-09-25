@@ -259,9 +259,9 @@ const COMPATIBLE: Wire = {
     const [head = "", data = ""] = String(part?.url ?? "").split(";base64,")
     return { mediaType: head.replace(/^data:/, ""), bytes: data.length }
   },
-  models: { data: [{ id: "deepseek-chat" }, { id: "deepseek-reasoner" }] },
+  models: { data: [{ id: "deepseek-flash" }, { id: "deepseek-v4-pro" }] },
   wantsTool: {
-    model: "deepseek-chat",
+    model: "deepseek-flash",
     choices: [
       {
         finish_reason: "tool_calls",
@@ -281,13 +281,13 @@ const COMPATIBLE: Wire = {
     ],
   },
   answers: {
-    model: "deepseek-chat",
+    model: "deepseek-flash",
     choices: [{ finish_reason: "stop", message: { role: "assistant", content: SAID } }],
     // The prompt counted whole with the cached part named beside it.
     usage: { prompt_tokens: 1000, completion_tokens: 50, prompt_tokens_details: { cached_tokens: 900 } },
   },
   refuses: {
-    model: "deepseek-chat",
+    model: "deepseek-flash",
     choices: [{ finish_reason: "content_filter", message: { role: "assistant", content: "" } }],
   },
 }
@@ -1355,7 +1355,7 @@ test("Qwen and OpenRouter are the same talker at another address", async ({ page
  *
  * Both of these are true of the provider rather than of this app, and both are
  * the sort of thing somebody would want to know first: what Google does with a
- * free tier's contents, and that DeepSeek cannot be shown a receipt at all.
+ * free tier's contents, and that only one of DeepSeek's models can be shown a receipt.
  * They live on the talker, so a provider added with one cannot be added without
  * anybody seeing it.
  */
@@ -1363,16 +1363,16 @@ test("a provider's caveat is said before its key is asked for", async ({ page })
   await page.goto("/settings")
 
   await page.getByRole("button", { name: "DeepSeek", exact: true }).click()
-  await expect(page.getByText("cannot be read here")).toBeVisible()
+  await expect(page.getByText("only deepseek-flash takes images")).toBeVisible()
 
   await page.getByRole("button", { name: "Gemini", exact: true }).click()
-  await expect(page.getByText("cannot be read here")).toBeHidden()
+  await expect(page.getByText("only deepseek-flash takes images")).toBeHidden()
   await expect(page.getByText("reviewers may read it")).toBeVisible()
 
   // And whoever has nothing to declare says nothing.
   await page.getByRole("button", { name: "Claude", exact: true }).click()
   await expect(page.getByText("reviewers may read it")).toBeHidden()
-  await expect(page.getByText("cannot be read here")).toBeHidden()
+  await expect(page.getByText("only deepseek-flash takes images")).toBeHidden()
 })
 
 for (const wire of [CLAUDE, GEMINI, OPENAI, COMPATIBLE]) {
