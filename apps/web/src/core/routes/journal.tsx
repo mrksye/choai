@@ -142,7 +142,7 @@ type Types = Readonly<Record<string, AccountType>>
 /** The kind is left to the sign and to the name beneath it; the whole name is a hover away. */
 function PostingLine(props: { posting: Posting; types: Types }): JSX.Element {
   return (
-    <div class="flex justify-between gap-6 py-0.5">
+    <div class="flex justify-between gap-6 py-0.5 text-sm">
       <span class="min-w-0 truncate text-muted-foreground" title={props.posting.paccount}>
         {withoutKind(props.posting.paccount, props.types)}
       </span>
