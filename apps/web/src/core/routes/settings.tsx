@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createResource, on, type JSX } from "solid-js"
+import { For, Show, createEffect, createMemo, createResource, on, type JSX } from "solid-js"
 import { A, useLocation } from "@solidjs/router"
 
 import { LOCALES, LOCALE_NAMES, locale, setLocale, t } from "~/core/i18n"
@@ -9,6 +9,7 @@ import { AiKeyPanel } from "~/core/components/ai-key-panel"
 import { handOver } from "~/core/journal/handover"
 import { keptForGood } from "~/core/journal/kept"
 import { getOrUndefined } from "~/core/lib/monad"
+import { pageOf } from "~/core/address/address"
 import { SCHEMES, scheme, setScheme } from "~/core/lib/theme"
 
 /** Whether there is a journal in hand for the library section to be about. */
@@ -61,9 +62,10 @@ export default function Settings(): JSX.Element {
    * the one already named scrolls to it again, which is what pressing the same
    * name twice ought to do.
    */
+  const section = createMemo(() => pageOf(location.hash))
   createEffect(
     on(
-      () => location.hash,
+      section,
       (hash) => {
         const named = hash.replace(/^#/, "")
         if (named === "") return

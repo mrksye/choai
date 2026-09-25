@@ -1,7 +1,9 @@
 import { For, type JSX } from "solid-js"
-import { useLocation, useNavigate } from "@solidjs/router"
+import { useLocation } from "@solidjs/router"
 
 import { SECTIONS } from "~/core/routes/settings"
+import { pageOf } from "~/core/address/address"
+import { useMoves } from "~/core/address/moves"
 
 /**
  * The explorer beside the settings: what this page is made of.
@@ -24,12 +26,12 @@ export function SettingsExplorer(props: {
   readonly onChosen?: () => void
 }): JSX.Element {
   const location = useLocation()
-  const navigate = useNavigate()
+  const moves = useMoves()
 
-  const here = (id: string): boolean => location.hash === `#${id}`
+  const here = (id: string): boolean => pageOf(location.hash) === `#${id}`
 
   const choose = (id: string): void => {
-    navigate(`/settings#${id}`)
+    moves.goTo(`/settings#${id}`)
     props.onChosen?.()
   }
 

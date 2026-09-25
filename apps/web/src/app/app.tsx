@@ -24,7 +24,9 @@ import { showed, wantedQuery } from "~/core/journal/showing"
 import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
-import { dock, type InTheDock } from "~/core/dock"
+import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
+import { dockedIn, readFragment, withLayer, withoutLayer } from "~/core/address/address"
+import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
 import { ShortcutsHelp } from "~/core/components/shortcuts-help"
@@ -84,21 +86,11 @@ const EDGES = 2
 export function Layout(props: ParentProps) {
   const location = useLocation()
   const navigate = useNavigate()
+  const moves = useMoves()
   const [query, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
-  /**
-   * Where the list and the work cannot share the window, the work is what this
-   * opens on.
-   *
-   * Otherwise there is no first screen: the list has the window, and whatever
-   * the work was going to say — including the offer of a journal to somebody who
-   * has none yet — is behind it with no way through, since the way through is
-   * choosing something from a list that has nothing in it.
-   */
-  const [railVisible, setRailVisible] = createSignal(!overHalf(RAIL + EXPLORER))
-  const [panelOpen, setPanelOpen] = createSignal(!overHalf(RAIL + EXPLORER))
-
-  const chromeShowing = (): boolean => railVisible() || panelOpen()
+  const [railVisible, setRailVisible] = createSignal(true)
+  const [panelOpen, setPanelOpen] = createSignal(true)
 
   /**
    * Whether the left of the window is a screen of its own.
@@ -110,6 +102,32 @@ export function Layout(props: ParentProps) {
    * what kind of device this is.
    */
   const snapped = (): boolean => overHalf(RAIL + EXPLORER)
+
+  /**
+   * Where the list takes the window, it is a screen of its own, so it is in the
+   * address like one and going back leaves it. Beside the work it is only a
+   * panel folded or not, and every fold being a step to press back through
+   * would bury the pages behind them.
+   *
+   * With no layer the work is what this opens on. Otherwise there is no first
+   * screen: the list has the window, and whatever the work was going to say —
+   * including the offer of a journal to somebody who has none yet — is behind
+   * it with no way through, since the way through is choosing something from a
+   * list that has nothing in it.
+   */
+  const listed = (): boolean => moves.layers().includes("list")
+  const railShown = (): boolean => (snapped() ? listed() : railVisible())
+  const panelShown = (): boolean => (snapped() ? listed() : panelOpen())
+  const chromeShowing = (): boolean => railShown() || panelShown()
+
+  const setChrome = (show: boolean): void => {
+    if (snapped()) {
+      show ? moves.lay("list") : moves.lift("list")
+      return
+    }
+    setRailVisible(show)
+    setPanelOpen(show)
+  }
 
   /** What the explorer is pinned to when it has the window to itself. */
   const wholeWindow = (): number => Math.max(1, viewportWidth() - RAIL - EDGES)
@@ -123,8 +141,7 @@ export function Layout(props: ParentProps) {
    */
   const showTheWork = (): void => {
     if (!snapped()) return
-    setRailVisible(false)
-    setPanelOpen(false)
+    moves.move((at) => ({ ...at, fragment: withoutLayer(at.fragment, "list") }))
   }
 
   /**
@@ -143,7 +160,8 @@ export function Layout(props: ParentProps) {
    *
    * Leaving a page is going back to another one, so it is pushed; narrowing the
    * page already open is not going anywhere, and pushing there would make every
-   * account tried a step to be pressed back through.
+   * account tried a step to be pressed back through. Unless the list had the
+   * window: leaving it is a step, and going back should find it again.
    *
    * The settings explorer chooses a section rather than a query and takes its own
    * address there, so it hands up nothing and nothing here moves.
@@ -151,7 +169,10 @@ export function Layout(props: ParentProps) {
   const chose = (chosen?: string): void => {
     if (chosen !== undefined) {
       const view = railOf(current())
-      navigate(view + searchFor(chosen), { replace: view === location.pathname })
+      moves.move(
+        (at) => ({ path: view, search: searchFor(chosen), fragment: { page: "", layers: at.fragment.layers } }),
+        { replace: view === location.pathname && !(snapped() && listed()) },
+      )
     }
     showTheWork()
   }
@@ -162,9 +183,7 @@ export function Layout(props: ParentProps) {
    * all back.
    */
   const toggleChrome = (): void => {
-    const bringBack = !chromeShowing()
-    setRailVisible(bringBack)
-    setPanelOpen(bringBack)
+    setChrome(!chromeShowing())
   }
 
   /**
@@ -177,11 +196,11 @@ export function Layout(props: ParentProps) {
    */
   const select = (href: string): void => {
     if (location.pathname === href) {
-      setPanelOpen((open) => !open)
+      snapped() ? moves.lift("list") : setPanelOpen((open) => !open)
       return
     }
     setPanelOpen(true)
-    navigate(href + location.search)
+    moves.move((at) => ({ ...at, path: href, fragment: { page: "", layers: at.fragment.layers } }))
   }
 
   /**
@@ -211,13 +230,51 @@ export function Layout(props: ParentProps) {
    */
   createEffect(
     on([underReview, sending], ([proposal, writing]) => {
-      if (proposal === undefined) {
-        if (dock.is("reviewing")) dock.close()
-        return
-      }
-      if (!writing && !dock.is("chatting")) dock.show("reviewing")
+      if (proposal !== undefined && !writing && !dock.is("chatting") && !dock.is("reviewing")) dock.show("reviewing")
     }),
   )
+
+  /**
+   * The dock is lent through the address, so going back puts it down and going
+   * forward lends it again.
+   *
+   * On a narrow window lending it folds the rails away first. There is not room
+   * for both, and this reuses the folding already here rather than bringing in
+   * a second kind of container for small screens. Whoever asked for it — the
+   * journal opening an entry knows nothing of the rails — gets the room either
+   * way.
+   */
+  seatDock({
+    showing: () => dockedAs(dockedIn(readFragment(location.hash))),
+    show: (what) => {
+      if (narrow() && !snapped()) {
+        setRailVisible(false)
+        setPanelOpen(false)
+      }
+      moves.move((at) => ({
+        ...at,
+        fragment: withLayer(narrow() ? withoutLayer(at.fragment, "list") : at.fragment, LAYER_OF[what]),
+      }))
+    },
+    close: () => {
+      const showing = dock.showing()
+      if (showing !== undefined) moves.lift(LAYER_OF[showing])
+    },
+  })
+
+  /**
+   * An occupant with nothing to show gives the space back.
+   *
+   * Reached by going forward to an entry whose editor has since let go, or by a
+   * reload: the address still lends the dock, and what it was lent to is gone.
+   * An empty panel over the journal is the one thing the dock must never be.
+   */
+  createEffect(() => {
+    const showing = dock.showing()
+    const empty =
+      (showing === "editing" && editing() === undefined) || (showing === "reviewing" && underReview() === undefined)
+    if (empty) dock.close()
+  })
 
   /**
    * The entry being corrected is let go of when the dock stops showing it.
@@ -238,40 +295,13 @@ export function Layout(props: ParentProps) {
     dock.close()
   }
 
-  /**
-   * Opening the composer on a narrow window folds the rails away first. There is
-   * not room for both, and this reuses the folding already here rather than
-   * bringing in a second kind of container for small screens.
-   */
   const compose = (): void => {
-    if (narrow()) {
-      setRailVisible(false)
-      setPanelOpen(false)
-    }
     dock.show("composing")
   }
 
-  /** The dock needs the same room whichever of the three is in it. */
   const chat = (): void => {
-    if (narrow()) {
-      setRailVisible(false)
-      setPanelOpen(false)
-    }
     dock.show("chatting")
   }
-
-  /**
-   * Editing an entry is started from the journal, which does not know about the
-   * rails, so the folding that opening the composer does by hand is done here
-   * for it — the dock needs the same room either way.
-   */
-  createEffect(
-    on(editing, (open) => {
-      if (open === undefined || !narrow()) return
-      setRailVisible(false)
-      setPanelOpen(false)
-    }),
-  )
 
   /**
    * A query asked for from outside the tree lands here.
@@ -425,7 +455,7 @@ export function Layout(props: ParentProps) {
         activity={
           <ActivityBar
             class={SLIDE}
-            visible={railVisible()}
+            visible={railShown()}
             items={buttonsFor(NAV)}
             footer={buttonsFor(FOOT)}
             expanded={railExpanded()}
@@ -452,7 +482,7 @@ export function Layout(props: ParentProps) {
             // explorer take the window whole and stay there.
             minWidth={() => (snapped() ? wholeWindow() : 168)}
             maxWidth={() => (snapped() ? wholeWindow() : withinWindow())}
-            open={panelOpen()}
+            open={panelShown()}
             header={
               <>
                 <span>{current().label()}</span>
@@ -475,7 +505,7 @@ export function Layout(props: ParentProps) {
                       type="button"
                       aria-pressed={onSource()}
                       onClick={() => {
-                        navigate((onSource() ? "/" : "/source") + location.search)
+                        moves.goTo(onSource() ? "/" : "/source")
                         showTheWork()
                       }}
                       aria-label={t("source.title")}

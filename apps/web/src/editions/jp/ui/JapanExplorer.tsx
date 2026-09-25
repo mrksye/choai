@@ -1,5 +1,7 @@
-import { useLocation, useNavigate } from "@solidjs/router"
+import { useLocation } from "@solidjs/router"
 import { For, type JSX } from "solid-js"
+
+import { useMoves } from "~/core/address/moves"
 
 import { ROUTE } from "../naming"
 import { words } from "../words"
@@ -19,7 +21,7 @@ import { words } from "../words"
  */
 export function JapanExplorer(props: { readonly onChosen?: () => void }): JSX.Element {
   const location = useLocation()
-  const navigate = useNavigate()
+  const moves = useMoves()
 
   const screens = (): readonly { readonly href: string; readonly name: string }[] => [
     { href: ROUTE.chart, name: words().nav.chart },
@@ -30,7 +32,7 @@ export function JapanExplorer(props: { readonly onChosen?: () => void }): JSX.El
   ]
 
   const go = (href: string): void => {
-    navigate(href)
+    moves.goTo(href)
     props.onChosen?.()
   }
 

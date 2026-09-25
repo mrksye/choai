@@ -1,5 +1,5 @@
 import { Show, createMemo, onMount, type JSX } from "solid-js"
-import { A, useLocation, useNavigate } from "@solidjs/router"
+import { A, useLocation } from "@solidjs/router"
 
 import { Button } from "~/core/components/ui/button"
 import { GitHubPanel, SnagNote } from "~/core/components/github-panel"
@@ -18,6 +18,8 @@ import {
 import { STEP } from "~/core/github/history"
 import { GIT, addressOf, lookingAt } from "~/core/components/git/looking"
 import { journal } from "~/core/journal/store"
+import { pageOf } from "~/core/address/address"
+import { useMoves } from "~/core/address/moves"
 import { aroundChanges, changes, lineDiff } from "~/core/lib/diff"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
@@ -37,7 +39,7 @@ import { t } from "~/core/i18n"
  */
 export default function Git(): JSX.Element {
   const location = useLocation()
-  const looking = () => lookingAt(location.hash)
+  const looking = () => lookingAt(pageOf(location.hash))
   const changing = () => {
     const now = looking()
     return now.at === "change" ? now.path : undefined
@@ -102,7 +104,7 @@ function ChangeView(props: { readonly path: string }): JSX.Element {
 }
 
 function HistoryView(props: { readonly commit: string | undefined }): JSX.Element {
-  const navigate = useNavigate()
+  const moves = useMoves()
   onMount(wantHistory)
   const reading = (): boolean => historyNow().at === "reading"
   const snag = () => {
@@ -114,7 +116,7 @@ function HistoryView(props: { readonly commit: string | undefined }): JSX.Elemen
     return at === "not-connected" || at === "no-place"
   }
   const choose = (sha: string): void => {
-    navigate(addressOf({ at: "history", commit: props.commit === sha ? undefined : sha }))
+    moves.goTo(addressOf({ at: "history", commit: props.commit === sha ? undefined : sha }))
   }
 
   return (

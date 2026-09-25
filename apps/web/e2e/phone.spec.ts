@@ -253,3 +253,45 @@ test("a section the page will not draw is not offered", async ({ page }) => {
   expect(offered).not.toContain("The current journal")
   expect(offered).toContain("AI")
 })
+
+/**
+ * The system's back button undoes a move, and forward does it again.
+ *
+ * On a phone that button is the one always under the thumb, and every move that
+ * changes the screen is a change of address so that it has something to undo:
+ * the list taking the window, an entry opened beside the journal. Closing what
+ * a move opened is a step back rather than a step forward, or going back after
+ * it would open an editor whose entry has already been let go.
+ */
+test("going back undoes each move, and closing is one of them", async ({ page }) => {
+  await page.setViewportSize(PHONE)
+  await openTheDemo(page)
+
+  await back(page).click()
+  await expect(page).toHaveURL(/#list$/)
+  await anAccount(page).click()
+  await expect(explorer(page)).toBeHidden()
+
+  await page.goBack()
+  await expect(explorer(page)).toBeVisible()
+  await page.goBack()
+  await expect(explorer(page)).toBeHidden()
+  await page.goForward()
+  await expect(explorer(page)).toBeVisible()
+  await page.goBack()
+
+  const save = page.getByRole("button", { name: "Save", exact: true })
+  await page.getByRole("button").filter({ hasText: "landlord" }).first().click()
+  await expect(page).toHaveURL(/#edit$/)
+  await page.goBack()
+  await expect(save).toBeHidden()
+
+  await page.getByRole("button").filter({ hasText: "landlord" }).first().click()
+  await page.getByRole("button", { name: "Cancel" }).click()
+  await expect(save).toBeHidden()
+  await expect(page).toHaveURL(/\/$/)
+
+  await page.goForward()
+  await expect(save).toBeHidden()
+  await expect(page).toHaveURL(/\/$/)
+})

@@ -1,5 +1,5 @@
 import { For, Show, createResource, createSignal, type JSX } from "solid-js"
-import { useLocation, useNavigate } from "@solidjs/router"
+import { useLocation } from "@solidjs/router"
 
 import { Button } from "~/core/components/ui/button"
 import { SnagNote, outcomeWords } from "~/core/components/github-panel"
@@ -8,6 +8,8 @@ import { GIT, addressOf, lookingAt, type Looking } from "~/core/components/git/l
 import { agreements, token } from "~/core/github/kept"
 import { pull, push, type Outcome, type Snag } from "~/core/github/sync"
 import { journal } from "~/core/journal/store"
+import { pageOf } from "~/core/address/address"
+import { useMoves } from "~/core/address/moves"
 import { getOrUndefined, type Result } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 
@@ -25,7 +27,7 @@ export function GitExplorer(props: {
   readonly onChosen?: () => void
 }): JSX.Element {
   const location = useLocation()
-  const navigate = useNavigate()
+  const moves = useMoves()
   const [message, setMessage] = createSignal("")
   const [busy, setBusy] = createSignal(false)
   const [said, setSaid] = createSignal<string | undefined>(undefined)
@@ -37,11 +39,11 @@ export function GitExplorer(props: {
   const waiting = () => unsentNow() ?? []
 
   const go = (looking: Looking): void => {
-    navigate(addressOf(looking))
+    moves.goTo(addressOf(looking))
     props.onChosen?.()
   }
   const showing = (path: string): boolean => {
-    const now = lookingAt(location.hash)
+    const now = lookingAt(pageOf(location.hash))
     return location.pathname === GIT && now.at === "change" && now.path === path
   }
 
@@ -72,7 +74,7 @@ export function GitExplorer(props: {
     return remote === undefined ? "" : `${remote.owner}/${remote.repo}`
   }
   const lookingAtConnection = (): boolean =>
-    location.pathname === GIT && lookingAt(location.hash).at === "connection"
+    location.pathname === GIT && lookingAt(pageOf(location.hash)).at === "connection"
 
   return (
     <div class="flex flex-col gap-2 py-2">
@@ -168,7 +170,7 @@ export function GitExplorer(props: {
           class="w-full px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
           classList={{
             "bg-accent text-accent-foreground":
-              location.pathname === GIT && lookingAt(location.hash).at === "history",
+              location.pathname === GIT && lookingAt(pageOf(location.hash)).at === "history",
           }}
         >
           {t("git.graph")}

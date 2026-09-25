@@ -1,6 +1,7 @@
-import { createRoot } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 
-import { createSlot, type Slot } from "~/core/lib/solid-workbench-ui"
+import type { Slot } from "~/core/lib/solid-workbench-ui"
+import type { Layer } from "~/core/address/address"
 
 /**
  * The panel beside the journal, and who has it.
@@ -20,4 +21,43 @@ import { createSlot, type Slot } from "~/core/lib/solid-workbench-ui"
  */
 export type InTheDock = "composing" | "editing" | "chatting" | "reviewing"
 
-export const dock: Slot<InTheDock> = createRoot(() => createSlot<InTheDock>())
+/** What each is called in the address. */
+export const LAYER_OF: Readonly<Record<InTheDock, Layer>> = {
+  composing: "compose",
+  editing: "edit",
+  chatting: "chat",
+  reviewing: "review",
+}
+
+export const dockedAs = (layer: Layer | undefined): InTheDock | undefined =>
+  (Object.keys(LAYER_OF) as InTheDock[]).find((what) => LAYER_OF[what] === layer)
+
+/**
+ * Who has the space is kept in the address, which only the layout can reach —
+ * so the layout seats the dock on it, and until then it is an ordinary slot
+ * that nothing has been lent.
+ */
+export interface Seat {
+  readonly showing: () => InTheDock | undefined
+  readonly show: (what: InTheDock) => void
+  readonly close: () => void
+}
+
+const unseated = (): Seat => {
+  const [showing, setShowing] = createSignal<InTheDock | undefined>(undefined)
+  return { showing, show: (what) => setShowing(() => what), close: () => setShowing(undefined) }
+}
+
+const [seat, setSeat] = createRoot(() => createSignal<Seat>(unseated()))
+
+export const seatDock = (on: Seat): void => {
+  setSeat(() => on)
+}
+
+export const dock: Slot<InTheDock> = {
+  showing: () => seat().showing(),
+  is: (what) => seat().showing() === what,
+  show: (what) => seat().show(what),
+  toggle: (what) => (seat().showing() === what ? seat().close() : seat().show(what)),
+  close: () => seat().close(),
+}

@@ -300,11 +300,23 @@ three tsconfigs agree on where the seam resolves.
   the explorer currently has: pinning a draggable width is a thing there is no
   dragging back out of. The pinning itself is `minWidth === maxWidth`, which
   `resize.ts` already clamps to.
+- **Every move that changes the screen is a change of address**, so the
+  browser's back and forward — a phone's back button — undo and redo it.
+  `core/address/address.ts` names them: a page keeps its own part of the
+  fragment (`#connection`, `#language`) and the shell lays its layers after it
+  (`#connection+chat`), `list` for the list taking a narrow window and one of
+  `compose`/`edit`/`chat`/`review` for the dock. A page reads only its own part
+  through `pageOf`. `core/address/moves.ts` makes each move one navigation built
+  on the one still pending, because the router keeps only the last of two in a
+  tick; closing what the step before laid is a step back, or going back after
+  it would reopen an editor that has let its entry go. The dock is read off the
+  address, not kept beside it.
 - **The dock holds one thing at a time**, and `core/dock.ts` is that one piece of
   state — the name of whoever the panel is lent to. Not a flag per occupant with
   a rule about who wins: under that, opening the second does not close the first,
-  it hides it, and pressing the loser does nothing. `core/lib/solid-workbench-ui`'s
-  `createSlot` is the vessel; closing is never clearing, so a draft, a
+  it hides it, and pressing the loser does nothing. It answers to
+  `core/lib/solid-workbench-ui`'s `Slot` and is kept in the address, where the
+  layout seats it; closing is never clearing, so a draft, a
   conversation and a proposal all survive it.
 - **`app/app.tsx`** wires `core/lib/solid-workbench-ui` (MIT, kept app-agnostic); its
   `NAV`/`FOOT`/`INNER` tables pair each route with its explorer, and one query in
