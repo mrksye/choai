@@ -11,18 +11,28 @@
  * and the shell adds its layers after it: `#connection+chat` is the connection
  * with the conversation open beside it. A page reads only its own part through
  * `pageOf`, so a layer coming or going is not a change to what it shows.
+ *
+ * A page with nothing after its `#` is its list, the way `/settings` is the
+ * list of sections and `/settings#language` is one of them. A page with no
+ * parts of its own — the journal is one account list and one page of entries —
+ * says it is showing its work with `work`.
  */
+
+/** Where the journal is. Nothing is at `/`: that is only the way in. */
+export const JOURNAL = "/journal"
+
+export const ENTRY = "/"
 
 /**
  * What the shell lays over a page.
  *
- * `list` is the list taking the window, on a window too narrow for the list
- * and the work together; the rest are the dock, which holds one at a time.
+ * `work` is the page's work in place of its list, for a page with no part of
+ * its own to name; the rest are the dock, which holds one at a time.
  */
-export type Layer = "list" | "compose" | "edit" | "chat" | "review"
+export type Layer = "work" | "compose" | "edit" | "chat" | "review"
 
 /** In the order they are written, so the same screen is always the same address. */
-const LAYERS: readonly Layer[] = ["list", "compose", "edit", "chat", "review"]
+const LAYERS: readonly Layer[] = ["work", "compose", "edit", "chat", "review"]
 
 const DOCKED: readonly Layer[] = ["compose", "edit", "chat", "review"]
 
@@ -68,6 +78,24 @@ export const pageOf = (hash: string): string => {
   return page === "" ? "" : `#${page}`
 }
 
+/**
+ * Whether the page's work is what is on screen rather than its list.
+ *
+ * Only a window too narrow for both has to choose; a wide one shows the two
+ * side by side whatever this says.
+ */
+export const showsTheWork = (fragment: Fragment): boolean => fragment.page !== "" || fragment.layers.includes("work")
+
+/** The page's work, where its address did not already name it. */
+export const atTheWork = (fragment: Fragment): Fragment =>
+  showsTheWork(fragment) ? fragment : withLayer(fragment, "work")
+
+/** The page's list: its own part and its work left, the dock kept. */
+export const atTheList = (fragment: Fragment): Fragment => ({
+  page: "",
+  layers: fragment.layers.filter((layer) => DOCKED.includes(layer)),
+})
+
 /** The dock holds one thing, so laying one of its layers takes the other off. */
 export const withLayer = (fragment: Fragment, layer: Layer): Fragment => ({
   page: fragment.page,
@@ -95,19 +123,22 @@ export const readAddress = (written: string): Address => {
 export const writeAddress = (address: Address): string =>
   address.path + address.search + writeFragment(address.fragment)
 
+/** The same place with the same work showing, whatever the dock holds. */
+export const sameBesideTheDock = (one: Address, other: Address): boolean =>
+  one.path === other.path &&
+  one.search === other.search &&
+  one.fragment.page === other.fragment.page &&
+  showsTheWork(one.fragment) === showsTheWork(other.fragment)
+
 /**
- * The one layer a move laid over what was there, if that is all it did.
+ * How a book is arrived at: `/` is the journal, with its list behind its work
+ * so that going back from the first screen finds the list before it leaves.
  *
- * Such a move is undone by going back to where it came from, so closing what it
- * opened is a step back rather than a step forward — otherwise going back after
- * closing would open it again, with whatever it held already let go.
+ * Only for `/`, which is no page. An address that names a page is where
+ * somebody meant to be, and is left as it is.
  */
-export const laidBy = (before: Address, after: Address): Layer | undefined => {
-  const samePlace =
-    before.path === after.path && before.search === after.search && before.fragment.page === after.fragment.page
-  const added = after.fragment.layers.filter((layer) => !before.fragment.layers.includes(layer))
-  const kept = before.fragment.layers.every(
-    (layer) => after.fragment.layers.includes(layer) || (DOCKED.includes(layer) && added.some((a) => DOCKED.includes(a))),
-  )
-  return samePlace && kept && added.length === 1 ? added[0] : undefined
+export const arrivalsAt = (at: Address): readonly Address[] => {
+  if (at.path !== ENTRY) return []
+  const journal = { ...at, path: JOURNAL }
+  return showsTheWork(at.fragment) ? [journal] : [journal, { ...journal, fragment: atTheWork(at.fragment) }]
 }

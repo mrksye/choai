@@ -302,15 +302,19 @@ three tsconfigs agree on where the seam resolves.
   `resize.ts` already clamps to.
 - **Every move that changes the screen is a change of address**, so the
   browser's back and forward — a phone's back button — undo and redo it.
-  `core/address/address.ts` names them: a page keeps its own part of the
-  fragment (`#connection`, `#language`) and the shell lays its layers after it
-  (`#connection+chat`), `list` for the list taking a narrow window and one of
-  `compose`/`edit`/`chat`/`review` for the dock. A page reads only its own part
-  through `pageOf`. `core/address/moves.ts` makes each move one navigation built
+  `core/address/address.ts` names them. A page with nothing after its `#` is its
+  list, and anything after it is its work: a page's own part (`#connection`,
+  `#language`), or `work` for a page with none, like the journal. The shell lays
+  the dock after it (`#connection+chat`, `#work+edit`), and a page reads only its
+  own part through `pageOf`. Nothing is at `/`: it is the way in, rewritten in
+  `app/index.tsx` before the router reads it to `/journal` with `/journal#work`
+  pushed on top, so going back from the first screen finds the list before it
+  leaves the app. `core/address/moves.ts` makes each move one navigation built
   on the one still pending, because the router keeps only the last of two in a
-  tick; closing what the step before laid is a step back, or going back after
-  it would reopen an editor that has let its entry go. The dock is read off the
-  address, not kept beside it.
+  tick, and each entry remembers the address it came from: going where the step
+  before was is a step back, or going back after closing would reopen an editor
+  that has let its entry go. The dock is read off the address, not kept beside
+  it.
 - **The dock holds one thing at a time**, and `core/dock.ts` is that one piece of
   state — the name of whoever the panel is lent to. Not a flag per occupant with
   a rule about who wins: under that, opening the second does not close the first,

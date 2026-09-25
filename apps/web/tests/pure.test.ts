@@ -27,7 +27,20 @@ import { byDay, weekdayOf } from "~/core/journal/days"
 import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
-import { laidBy, pageOf, readAddress, readFragment, withLayer, withoutLayer, writeFragment } from "~/core/address/address"
+import {
+  arrivalsAt,
+  atTheList,
+  atTheWork,
+  pageOf,
+  readAddress,
+  readFragment,
+  sameBesideTheDock,
+  showsTheWork,
+  withLayer,
+  withoutLayer,
+  writeAddress,
+  writeFragment,
+} from "~/core/address/address"
 
 /**
  * The parts that are only functions, checked as functions.
@@ -828,27 +841,41 @@ describe("an account without its kind", () => {
 describe("where the app is, as the address says it", () => {
   test("a page's own part and the shell's layers share the fragment", () => {
     expect(readFragment("#connection+chat")).toEqual({ page: "connection", layers: ["chat"] })
-    expect(readFragment("#edit")).toEqual({ page: "", layers: ["edit"] })
+    expect(readFragment("#work+edit")).toEqual({ page: "", layers: ["work", "edit"] })
     expect(readFragment("")).toEqual({ page: "", layers: [] })
-    expect(pageOf("#change=a%2Bb.journal+list")).toBe("#change=a%2Bb.journal")
-    expect(pageOf("#chat")).toBe("")
+    expect(pageOf("#change=a%2Bb.journal+chat")).toBe("#change=a%2Bb.journal")
+    expect(pageOf("#work")).toBe("")
   })
 
   test("the same screen is always written the same way", () => {
-    expect(writeFragment({ page: "language", layers: ["compose", "list"] })).toBe("#language+list+compose")
+    expect(writeFragment({ page: "language", layers: ["compose", "work"] })).toBe("#language+work+compose")
     expect(writeFragment({ page: "", layers: [] })).toBe("")
   })
 
-  test("the dock holds one layer at a time, and the list is not the dock", () => {
-    const composing = readFragment("#list+compose")
-    expect(withLayer(composing, "edit").layers).toEqual(["list", "edit"])
-    expect(withoutLayer(composing, "list").layers).toEqual(["compose"])
+  test("nothing after the # is the page's list; its own part or work is its work", () => {
+    expect(showsTheWork(readFragment(""))).toBe(false)
+    expect(showsTheWork(readFragment("#chat"))).toBe(false)
+    expect(showsTheWork(readFragment("#language"))).toBe(true)
+    expect(showsTheWork(readFragment("#work"))).toBe(true)
+    expect(writeFragment(atTheWork(readFragment("#language")))).toBe("#language")
+    expect(writeFragment(atTheList(readFragment("#language+chat")))).toBe("#chat")
   })
 
-  test("a move that only laid one layer is undone by a step back", () => {
-    expect(laidBy(readAddress("/?q=food"), readAddress("/?q=food#edit"))).toBe("edit")
-    expect(laidBy(readAddress("/#compose"), readAddress("/#edit"))).toBe("edit")
-    expect(laidBy(readAddress("/#list"), readAddress("/?q=food"))).toBeUndefined()
-    expect(laidBy(readAddress("/settings#list"), readAddress("/settings#language+list"))).toBeUndefined()
+  test("the dock holds one layer at a time, and the work is not the dock", () => {
+    const composing = readFragment("#work+compose")
+    expect(withLayer(composing, "edit").layers).toEqual(["work", "edit"])
+    expect(withoutLayer(composing, "work").layers).toEqual(["compose"])
+  })
+
+  test("closing the dock returns to the step before whatever it held there", () => {
+    expect(sameBesideTheDock(readAddress("/journal#work+compose"), readAddress("/journal#work"))).toBe(true)
+    expect(sameBesideTheDock(readAddress("/journal"), readAddress("/journal#work"))).toBe(false)
+    expect(sameBesideTheDock(readAddress("/journal?q=food#work"), readAddress("/journal#work"))).toBe(false)
+  })
+
+  test("/ is the journal's work with its list behind it, and any other address is kept", () => {
+    expect(arrivalsAt(readAddress("/?q=food")).map(writeAddress)).toEqual(["/journal?q=food", "/journal?q=food#work"])
+    expect(arrivalsAt(readAddress("/#work+chat")).map(writeAddress)).toEqual(["/journal#work+chat"])
+    expect(arrivalsAt(readAddress("/settings"))).toEqual([])
   })
 })

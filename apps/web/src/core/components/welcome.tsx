@@ -1,5 +1,5 @@
 import { Show, type JSX } from "solid-js"
-import { useNavigate } from "@solidjs/router"
+import { useMoves } from "~/core/address/moves"
 
 import { openDemo, openFiles, opening, openingTrouble, settling } from "~/core/journal/store"
 import { startFresh } from "~/core/journal/fresh"
@@ -29,11 +29,11 @@ export function Welcome(props: { adding?: boolean }): JSX.Element {
 
 function Choices(props: { adding: boolean }): JSX.Element {
   let chooser!: HTMLInputElement
-  const navigate = useNavigate()
+  const moves = useMoves()
 
   /** A book that opened is a book to look at, so this screen steps aside. */
   const then = async (opening: Promise<{ ok: boolean }>): Promise<void> => {
-    if ((await opening).ok) navigate("/")
+    if ((await opening).ok) moves.toTheJournal()
   }
 
   return (

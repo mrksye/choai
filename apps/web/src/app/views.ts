@@ -1,5 +1,6 @@
 import { edition } from "~/edition"
 import { viewsWith, type View } from "~/edition/types"
+import { JOURNAL } from "~/core/address/address"
 import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
 import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
 import { GitExplorer } from "~/core/explorer/GitExplorer"
@@ -32,9 +33,14 @@ import TrialBalance from "~/core/routes/trial-balance"
  * are kept and it is what the app is opened for; the rest are things you go and
  * look at.
  */
+/** The journal's own text, which sits under it rather than beside it. */
+export const SOURCE = `${JOURNAL}/source`
+
+export const ADD = "/add"
+
 const CORE: readonly View[] = [
   {
-    href: "/",
+    href: JOURNAL,
     label: () => t("nav.journal"),
     Icon: ReceiptIcon,
     Explorer: JournalExplorer,
@@ -102,22 +108,22 @@ const CORE: readonly View[] = [
     reached: { from: "within", under: "/settings" },
   },
   {
-    href: "/add",
+    href: ADD,
     label: () => t("books.addTitle"),
     Icon: ReceiptIcon,
     Explorer: JournalExplorer,
     page: Add,
     writes: false,
-    reached: { from: "within", under: "/" },
+    reached: { from: "within", under: JOURNAL },
   },
   {
-    href: "/source",
+    href: SOURCE,
     label: () => t("source.title"),
     Icon: ReceiptIcon,
     Explorer: JournalExplorer,
     page: Source,
     writes: true,
-    reached: { from: "within", under: "/" },
+    reached: { from: "within", under: JOURNAL },
   },
 ]
 

@@ -64,7 +64,7 @@ function Connection(): JSX.Element {
   return (
     <div class="flex max-w-xl flex-col gap-3">
       <Show when={connectedNow()}>
-        <A href={GIT} class="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+        <A href={`${GIT}#work`} class="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
           {t("git.back")}
         </A>
       </Show>
@@ -83,7 +83,7 @@ function ChangeView(props: { readonly path: string }): JSX.Element {
 
   return (
     <div class="flex flex-col gap-3">
-      <A href={GIT} class="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+      <A href={`${GIT}#work`} class="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
         {t("git.back")}
       </A>
       <header class="flex flex-wrap items-baseline gap-x-3 gap-y-1">

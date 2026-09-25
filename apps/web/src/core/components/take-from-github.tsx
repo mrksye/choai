@@ -1,5 +1,5 @@
 import { Show, createResource, createSignal, type JSX } from "solid-js"
-import { useNavigate } from "@solidjs/router"
+import { useMoves } from "~/core/address/moves"
 import { A } from "@solidjs/router"
 
 import { Button } from "~/core/components/ui/button"
@@ -19,7 +19,7 @@ const NOWHERE: Remote = { owner: "", repo: "", branch: "", path: "" }
  * been fetched and read. A copy that will not arrive leaves no half-book behind.
  */
 export function TakeFromGitHub(): JSX.Element {
-  const navigate = useNavigate()
+  const moves = useMoves()
   const [saved] = createResource(token)
   const [remote, setRemote] = createSignal<Remote>(NOWHERE)
   const [busy, setBusy] = createSignal(false)
@@ -35,7 +35,7 @@ export function TakeFromGitHub(): JSX.Element {
     setRefused(false)
     const result = await pullAsNewBook(remote())
     setBusy(false)
-    if (result.ok) navigate("/")
+    if (result.ok) moves.toTheJournal()
     else setRefused(true)
   }
 

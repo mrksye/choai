@@ -2,10 +2,12 @@ import { createEffect, createRoot, createSignal, on, untrack, useContext } from 
 import { RouterContext, useLocation, useNavigate } from "@solidjs/router"
 
 import {
-  laidBy,
+  JOURNAL,
+  atTheList,
+  atTheWork,
   readAddress,
   readFragment,
-  withLayer,
+  sameBesideTheDock,
   withoutLayer,
   writeAddress,
   type Address,
@@ -13,9 +15,14 @@ import {
   type Layer,
 } from "./address"
 
-/** What an entry of the history remembers about the move that made it. */
-interface Laid {
-  readonly laid: Layer
+/**
+ * What an entry of the history remembers: the address the move that made it left.
+ *
+ * The settled one, not one still on its way: two moves in a tick make one
+ * entry, and the step before it is where the first of them started.
+ */
+export interface Came {
+  readonly from: string
 }
 
 /**
@@ -30,8 +37,8 @@ interface Laid {
 const [leaving, setLeaving] = createRoot(() => createSignal<string | undefined>(undefined))
 
 export interface Moves {
-  /** The layers over the page, as the address has them now. */
-  readonly layers: () => readonly Layer[]
+  /** The fragment as the address has it now. */
+  readonly fragment: () => Fragment
   /**
    * Change where the app is.
    *
@@ -42,14 +49,19 @@ export interface Moves {
   readonly move: (change: (here: Address) => Address, how?: { readonly replace?: boolean }) => void
   /** Another page, or another part of one, with the query and the layers kept. */
   readonly goTo: (written: string) => void
-  readonly lay: (layer: Layer) => void
-  /** Take a layer off: a step back where laying it was the step before. */
+  /** Take a dock layer off: a step back where laying it was the step before. */
   readonly lift: (layer: Layer) => void
+  /** From a page's list to its work. */
+  readonly toTheWork: () => void
+  /** From a page's work to its list: a step back where the list was the step before. */
+  readonly toTheList: () => void
+  /** The journal's work, with nothing narrowing it: where a book is opened onto. */
+  readonly toTheJournal: () => void
 }
 
 export function useMoves(): Moves {
   const router = useContext(RouterContext)
-  const location = useLocation<Laid | undefined>()
+  const location = useLocation<Came | undefined>()
   const navigate = useNavigate()
 
   const settled = (): string => location.pathname + location.search + location.hash
@@ -65,13 +77,29 @@ export function useMoves(): Moves {
     const before = here()
     const after = change(before)
     if (writeAddress(after) === writeAddress(before)) return
-    const laid = laidBy(before, after)
     navigate(writeAddress(after), {
       resolve: false,
       scroll: false,
-      ...(how?.replace === true ? { replace: true } : {}),
-      ...(laid === undefined ? {} : { state: { laid } satisfies Laid }),
+      ...(how?.replace === true ? { replace: true } : { state: { from: untrack(settled) } satisfies Came }),
     })
+  }
+
+  /**
+   * Going where the step before was is a step back, not a step forward.
+   *
+   * Otherwise going back afterwards would undo the closing — and open an editor
+   * whose entry has already been let go, or a list already left.
+   */
+  const retreat = (change: (here: Address) => Address, returnsTo: (before: Address, going: Address) => boolean) => {
+    if (untrack(leaving) !== undefined) return
+    const going = change(here())
+    const from = untrack(() => location.state?.from)
+    if (router?.pendingTarget === undefined && from !== undefined && returnsTo(readAddress(from), going)) {
+      setLeaving(untrack(settled))
+      navigate(-1)
+      return
+    }
+    move(() => going)
   }
 
   const changeFragment = (change: (fragment: Fragment) => Fragment) =>
@@ -82,24 +110,29 @@ export function useMoves(): Moves {
     move((at) => ({ ...at, path: going.path, fragment: { ...at.fragment, page: going.fragment.page } }))
   }
 
-  const lay = (layer: Layer): void => changeFragment((fragment) => withLayer(fragment, layer))
-
   const lift = (layer: Layer): void => {
-    if (untrack(leaving) !== undefined || !here().fragment.layers.includes(layer)) return
-    const layingWasTheStepBefore = router?.pendingTarget === undefined && untrack(() => location.state?.laid) === layer
-    if (layingWasTheStepBefore) {
-      setLeaving(untrack(settled))
-      navigate(-1)
-      return
-    }
-    changeFragment((fragment) => withoutLayer(fragment, layer))
+    if (!here().fragment.layers.includes(layer)) return
+    retreat((at) => ({ ...at, fragment: withoutLayer(at.fragment, layer) }), sameBesideTheDock)
   }
 
+  const toTheWork = (): void => changeFragment(atTheWork)
+
+  const toTheList = (): void =>
+    retreat(
+      (at) => ({ ...at, fragment: atTheList(at.fragment) }),
+      (before, going) => writeAddress(before) === writeAddress(going),
+    )
+
+  const toTheJournal = (): void =>
+    move((at) => ({ path: JOURNAL, search: "", fragment: atTheWork(atTheList(at.fragment)) }))
+
   return {
-    layers: () => readFragment(location.hash).layers,
+    fragment: () => readFragment(location.hash),
     move,
     goTo,
-    lay,
     lift,
+    toTheWork,
+    toTheList,
+    toTheJournal,
   }
 }

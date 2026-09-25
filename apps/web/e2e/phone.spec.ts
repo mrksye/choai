@@ -139,7 +139,7 @@ test("going to the journal's text opens it as the work", async ({ page }) => {
 
   // And the same switch is how it is left.
   await theText(page).click()
-  await expect(page).toHaveURL(/^[^?]*\/(\?|$)/)
+  await expect(page).toHaveURL(/\/journal(\?[^#]*)?(#work)?$/)
   await expect(explorer(page)).toBeHidden()
 })
 
@@ -158,7 +158,7 @@ test("on a wide window the text is opened beside the list, not instead of it", a
   // since the journal's lamp is already on while the text is showing.
   await expect(theText(page)).toHaveAttribute("aria-pressed", "true")
   await theText(page).click()
-  await expect(page).toHaveURL(/^[^?]*\/(\?|$)/)
+  await expect(page).toHaveURL(/\/journal(\?[^#]*)?(#work)?$/)
   await expect(theText(page)).toHaveAttribute("aria-pressed", "false")
 })
 
@@ -182,7 +182,7 @@ test("choosing an account leaves the journal's text, carrying the choice with it
   // The page and the query change together. Set one after the other they are two
   // navigations in a tick, and the router keeps the last of them, which is how a
   // query set first comes to be dropped by the page that follows it.
-  await expect(page).toHaveURL(/\/\?q=/)
+  await expect(page).toHaveURL(/\/journal\?q=/)
   await expect(page.getByRole("searchbox")).toHaveValue("acct:expenses:food")
   await expect(theText(page)).toHaveAttribute("aria-pressed", "false")
 
@@ -258,40 +258,50 @@ test("a section the page will not draw is not offered", async ({ page }) => {
  * The system's back button undoes a move, and forward does it again.
  *
  * On a phone that button is the one always under the thumb, and every move that
- * changes the screen is a change of address so that it has something to undo:
- * the list taking the window, an entry opened beside the journal. Closing what
- * a move opened is a step back rather than a step forward, or going back after
- * it would open an editor whose entry has already been let go.
+ * changes the screen is a change of address so that it has something to undo.
+ * A page with nothing after its `#` is its list and anything after it is its
+ * work, the journal's being `#work`; `/` is the journal's work with the list
+ * written behind it, so the first screen goes back to the list before it goes
+ * back out of the app. Closing what a move opened is a step back rather than a
+ * step forward, or going back after it would open an editor whose entry has
+ * already been let go.
  */
 test("going back undoes each move, and closing is one of them", async ({ page }) => {
   await page.setViewportSize(PHONE)
   await openTheDemo(page)
+  await expect(page).toHaveURL(/\/journal#work$/)
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/journal$/)
+  await expect(explorer(page)).toBeVisible()
+  await page.goForward()
+  await expect(explorer(page)).toBeHidden()
 
   await back(page).click()
-  await expect(page).toHaveURL(/#list$/)
+  await expect(page).toHaveURL(/\/journal$/)
+  await explorer(page).click()
+  await expect(page).toHaveURL(/\/journal#work$/)
+  await expect(explorer(page)).toBeHidden()
+  await page.goBack()
+  await expect(explorer(page)).toBeVisible()
   await anAccount(page).click()
-  await expect(explorer(page)).toBeHidden()
-
+  await expect(page).toHaveURL(/\/journal\?q=[^#]*#work$/)
   await page.goBack()
   await expect(explorer(page)).toBeVisible()
-  await page.goBack()
-  await expect(explorer(page)).toBeHidden()
-  await page.goForward()
-  await expect(explorer(page)).toBeVisible()
-  await page.goBack()
+  await explorer(page).click()
 
   const save = page.getByRole("button", { name: "Save", exact: true })
   await page.getByRole("button").filter({ hasText: "landlord" }).first().click()
-  await expect(page).toHaveURL(/#edit$/)
+  await expect(page).toHaveURL(/#work\+edit$/)
   await page.goBack()
   await expect(save).toBeHidden()
 
   await page.getByRole("button").filter({ hasText: "landlord" }).first().click()
   await page.getByRole("button", { name: "Cancel" }).click()
   await expect(save).toBeHidden()
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/journal#work$/)
 
   await page.goForward()
   await expect(save).toBeHidden()
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/journal#work$/)
 })

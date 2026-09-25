@@ -1,6 +1,6 @@
 import type { ParentProps } from "solid-js"
 import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
-import { useLocation, useNavigate } from "@solidjs/router"
+import { useLocation } from "@solidjs/router"
 import { Dynamic } from "solid-js/web"
 import { getOrUndefined } from "~/core/lib/monad"
 
@@ -8,7 +8,7 @@ import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem }
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, DownloadIcon, FileCodeIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
-import { FOOT, NAV, railOf, viewAt } from "./views"
+import { ADD, FOOT, NAV, SOURCE, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
@@ -25,7 +25,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { dockedIn, readFragment, withLayer, withoutLayer } from "~/core/address/address"
+import { JOURNAL, atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -85,7 +85,6 @@ const EDGES = 2
 
 export function Layout(props: ParentProps) {
   const location = useLocation()
-  const navigate = useNavigate()
   const moves = useMoves()
   const [query, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
@@ -104,25 +103,20 @@ export function Layout(props: ParentProps) {
   const snapped = (): boolean => overHalf(RAIL + EXPLORER)
 
   /**
-   * Where the list takes the window, it is a screen of its own, so it is in the
-   * address like one and going back leaves it. Beside the work it is only a
-   * panel folded or not, and every fold being a step to press back through
-   * would bury the pages behind them.
-   *
-   * With no layer the work is what this opens on. Otherwise there is no first
-   * screen: the list has the window, and whatever the work was going to say —
-   * including the offer of a journal to somebody who has none yet — is behind
-   * it with no way through, since the way through is choosing something from a
-   * list that has nothing in it.
+   * Where the list takes the window, it is a screen of its own, and the address
+   * says which of the two is showing: a page's list is the page with nothing
+   * after its `#`. Beside the work the list is only a panel folded or not, and
+   * every fold being a step to press back through would bury the pages behind
+   * them.
    */
-  const listed = (): boolean => moves.layers().includes("list")
+  const listed = (): boolean => !showsTheWork(moves.fragment())
   const railShown = (): boolean => (snapped() ? listed() : railVisible())
   const panelShown = (): boolean => (snapped() ? listed() : panelOpen())
   const chromeShowing = (): boolean => railShown() || panelShown()
 
   const setChrome = (show: boolean): void => {
     if (snapped()) {
-      show ? moves.lay("list") : moves.lift("list")
+      show ? moves.toTheList() : moves.toTheWork()
       return
     }
     setRailVisible(show)
@@ -136,12 +130,12 @@ export function Layout(props: ParentProps) {
    * The list has done its job, so the work is what to look at.
    *
    * Everything in the list that leads somewhere calls this: choosing an account,
-   * and going to the text behind the journal. Only where the two cannot share
-   * the window — with room for both, a choice is a filter and nothing moves.
+   * and going to the text behind the journal. At any width, so that an address
+   * says the same thing whichever window it is opened in; only a window too
+   * narrow for both shows the difference.
    */
   const showTheWork = (): void => {
-    if (!snapped()) return
-    moves.move((at) => ({ ...at, fragment: withoutLayer(at.fragment, "list") }))
+    moves.toTheWork()
   }
 
   /**
@@ -160,8 +154,8 @@ export function Layout(props: ParentProps) {
    *
    * Leaving a page is going back to another one, so it is pushed; narrowing the
    * page already open is not going anywhere, and pushing there would make every
-   * account tried a step to be pressed back through. Unless the list had the
-   * window: leaving it is a step, and going back should find it again.
+   * account tried a step to be pressed back through. Unless the list was what
+   * the address showed: leaving it is a step, and going back should find it.
    *
    * The settings explorer chooses a section rather than a query and takes its own
    * address there, so it hands up nothing and nothing here moves.
@@ -170,9 +164,10 @@ export function Layout(props: ParentProps) {
     if (chosen !== undefined) {
       const view = railOf(current())
       moves.move(
-        (at) => ({ path: view, search: searchFor(chosen), fragment: { page: "", layers: at.fragment.layers } }),
-        { replace: view === location.pathname && !(snapped() && listed()) },
+        (at) => ({ path: view, search: searchFor(chosen), fragment: atTheWork(atTheList(at.fragment)) }),
+        { replace: view === location.pathname && !listed() },
       )
+      return
     }
     showTheWork()
   }
@@ -196,11 +191,11 @@ export function Layout(props: ParentProps) {
    */
   const select = (href: string): void => {
     if (location.pathname === href) {
-      snapped() ? moves.lift("list") : setPanelOpen((open) => !open)
+      snapped() ? moves.toTheWork() : setPanelOpen((open) => !open)
       return
     }
     setPanelOpen(true)
-    moves.move((at) => ({ ...at, path: href, fragment: { page: "", layers: at.fragment.layers } }))
+    moves.move((at) => ({ ...at, path: href, fragment: atTheList(at.fragment) }))
   }
 
   /**
@@ -253,7 +248,7 @@ export function Layout(props: ParentProps) {
       }
       moves.move((at) => ({
         ...at,
-        fragment: withLayer(narrow() ? withoutLayer(at.fragment, "list") : at.fragment, LAYER_OF[what]),
+        fragment: withLayer(narrow() ? atTheWork(at.fragment) : at.fragment, LAYER_OF[what]),
       }))
     },
     close: () => {
@@ -348,7 +343,7 @@ export function Layout(props: ParentProps) {
   })
 
   /** Whether the journal's own text is what is on screen. */
-  const onSource = (): boolean => location.pathname === "/source"
+  const onSource = (): boolean => location.pathname === SOURCE
 
   /** The view being shown, which is what the explorer beside it belongs to. */
   const current = (): View => viewAt(location.pathname)
@@ -395,12 +390,12 @@ export function Layout(props: ParentProps) {
                 {/* Whose books these are matters more than the app's own name,
                     and on a phone there is only room for one of them. */}
                 <BookSwitcher
-                  onAdd={() => navigate("/add")}
+                  onAdd={() => moves.move((at) => ({ ...at, path: ADD, fragment: atTheWork(atTheList(at.fragment)) }))}
                   onSwitched={() => {
                     // The query belonged to the books being put down; an account
                     // it names may not exist in the ones being picked up.
                     setQuery("")
-                    navigate("/")
+                    moves.toTheJournal()
                   }}
                 />
               </>
@@ -489,7 +484,7 @@ export function Layout(props: ParentProps) {
                 {/* One group at the far end, so the two ways of writing sit
                     together rather than being spread across the heading. */}
                 <div class="flex items-center gap-1">
-                  <Show when={railOf(current()) === "/" && getOrUndefined(journal()) !== undefined}>
+                  <Show when={railOf(current()) === JOURNAL && getOrUndefined(journal()) !== undefined}>
                     {/* The text behind the view being looked at, which is the
                         journal's own business rather than a view of its own.
                         A switch that shows it is on, rather than a button that
@@ -505,7 +500,7 @@ export function Layout(props: ParentProps) {
                       type="button"
                       aria-pressed={onSource()}
                       onClick={() => {
-                        moves.goTo(onSource() ? "/" : "/source")
+                        moves.goTo(onSource() ? JOURNAL : SOURCE)
                         showTheWork()
                       }}
                       aria-label={t("source.title")}

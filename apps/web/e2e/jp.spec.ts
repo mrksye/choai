@@ -814,7 +814,7 @@ const writeRichEntry = async (page: Page): Promise<void> => {
   })
   expect(typeof path).toBe("string")
 
-  await page.goto("/source")
+  await page.goto("/journal/source#work")
   const box = page.getByRole("textbox").first()
   await box.fill((await box.inputValue()) + RICH)
   await page.getByRole("button", { name: /^Save$|^保存$/ }).first().click()
