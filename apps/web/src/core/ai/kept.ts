@@ -18,6 +18,7 @@
  * There is no linter to hold that line, so it is written here instead.
  */
 
+import { createSignal } from "solid-js"
 import { STORE, within } from "~/core/lib/idb"
 import type { Model, Which } from "./talker"
 
@@ -39,11 +40,21 @@ const row = async (id: string): Promise<Row | undefined> => {
   return found.result
 }
 
+/**
+ * How many times what is kept here has been changed while the app is open.
+ *
+ * Read as a source by whoever holds a key read earlier, since the conversation
+ * can stay open beside the settings where a key is saved.
+ */
+const [keptVersion, setKeptTimes] = createSignal(0)
+export { keptVersion }
+
 const put = async (next: Row): Promise<void> => {
   const was = await row(next.id)
   await within("readwrite", [KEYS], (transaction) => {
     transaction.objectStore(KEYS).put({ ...was, ...next })
   })
+  setKeptTimes((times) => times + 1)
 }
 
 /** Which provider is being used, if one has been chosen. */
@@ -62,6 +73,7 @@ export const forgetKey = async (of: Which): Promise<void> => {
   await within("readwrite", [KEYS], (transaction) => {
     transaction.objectStore(KEYS).put({ id: of, ...(was?.model === undefined ? {} : { model: was.model }) })
   })
+  setKeptTimes((times) => times + 1)
 }
 
 /**

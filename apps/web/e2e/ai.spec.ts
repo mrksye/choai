@@ -339,6 +339,22 @@ const askThat = async (page: Page, question: string): Promise<void> => {
 }
 
 /**
+ * With no key, the panel says where one is saved and goes there, and stays
+ * open beside the settings so that saving one is seen to take.
+ */
+test("a missing key leads to where one is saved, and saving it is seen at once", async ({ page }) => {
+  await page.goto("/journal#work+chat")
+  await expect(page.getByText("No API key is set for the AI.")).toBeVisible()
+  await page.getByRole("button", { name: "Save an API key in settings" }).click()
+  await expect(page).toHaveURL(/\/settings#ai\+/)
+
+  await page.getByLabel("API key").fill(NOT_A_KEY)
+  await page.getByRole("button", { name: "Save", exact: true }).click()
+  await expect(page.getByText("No API key is set for the AI.")).toBeHidden()
+  await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
+})
+
+/**
  * Checking is a press of its own, and it is the press that can fail.
  *
  * Saving keeps what was typed without asking anybody, which is the point: the

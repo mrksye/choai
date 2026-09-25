@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createResource, createSignal, on, type JSX } from "solid-js"
 
-import { key, which } from "~/core/ai/kept"
+import { key, keptVersion, which } from "~/core/ai/kept"
 import { talkerFor } from "~/core/ai/talkers"
 import type { Beat, Ending, Ran } from "~/core/ai/loop"
 import { asUrl, shrink } from "~/core/ai/photo"
@@ -29,6 +29,31 @@ import { Ellipsis } from "~/core/lib/ui/ellipsis"
 import { CircleStopIcon, PaperclipIcon, SendIcon, XIcon } from "~/core/lib/ui/icons"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
+import { useMoves } from "~/core/address/moves"
+
+/**
+ * Said in place of the conversation until there is a key to hold one with.
+ *
+ * A move rather than a link: the panel is in the address beside the page, and
+ * a link names a whole address and would close the panel on the way there.
+ */
+function NeedsKey(): JSX.Element {
+  const moves = useMoves()
+  return (
+    <p class="text-sm text-muted-foreground">
+      {t("ai.needsKey")}
+      <br />
+      <button
+        type="button"
+        class="underline underline-offset-2 hover:text-foreground"
+        onClick={() => moves.goTo("/settings#ai")}
+      >
+        {t("ai.saveKeyInSettings")}
+      </button>
+      {t("ai.saveKeyAfter")}
+    </p>
+  )
+}
 
 /**
  * Asking about the books in words, beside the books.
@@ -41,8 +66,8 @@ export function AiChat(): JSX.Element {
   const [written, setWritten] = createSignal("")
   const [carrying, setCarrying] = createSignal<readonly Brought[]>([])
   const [tooBig, setTooBig] = createSignal(false)
-  /** Read when the panel opens, which is the only moment it can have changed. */
-  const [saved] = createResource(async () => key(talkerFor(await which()).id))
+  /** Read again whenever a key is saved, which can happen with this panel still open. */
+  const [saved] = createResource(keptVersion, async () => key(talkerFor(await which()).id))
   const ready = (): boolean => saved() !== undefined
 
   const send = async (): Promise<void> => {
@@ -91,7 +116,7 @@ export function AiChat(): JSX.Element {
   return (
     <div class="flex h-full flex-col">
       <div class="flex-1 overflow-y-auto p-3">
-        <Show when={ready()} fallback={<p class="text-sm text-muted-foreground">{t("ai.needsKey")}</p>}>
+        <Show when={ready()} fallback={<NeedsKey />}>
         <Show when={anythingSaid()} fallback={<Nothing />}>
           <div class="flex flex-col gap-3">
             <For each={beats()}>{(beat) => <One beat={beat} />}</For>
