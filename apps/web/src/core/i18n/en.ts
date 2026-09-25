@@ -198,9 +198,6 @@ export const en = {
     addTitle: "Add a book",
     addBody: "Another set of books, kept apart from the ones already here. Nothing is mixed: each is its own files.",
     fromGitHub: "Take from a repository",
-    needsToken: "A personal access token has to be saved first — it is what reaches GitHub, and it is saved once for every book.",
-    goAndSaveOne: "Save a token in source control →",
-    notTaken: "Nothing came back from there. Check the owner, the repository and the path.",
   },
   library: {
     title: "The current journal",
