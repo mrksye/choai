@@ -354,6 +354,16 @@ test("a missing key leads to where one is saved, and saving it is seen at once",
   await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
 })
 
+/** On a phone the panel covers the page, so it is put down to show the settings. */
+test("on a phone, the way to a key puts the panel down to show where it goes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/journal#work+chat")
+  await page.getByRole("button", { name: "Save an API key in settings" }).click()
+  await expect(page).toHaveURL(/\/settings#ai(?!.*chat)/)
+  await expect(page.getByLabel("API key")).toBeInViewport()
+  await expect(page.getByText("No API key is set for the AI.")).toBeHidden()
+})
+
 /**
  * Checking is a press of its own, and it is the press that can fail.
  *

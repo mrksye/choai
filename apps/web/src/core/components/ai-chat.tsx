@@ -30,15 +30,23 @@ import { CircleStopIcon, PaperclipIcon, SendIcon, XIcon } from "~/core/lib/ui/ic
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 import { useMoves } from "~/core/address/moves"
+import { dock } from "~/core/dock"
+import { narrow } from "~/core/lib/narrow"
 
 /**
  * Said in place of the conversation until there is a key to hold one with.
  *
  * A move rather than a link: the panel is in the address beside the page, and
  * a link names a whole address and would close the panel on the way there.
+ * Where the window is too narrow for both, the panel covers the page, so it is
+ * put down instead — left open, it would hide the very settings it pointed to.
  */
 function NeedsKey(): JSX.Element {
   const moves = useMoves()
+  const toWhereKeysAreSaved = (): void => {
+    moves.goTo("/settings#ai")
+    if (narrow()) dock.close()
+  }
   return (
     <p class="text-sm text-muted-foreground">
       {t("ai.needsKey")}
@@ -46,7 +54,7 @@ function NeedsKey(): JSX.Element {
       <button
         type="button"
         class="underline underline-offset-2 hover:text-foreground"
-        onClick={() => moves.goTo("/settings#ai")}
+        onClick={toWhereKeysAreSaved}
       >
         {t("ai.saveKeyInSettings")}
       </button>
