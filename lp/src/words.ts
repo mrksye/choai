@@ -17,10 +17,10 @@ export const en = {
    * that a language added later cannot arrive without one.
    */
   image: "/og.png",
-  title: "choai — your hledger journal, in the browser",
+  title: "choai — plain text accounting for everyone",
   description:
     "Keep hledger journals in a private GitHub repository, from a phone or a desktop. hledger itself does the accounting, compiled to WebAssembly. Free, without advertising.",
-  tagline: "Your hledger journal, in the browser.",
+  tagline: "hledger, on your phone.",
   lead: "Plain-text accounting on a phone, kept in a private repository of your own. hledger itself does the accounting — the real thing, compiled to WebAssembly and running in the page. No account to make, nothing uploaded, free and without advertising.",
   open: "Open the app",
   aboutHledger: "New to hledger? Start here",
@@ -44,10 +44,10 @@ export const en = {
       at: "/ai/",
     },
     {
-      heading: "It outlives this site",
-      body: "All of the code is in the open on GitHub. What is served is static files, so deploying it yourself keeps it running at an address of your own. Your books were in your own repository all along.",
-      more: "Source",
-      at: "https://github.com/mrksye/choai",
+      heading: "You own your accounting data",
+      body: "Your books are not held inside any one company's accounting software. They are plain text, saved in a repository of your own. choai is built on hledger and keeps the journal in hledger's own format, so if choai ever goes away, the same file opens in hledger just as it is. The data stays with you, for good.",
+      more: "The journal format",
+      at: "https://hledger.org/hledger.html#journal",
     },
   ],
   readingsHeading: "More about it",
@@ -74,11 +74,11 @@ export const ja: Words = {
   lang: "ja",
   other: { label: "English" },
   image: "/og-ja.png",
-  title: "choai — hledger の帳簿を、ブラウザで",
+  title: "choai — plain text accounting for everyone",
   description:
     "hledger の帳簿を private な GitHub リポジトリに置いて、スマホからでもパソコンからでも。計算しているのは hledger 本体を WebAssembly にしたものです。無料、広告なし。",
-  tagline: "hledger の帳簿を、ブラウザで。",
-  lead: "プレーンテキスト会計を、スマホで。帳簿は自分の private リポジトリに置きます。計算しているのは hledger 本体 ── WebAssembly にして、このページの中で動かしています。登録は不要、どこにも送らず、無料で広告もありません。",
+  tagline: "hledger をスマホで。",
+  lead: "帳簿は自分の private リポジトリに置きます。計算しているのは hledger 本体 ── WebAssembly にして、このページの中で動かしています。登録は不要、どこにも送らず、無料で広告もありません。",
   open: "アプリを開く",
   aboutHledger: "hledger を知らない方はこちら",
   points: [
@@ -101,10 +101,10 @@ export const ja: Words = {
       at: "/ai/",
     },
     {
-      heading: "このサイトが止まっても終わりません",
-      body: "コードはすべて GitHub で公開しています。配っているのは静的ファイルなので、ご自身でデプロイすれば自分のアドレスで使い続けられます。帳簿はもともとあなたのリポジトリにあります。",
-      more: "ソース",
-      at: "https://github.com/mrksye/choai",
+      heading: "会計データを自分で所有",
+      body: "帳簿は、特定の会社の会計ソフトの中ではなく、テキストファイルとしてあなたのリポジトリに保存されます。choai は hledger を元に作られていて、帳簿の書式も hledger のものです。だから choai がなくなっても、同じファイルを hledger でそのまま開けます。データはずっと、あなたの手元にあります。",
+      more: "hledger の帳簿の書式",
+      at: "https://hledger.org/hledger.html#journal",
     },
   ],
   readingsHeading: "もっと詳しく",
