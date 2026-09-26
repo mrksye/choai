@@ -9,7 +9,7 @@ import { DEFAULT_EDITION, EDITIONS, isEditionId, nameOf } from "./src/edition/ro
  * Which edition is being built.
  *
  * A name this does not know stops the build rather than falling back, because
- * the fallback would be a global build published at a name that promised a
+ * the fallback would be a standard build published at a name that promised a
  * Japanese one, and nothing about the result would say so.
  */
 const asked = process.env.CHOAI_EDITION ?? DEFAULT_EDITION
@@ -39,7 +39,7 @@ export default defineConfig({
     // edition seam has to be matched before the source root it sits inside.
     alias: [
       // The one thing a build decides. `~/edition/chosen` is a name with a file
-      // behind it — the global edition, which is what the typechecker and the
+      // behind it — the standard edition, which is what the typechecker and the
       // tests resolve — and this points it at whichever edition was asked for,
       // so the other one's code is not in the bundle rather than in it and
       // unreachable.
@@ -54,7 +54,7 @@ export default defineConfig({
       //
       // The manifest already reads the name from the roll; leaving the title
       // spelled out in the HTML would mean a Japan build published under the
-      // global build's name, and a tab that disagrees with the icon beside it.
+      // standard build's name, and a tab that disagrees with the icon beside it.
       //
       // The canonical link is written here rather than in the HTML because the
       // build reads every `link` in the page as a reference to a file to be

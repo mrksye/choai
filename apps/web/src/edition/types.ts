@@ -20,7 +20,7 @@ import type { EditionId } from "./roll"
  *
  * What is deliberately not here is a hook, a lifecycle, or a way to change what
  * core already does. An edition adds; it cannot replace or take away. That is
- * what keeps a global build honestly global — there is no edition anywhere that
+ * what keeps a standard build free of any jurisdiction — there is no edition anywhere that
  * can quietly rewrite what a balance sheet means.
  */
 
@@ -104,7 +104,7 @@ export interface Edition {
    * for the reason `label` is a function: this is read by a model and does not
    * follow the language the screens are speaking.
    *
-   * Left out where there is nothing to say, which is what the global edition
+   * Left out where there is nothing to say, which is what the standard edition
    * does — it belongs to nowhere, so there are no local conventions to describe.
    */
   readonly guidance?: () => string

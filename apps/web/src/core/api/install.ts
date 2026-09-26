@@ -81,7 +81,10 @@ window.choai = choai()
  * this is, because that is the one thing about the table which cannot be read
  * off the table — two deployments of this app answer to different names, and
  * the manifest says the same thing to anything that goes and asks.
+ *
+ * `llms.txt` is named on the host the page was served from, because every
+ * edition serves its own and each names the edition it came with.
  */
 console.info(
-  `${appName()} — window.choai is here (${edition.id} edition). Call window.choai.describe() for what it can do. https://choai.dev/llms.txt`,
+  `${appName()} — window.choai is here (${edition.id} edition). Call window.choai.describe() for what it can do. ${new URL("/llms.txt", location.origin).href}`,
 )

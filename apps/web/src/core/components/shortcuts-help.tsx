@@ -22,8 +22,8 @@ import { locale, t, type Locale } from "~/core/i18n"
  * site keeps English at its root and every other language under its own name.
  */
 const DOCS: Readonly<Record<Locale, string>> = {
-  en: "https://docs.choai.dev/",
-  ja: "https://docs.choai.dev/ja/",
+  en: "https://choai.dev/",
+  ja: "https://choai.dev/ja/",
 }
 
 export function ShortcutsHelp(): JSX.Element {

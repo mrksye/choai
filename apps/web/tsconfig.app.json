@@ -22,7 +22,7 @@
        defaults to, which is what everything that is not vite resolves. Written
        above the wildcard because an exact key is tried first. */
     "paths": {
-      "~/edition/chosen": ["./src/editions/global/index.ts"],
+      "~/edition/chosen": ["./src/editions/standard/index.ts"],
       "~/*": ["./src/*"]
     },
 

@@ -8,8 +8,8 @@
 # serves at the root of its name.
 #
 #   scripts/build-site.sh
-#     apps/web/dist   -> choai.dev
-#     docs/dist       -> docs.choai.dev
+#     apps/web/dist   -> std.choai.dev
+#     docs/dist       -> choai.dev
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -17,5 +17,5 @@ bun --cwd=apps/web run build
 bun --cwd=docs run build
 
 echo
-echo "apps/web/dist   -> choai.dev"
-echo "docs/dist       -> docs.choai.dev"
+echo "apps/web/dist   -> std.choai.dev"
+echo "docs/dist       -> choai.dev"

@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://docs.choai.dev/sitemap-index.xml
+Sitemap: https://choai.dev/sitemap-index.xml

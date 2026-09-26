@@ -91,7 +91,8 @@ bun --cwd=docs run dev           # astro on :45720 (ASTRO in digits)
 scripts/build-site.sh            # apps/web/dist and docs/dist, side by side
 ```
 
-`choai.dev` serves `apps/web/dist`, `docs.choai.dev` serves `docs/dist`. Where
+`std.choai.dev` serves `apps/web/dist`, `choai.dev` serves `docs/dist`, and
+`docs.choai.dev` is a permanent redirect to `choai.dev` kept on the zone. Where
 the app lives is `PUBLIC_APP` in `docs/.env`, so development links to a local
 app rather than to the published one.
 
@@ -110,7 +111,7 @@ which has four directories and no loose files:
 src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
 ├── edition/    the contract (types.ts), the roll, and the door core knows one by
-├── editions/   global/ and jp/, one module each
+├── editions/   standard/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
 
@@ -121,13 +122,13 @@ before putting anything in `editions/jp/`. Two of the rules are not prose:
 all**, and `composite` makes that list binding — so naming any edition module
 from any of them is `TS6307` and takes the build down before vite runs. There
 is no exception for the seam, because `~/edition/chosen` is a name with no file:
-vite points it at the edition being built, `paths` points it at the global one,
+vite points it at the edition being built, `paths` points it at the standard one,
 and the check points it at `edition/none.ts`, which declares an edition without
 being one. `tests/boundary.test.ts` holds what no type can say — that the list
 of modules naming an edition is empty rather than nearly empty, and that the
 three tsconfigs agree on where the seam resolves.
 
-- **The app is built twice from one tree**, as the global edition at `choai.dev`
+- **The app is built twice from one tree**, as the standard edition at `std.choai.dev`
   and the Japan edition at `jp.choai.dev`. Core is plain text accounting and
   does not know Japan exists — there is no `if (edition ===` in it and there is
   not to be one. What an edition adds is two tables and a

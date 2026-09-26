@@ -19,7 +19,7 @@ import {
   ofKinds,
 } from "~/core/journal/declarations"
 import { capabilitiesWith, viewsWith, type View } from "~/edition/types"
-import { GlobalEdition } from "~/editions/global"
+import { StandardEdition } from "~/editions/standard"
 import { CAPABILITY, NAMED, ROUTE, UNDER } from "~/editions/jp/naming"
 import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journal/companions"
 import { withTag, withTags } from "~/core/journal/tagging"
@@ -639,13 +639,13 @@ describe("what an edition joins on", () => {
     Object.values(CAPABILITY).forEach((name) => expect(name.startsWith(NAMED)).toBe(true))
   })
 
-  test("the global edition adds nothing, because everything it would add is core", () => {
-    expect(GlobalEdition.id).toBe("global")
-    expect(GlobalEdition.views).toEqual([])
-    expect(Object.keys(GlobalEdition.capabilities)).toEqual([])
+  test("the standard edition adds nothing, because everything it would add is core", () => {
+    expect(StandardEdition.id).toBe("standard")
+    expect(StandardEdition.views).toEqual([])
+    expect(Object.keys(StandardEdition.capabilities)).toEqual([])
     // Including the third table: it belongs to nowhere, so there are no local
     // conventions for it to describe to a model.
-    expect(GlobalEdition.guidance).toBeUndefined()
+    expect(StandardEdition.guidance).toBeUndefined()
   })
 
   test("what an edition says to a model is added to core's, never in place of it", () => {

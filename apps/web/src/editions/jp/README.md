@@ -217,14 +217,14 @@ would stop meaning anything.
    no JSX runtime for it — so anything worth testing stays in a module that draws
    nothing. That has kept the reasoning testable and it should go on doing so.
 
-## Checking that none of this reaches a global build
+## Checking that none of this reaches a standard build
 
 The typechecker holds the import boundary; nothing holds the bundle, so it is
 checked by hand when something distinctive is added.
 
 ```sh
-bun run build:global && grep -rl "消費税" dist/assets/    # nothing listed
-bun run build:jp     && grep -rl "消費税" dist/assets/    # one file listed
+bun run build:standard && grep -rl "消費税" dist/assets/    # nothing listed
+bun run build:jp       && grep -rl "消費税" dist/assets/    # one file listed
 ```
 
 The second half is what makes the first half mean anything.

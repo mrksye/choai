@@ -4,7 +4,7 @@
 {
   "name": "choai",
   "compatibility_date": "2026-08-15",
-  // The app answers on choai.dev, so the workers.dev address it was reached at
+  // The app answers on std.choai.dev, so the workers.dev address it was reached at
   // before that is turned off rather than left as a second name for the same
   // thing. The name is attached where the deployment is rather than declared
   // here, and README says why: a copy of this that somebody else runs answers

@@ -62,7 +62,7 @@ describe("the edition seam", () => {
   test("is a name with no file, so it cannot be reached any other way", () => {
     // The build swaps a name. A `./chosen` beside it would resolve to the same
     // module, typecheck, test clean, and quietly build every edition as the
-    // global one — which happened once. There is no file to reach that way now.
+    // standard one — which happened once. There is no file to reach that way now.
     expect(modules()).not.toContain("edition/chosen.ts")
   })
 
@@ -76,7 +76,7 @@ describe("the edition seam", () => {
     expect(spelled).toEqual(["edition/index.ts: ~/edition/chosen"])
   })
 
-  test("resolves to the global edition for everything that is not vite", () => {
+  test("resolves to the standard edition for everything that is not vite", () => {
     const mapped = (file: string): unknown =>
       JSON.parse(
         readFileSync(new URL(`../${file}`, import.meta.url).pathname, "utf8").replace(
@@ -93,7 +93,7 @@ describe("the edition seam", () => {
     )
 
     paths.forEach((mapping) =>
-      expect(mapping["~/edition/chosen"]).toEqual(["./src/editions/global/index.ts"]),
+      expect(mapping["~/edition/chosen"]).toEqual(["./src/editions/standard/index.ts"]),
     )
   })
 })

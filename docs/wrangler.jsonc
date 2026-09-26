@@ -4,10 +4,12 @@
 {
   "name": "choai-docs",
   "compatibility_date": "2026-08-15",
-  // It answers on docs.choai.dev, attached where the deployment is rather than
+  // It answers on choai.dev, attached where the deployment is rather than
   // declared here, for the reason README gives beside the app's own name. The
   // workers.dev address is left on, so there is somewhere to look at a build
-  // that has not been given a name yet.
+  // that has not been given a name yet. docs.choai.dev, where it used to
+  // answer, is sent here by a redirect rule on the zone rather than by this
+  // worker — README says which.
   "assets": {
     // Astro writes each page as a directory, and the default handling answers
     // both spellings of a path, which is what astro.config.mjs asks for. There

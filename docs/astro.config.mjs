@@ -3,7 +3,8 @@ import sitemap from "@astrojs/sitemap"
 import { defineConfig } from "astro/config"
 
 /**
- * The site that explains the app, served on its own name.
+ * The site that explains the app, served at the root of the name the app's
+ * editions are subdomains of.
  *
  * Separate from the app rather than a corner of it: it speaks to somebody who
  * has not opened the app, and it is plain static files that need none of the
@@ -11,7 +12,7 @@ import { defineConfig } from "astro/config"
  * running this locally links to a local app rather than to the published one.
  */
 export default defineConfig({
-  site: "https://docs.choai.dev",
+  site: "https://choai.dev",
   // Both /ja and /ja/ answer. The pages are written to directories, so a host
   // serves either spelling, and refusing one of them locally only means a link
   // typed by hand fails on a laptop and works once published.

@@ -19,7 +19,7 @@ import { defineConfig } from "@playwright/test"
  * server takes its edition from the same variable the build does, so one rule
  * settles both: the edition under test decides what is under test.
  */
-const EDITION = process.env.CHOAI_EDITION ?? "global"
+const EDITION = process.env.CHOAI_EDITION ?? "standard"
 const JAPAN_ONLY = "**/jp.spec.ts"
 
 export default defineConfig({

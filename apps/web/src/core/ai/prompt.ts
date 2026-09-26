@@ -84,8 +84,8 @@ export const instructions = (): string =>
 /**
  * What this build's edition says about how its books are kept.
  *
- * Nothing at all where there is nothing to say, and nothing at all in a global
- * build — which is the point of a global build. Where there is something, it
+ * Nothing at all where there is nothing to say, and nothing at all in a standard
+ * build — which is the point of a standard build. Where there is something, it
  * arrives with a blank line before it, as a paragraph of its own rather than as
  * a sentence appended to core's last one.
  */

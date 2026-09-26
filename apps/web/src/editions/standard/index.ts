@@ -1,7 +1,7 @@
 import type { Edition } from "~/edition/types"
 
 /**
- * The global edition — choai as it stands, belonging to no jurisdiction.
+ * The standard edition — choai as it stands, belonging to no jurisdiction.
  *
  * It adds nothing, and the two empty tables are the statement rather than an
  * omission: everything this app does is core, and core is plain text
@@ -15,10 +15,10 @@ import type { Edition } from "~/edition/types"
  * expressible by hand in any set of books; an edition is only what saves
  * somebody from doing it by hand.
  */
-export const GlobalEdition: Edition = {
-  id: "global",
+export const StandardEdition: Edition = {
+  id: "standard",
   views: [],
   capabilities: {},
 }
 
-export { GlobalEdition as edition }
+export { StandardEdition as edition }

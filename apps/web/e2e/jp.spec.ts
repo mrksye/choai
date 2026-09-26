@@ -17,7 +17,7 @@ declare global {
  * beside the journal is still there afterwards. None of that can be checked
  * without the engine, and all of it is where this could quietly stop working.
  *
- * Run against a Japan build, which the global suite is not:
+ * Run against a Japan build, which the standard suite is not:
  *
  *     bun run e2e:jp
  *

@@ -77,4 +77,4 @@ as a float.
 - [README](https://github.com/mrksye/choai#windowchoai): the same interface,
   explained.
 - [Source](https://github.com/mrksye/choai): GPL-3.0-or-later.
-- [What choai is](https://docs.choai.dev/): for a person rather than a program.
+- [What choai is](https://choai.dev/): for a person rather than a program.

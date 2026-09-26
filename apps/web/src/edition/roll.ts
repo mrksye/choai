@@ -1,7 +1,7 @@
 /**
  * The editions this repository builds, and what each of them is called.
  *
- * One code base, two deployments: `choai.dev` serves the global edition and
+ * One code base, two deployments: `std.choai.dev` serves the standard edition and
  * `jp.choai.dev` the Japanese one. Which of them a build is comes from
  * `CHOAI_EDITION` at build time, never from anything the running app asks —
  * an edition is a fact about a deployment, not a setting somebody turns on.
@@ -14,7 +14,7 @@
  * path written down here, so there is one fewer thing to keep in step.
  */
 export const EDITIONS = {
-  global: { name: "choai" },
+  standard: { name: "choai" },
   jp: { name: "choai JP" },
 } as const
 
@@ -23,11 +23,11 @@ export type EditionId = keyof typeof EDITIONS
 /**
  * The edition a build is when nothing says otherwise.
  *
- * The global edition, because it is the one that depends on nowhere: a build
+ * The standard edition, because it is the one that depends on nowhere: a build
  * that has forgotten to say what it is should come out as the app for anybody,
  * not as one country's tax rules loose in the world.
  */
-export const DEFAULT_EDITION = "global" satisfies EditionId
+export const DEFAULT_EDITION = "standard" satisfies EditionId
 
 export const isEditionId = (name: string): name is EditionId => Object.hasOwn(EDITIONS, name)
 

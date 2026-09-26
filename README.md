@@ -100,7 +100,7 @@ that is what the version moves for.
 
 Being reachable is the point: this is a local application with no server, and
 what it can do it can be asked to do. So it says so where something that is not
-a person would look: `choai.dev/llms.txt` and `docs.choai.dev/llms.txt`, and a
+a person would look: `std.choai.dev/llms.txt` and `choai.dev/llms.txt`, and a
 line on the console when the app loads. None of the three writes the capability
 list down — they point at `describe()`, which is derived from the one table and
 cannot disagree with what runs.
@@ -117,7 +117,7 @@ exports its functions to JavaScript, in `wasm/hledger-wasm/src/Bindings.hs`.
 
 ## Editions
 
-The app is built twice from one source tree. `choai.dev` is the **global
+The app is built twice from one source tree. `std.choai.dev` is the **standard
 edition** and `jp.choai.dev` the **Japan edition** — the same core, the same
 screens, and somewhere for Japanese tax work to go without any of it reaching
 the books everyone else keeps.
@@ -125,9 +125,9 @@ the books everyone else keeps.
 The dependency runs one way:
 
 ```
-global ─┐
-        ├──> core
-jp ─────┘
+standard ─┐
+          ├──> core
+jp ───────┘
 ```
 
 `apps/web/src` has four directories and no loose files:
@@ -136,7 +136,7 @@ jp ─────┘
 src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
 ├── edition/    the contract (types.ts), the roll, and the door core knows one by
-├── editions/   global/ and jp/, one module each
+├── editions/   standard/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
 
@@ -159,17 +159,17 @@ Which one a build is comes from `CHOAI_EDITION`, never from anything the running
 app asks:
 
 ```sh
-bun run build            # the global edition — the default
-bun run build:global     # the same, said out loud
+bun run build            # the standard edition — the default
+bun run build:standard   # the same, said out loud
 bun run build:jp         # the Japan edition
 bun run dev:jp           # and the same while developing
 ```
 
 `~/edition/chosen` is a name with no file behind it, and `vite.config.ts` points
 it at whichever edition was named, so the other one's code is not in the bundle
-at all rather than in it and unreachable — a global build carries no Japanese tax law even after there is
+at all rather than in it and unreachable — a standard build carries no Japanese tax law even after there is
 some to carry. A `CHOAI_EDITION` it does not recognise stops the build rather
-than falling back, because the fallback would be a global build published at a
+than falling back, because the fallback would be a standard build published at a
 name that promised something else.
 
 The Japan edition adds five screens and five capabilities, and every one of them
@@ -204,12 +204,16 @@ code they govern.
 
 ## Three sites
 
-- **`choai.dev`** — the app itself, from `apps/web/dist`.
-- **`jp.choai.dev`** — the same app built as the Japan edition, from the same
-  directory: `bun run build:jp` and the `wrangler.jp.jsonc` beside it.
-- **`docs.choai.dev`** — the page that explains it, from `docs/dist`:
+- **`choai.dev`** — the page that explains the app, from `docs/dist`:
   a separate Astro project, English at the root and Japanese at `/ja/`. It loads
   no fonts and ships no script of its own.
+- **`std.choai.dev`** — the app itself as the standard edition, from
+  `apps/web/dist`.
+- **`jp.choai.dev`** — the same app built as the Japan edition, from the same
+  directory: `bun run build:jp` and the `wrangler.jp.jsonc` beside it.
+
+`docs.choai.dev` is where the explaining page used to be, and every path on it
+is sent permanently to the same path on `choai.dev`.
 
 The names are counted by the host as it serves them, rather than by anything
 written into any of them: page views, and where they were reached from. Nothing
@@ -233,7 +237,7 @@ its own build:
 | Build command | `bun install && bun run build` | `bun install && bun run build:jp` | `bun install && bun run build` |
 | Deploy command | `bunx wrangler deploy` | `bunx wrangler deploy -c wrangler.jp.jsonc` | `bunx wrangler deploy` |
 | `BUN_VERSION` | `1.3.14` | `1.3.14` | `1.3.14` |
-| Custom domain | `choai.dev` | `jp.choai.dev` | `docs.choai.dev` |
+| Custom domain | `std.choai.dev` | `jp.choai.dev` | `choai.dev` |
 
 No output directory is set in any of them, because `assets.directory` already says
 it. Nothing else is needed: the engine is committed, so the build wants no
@@ -246,6 +250,24 @@ the `wrangler.jsonc` files, though a `routes` entry would put them there: a name
 is not part of what this software is, only of where this one copy of it happens
 to live. Anyone is free to run their own, and a `wrangler deploy` that opened by
 demanding a domain somebody else owns would refuse to do anything at all.
+
+The move from `docs.choai.dev` is the same kind of fact, so it is kept in the
+same place: a Single Redirect rule on the `choai.dev` zone (Rules → Redirect
+Rules), not a Worker. Nothing is served on that name any more, only answered
+with where to go instead, and a Worker written to do it would be the one piece of
+server code in a project that has none — and would send somebody else's copy to
+ours.
+
+| | |
+| --- | --- |
+| When | Hostname equals `docs.choai.dev` |
+| Then | Dynamic, `concat("https://choai.dev", http.request.uri.path)` |
+| Status | `301` |
+| Query string | preserved |
+
+The rule only runs where Cloudflare is answering, so the name keeps a proxied
+DNS record of its own once it is detached from `choai-docs`: an `AAAA` to `100::`,
+which points nowhere and is never reached.
 
 ## License
 

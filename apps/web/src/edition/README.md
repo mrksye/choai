@@ -1,6 +1,6 @@
 # Editions
 
-choai is published twice from this one tree. `choai.dev` is the **global
+choai is published twice from this one tree. `std.choai.dev` is the **standard
 edition**, which belongs to no jurisdiction, and `jp.choai.dev` is the **Japan
 edition**, which is where Japanese tax work goes. They share a core, and the
 core does not know either of them exists.
@@ -11,9 +11,9 @@ stay true while they are added to, and what holds each rule — two of them are
 held by the build rather than by anybody remembering.
 
 ```
-global ─┐
-        ├──> core
-jp ─────┘
+standard ─┐
+          ├──> core
+jp ───────┘
 ```
 
 ## The tree
@@ -23,7 +23,7 @@ src/
 ├── core/       plain text accounting. Belongs to nowhere and knows of no edition
 ├── edition/    the contract (types.ts), the roll, and the door core knows an
 │               edition by
-├── editions/   global/ and jp/, one module each
+├── editions/   standard/ and jp/, one module each
 └── app/        the entry, the shell, and the table of every screen there is
 ```
 
@@ -85,14 +85,14 @@ edition. This is the same rule `viewsWith` and `capabilitiesWith` keep, in the
 form a paragraph can keep it — and `tests/pure.test.ts` holds it, because
 appending is the only thing `prompt.ts` is allowed to do with it.
 
-**Names are `global` and `jp`.** In TypeScript, `GlobalEdition` and
+**Names are `standard` and `jp`.** In TypeScript, `StandardEdition` and
 `JapanEdition`. Never `isJP`, never `useJapaneseMode`, never `specialMode`. A
 boolean cannot describe a third edition, and a name that says "special" says
 nothing at all.
 
-## The global edition is not the empty one
+## The standard edition is not the empty one
 
-It is the standard edition, and it is what somebody in any country gets.
+It is what somebody in any country gets.
 
 > Simple, manual, jurisdiction-neutral.
 
@@ -149,14 +149,14 @@ the line, and `bun run build` stops before vite is ever reached.
 
 There is no exception, not even for the seam. `~/edition/chosen` is a name with
 no file behind it: vite's alias points it at the edition being built, `paths`
-points it at the global edition for the typechecker, the tests and the editor,
+points it at the standard edition for the typechecker, the tests and the editor,
 and the boundary check points it at `edition/none.ts`, which declares an edition
 without being one. So the check can list no editions and still typecheck the
 whole of core, and there is nothing left that a rule has to be bent around.
 
 That the seam has no file is also why it can only be spelled one way. A
 `./chosen` beside it would resolve to the same module, typecheck, test clean,
-and quietly build every edition as the global one — which happened once. There
+and quietly build every edition as the standard one — which happened once. There
 is no longer a file to reach that way.
 
 **`tests/boundary.test.ts` holds what no type can say**, which is which
@@ -185,8 +185,8 @@ Japan edition first has code worth shaking out: put a distinctive string in a
 Japan-only module and look for it.
 
 ```sh
-bun run build:global && grep -rc "THE_STRING" dist/assets/   # every count zero
-bun run build:jp     && grep -rc "THE_STRING" dist/assets/   # one of them is not
+bun run build:standard && grep -rc "THE_STRING" dist/assets/   # every count zero
+bun run build:jp       && grep -rc "THE_STRING" dist/assets/   # one of them is not
 ```
 
 The second half is what makes the first half mean anything.
