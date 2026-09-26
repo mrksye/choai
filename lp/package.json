@@ -1,5 +1,5 @@
 {
-  "name": "choai-docs",
+  "name": "choai-lp",
   "private": true,
   "license": "GPL-3.0-or-later",
   "description": "The site that explains choai. Shares no code with the app; copyleft by choice rather than by inheritance.",

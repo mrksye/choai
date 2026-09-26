@@ -9,13 +9,13 @@
 #
 #   scripts/build-site.sh
 #     apps/web/dist   -> std.choai.dev
-#     docs/dist       -> choai.dev
+#     lp/dist         -> choai.dev
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 bun --cwd=apps/web run build
-bun --cwd=docs run build
+bun --cwd=lp run build
 
 echo
 echo "apps/web/dist   -> std.choai.dev"
-echo "docs/dist       -> choai.dev"
+echo "lp/dist         -> choai.dev"

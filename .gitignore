@@ -23,7 +23,7 @@ apps/web/dev-dist/
 apps/web/src/core/generated/
 
 # No settings file with a name like this is ever committed, anywhere in here.
-# The ones that are — docs/.env.example — say so in their own name.
+# The ones that are — lp/.env.example — say so in their own name.
 .env
 .env.*
 !.env.example

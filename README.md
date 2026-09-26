@@ -204,7 +204,7 @@ code they govern.
 
 ## Three sites
 
-- **`choai.dev`** — the page that explains the app, from `docs/dist`:
+- **`choai.dev`** — the page that explains the app, from `lp/dist`:
   a separate Astro project, English at the root and Japanese at `/ja/`. It loads
   no fonts and ships no script of its own.
 - **`std.choai.dev`** — the app itself as the standard edition, from
@@ -221,7 +221,7 @@ is kept on the device to recognise a return by, so there is no monthly total and
 nobody is followed from one name to the next — which is the counting the privacy
 page describes, on the app's behalf as well as its own.
 
-`scripts/build-site.sh` builds the app and the docs locally; the Japan edition
+`scripts/build-site.sh` builds the app and the landing page locally; the Japan edition
 is `bun --cwd=apps/web run build:jp`, which writes to the same `apps/web/dist`.
 
 Each is published on its own as a Cloudflare Worker serving static assets, built
@@ -233,7 +233,7 @@ its own build:
 
 | | `choai` | `choai-jp` | `choai-docs` |
 | --- | --- | --- | --- |
-| Root directory | `apps/web` | `apps/web` | `docs` |
+| Root directory | `apps/web` | `apps/web` | `lp` |
 | Build command | `bun install && bun run build` | `bun install && bun run build:jp` | `bun install && bun run build` |
 | Deploy command | `bunx wrangler deploy` | `bunx wrangler deploy -c wrangler.jp.jsonc` | `bunx wrangler deploy` |
 | `BUN_VERSION` | `1.3.14` | `1.3.14` | `1.3.14` |
@@ -241,7 +241,7 @@ its own build:
 
 No output directory is set in any of them, because `assets.directory` already says
 it. Nothing else is needed: the engine is committed, so the build wants no
-Haskell toolchain, and `docs` needs no `PUBLIC_APP` because a build that is not
+Haskell toolchain, and `lp` needs no `PUBLIC_APP` because a build that is not
 a development one already points at the published app.
 
 The names are attached in the dashboard, on the worker's own Domains & Routes,

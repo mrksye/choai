@@ -1,6 +1,10 @@
 // How the page that explains the app is served. Its own name and its own
 // deployment, sharing nothing with the app next door — which is the same
 // separation the rest of this directory keeps.
+//
+// The worker keeps the name it was created under, from when this directory was
+// docs/ and the site answered on docs.choai.dev: the dashboard's build is tied
+// to it, and renaming it here would deploy a new worker beside the old one.
 {
   "name": "choai-docs",
   "compatibility_date": "2026-08-15",

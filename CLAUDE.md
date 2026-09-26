@@ -82,18 +82,18 @@ records which source the published binary was built from.
 
 `wasm/README.md` has the rest (`setup.sh`, benching, `serve.sh`).
 
-The page that explains the app is its own Astro project in `docs/`, beside the
+The page that explains the app is its own Astro project in `lp/`, beside the
 app rather than inside it — where Vite keeps its own site. Its own dependencies,
 nothing of the app's, two names, two deployments:
 
 ```sh
-bun --cwd=docs run dev           # astro on :45720 (ASTRO in digits)
-scripts/build-site.sh            # apps/web/dist and docs/dist, side by side
+bun --cwd=lp run dev             # astro on :45720 (ASTRO in digits)
+scripts/build-site.sh            # apps/web/dist and lp/dist, side by side
 ```
 
-`std.choai.dev` serves `apps/web/dist`, `choai.dev` serves `docs/dist`, and
+`std.choai.dev` serves `apps/web/dist`, `choai.dev` serves `lp/dist`, and
 `docs.choai.dev` is a permanent redirect to `choai.dev` kept on the zone. Where
-the app lives is `PUBLIC_APP` in `docs/.env`, so development links to a local
+the app lives is `PUBLIC_APP` in `lp/.env`, so development links to a local
 app rather than to the published one.
 
 Each is published as a Cloudflare Worker serving static assets, built from
@@ -333,7 +333,7 @@ three tsconfigs agree on where the seam resolves.
   one navigation — the router keeps only the last of two in a tick, so a query
   set first is dropped by the page that follows it.
 - **`core/i18n/en.ts` is the type** every other dictionary is checked against, and
-  `docs/src/words.ts` does the same for the landing page — which speaks to
+  `lp/src/words.ts` does the same for the landing page — which speaks to
   someone who has not opened the app, so it does not share the app's wording.
 - **Generated or vendored, so don't hand-edit:** `src/core/generated/` (licences,
   rebuilt each dev/build), `src/core/components/ui/*` (solid-ui), `wasm/vendor/`.
@@ -342,7 +342,7 @@ three tsconfigs agree on where the seam resolves.
 
 - **GPL-3.0-or-later**, inherited by linking hledger-lib; publishing here is what
   satisfies it. Keep `core/lib/solid-workbench-ui` MIT and reusable.
-- **`docs/` is GPL by choice and must stay separable.** It links against nothing
+- **`lp/` is GPL by choice and must stay separable.** It links against nothing
   of the app's — no shared config, no shared dependencies, no imports across the
   two — so the copyleft does not reach it on its own; it carries the same licence
   because that is what this project publishes under. It could still be lifted

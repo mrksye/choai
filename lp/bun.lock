@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "choai-docs",
+      "name": "choai-lp",
       "devDependencies": {
         "@astrojs/check": "^0.9.4",
         "@astrojs/sitemap": "^3.7.4",
