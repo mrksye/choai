@@ -26,6 +26,7 @@ import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { byTop } from "~/core/explorer/tree"
 import { accountChosenIn, accountQuery } from "~/core/journal/account-query"
+import { ACCOUNTS, MAIN, TRANSACTIONS, adjustmentsOn, includedBy, including, laidOut, writtenInto } from "~/core/journal/layout"
 import { byMonth, counterpartsOf, dayOf, hasMovement, ledgerOf, namedIn, within } from "~/core/reports/ledger"
 import type { BalanceReport, RegisterRow, Transaction } from "~/core/hledger/wire"
 import { withoutKind } from "~/core/journal/declarations"
@@ -969,5 +970,41 @@ describe("an account's ledger", () => {
     expect(hasMovement("assets:cash", moved)).toBe(false)
     expect(hasMovement("assets:bank:checking:old", moved)).toBe(false)
     expect(hasMovement("liabilities:car", moved)).toBe(false)
+  })
+})
+
+describe("how a set of books is laid out in files", () => {
+  const book = { preamble: "; books\n\nD $1,000.00\n", accounts: "account assets  ; type:A\n", transactions: "" }
+
+  test("main.journal says how amounts are written and names each file it reads", () => {
+    const files = laidOut(book)
+    expect(Object.keys(files)).toEqual([MAIN, ACCOUNTS, TRANSACTIONS])
+    expect(files[MAIN]).toBe("; books\n\nD $1,000.00\n\ninclude accounts.journal\ninclude transactions.journal\n")
+    expect(includedBy(files[MAIN] ?? "")).toEqual([ACCOUNTS, TRANSACTIONS])
+  })
+
+  test("a closing's adjustments are a file named for its date", () => {
+    expect(adjustmentsOn("2027-08-20")).toBe("adjustments/2027-08-20.journal")
+  })
+
+  test("a file is included once, after the others, and a comment after an include is still an include", () => {
+    const main = "; books\n\ninclude accounts.journal  ; the chart\ninclude transactions.journal\n\n; choai-file: x.jsonl\n"
+    const once = including(main, "adjustments/2027-08-20.journal")
+    expect(once).toBe(
+      "; books\n\ninclude accounts.journal  ; the chart\ninclude transactions.journal\ninclude adjustments/2027-08-20.journal\n\n; choai-file: x.jsonl\n",
+    )
+    expect(including(once, "adjustments/2027-08-20.journal")).toBe(once)
+    expect(including(main, "accounts.journal")).toBe(main)
+    expect(including("; books\n", "transactions.journal")).toBe("; books\ninclude transactions.journal\n")
+  })
+
+  test("writing a journal file the book lacks names it in the entry file in the same write", () => {
+    const files = { [MAIN]: "include transactions.journal\n", [TRANSACTIONS]: "" }
+    expect(writtenInto(files, MAIN, ACCOUNTS, "account a\n")).toEqual({
+      [ACCOUNTS]: "account a\n",
+      [MAIN]: "include transactions.journal\ninclude accounts.journal\n",
+    })
+    expect(writtenInto(files, MAIN, TRANSACTIONS, "x\n")).toEqual({ [TRANSACTIONS]: "x\n" })
+    expect(writtenInto(files, MAIN, "register.jsonl", "{}\n")).toEqual({ "register.jsonl": "{}\n" })
   })
 })

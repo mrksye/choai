@@ -1383,6 +1383,7 @@ describe("a year's depreciation, offered rather than written", () => {
     }))
     expect(items.length).toBe(2)
     expect(items.every((one) => one.is === "add" && one.confidence === 1)).toBe(true)
+    expect(items.every((one) => one.is === "add" && one.path === "adjustments/2027-03-31.journal")).toBe(true)
   })
 })
 
@@ -1461,6 +1462,7 @@ describe("the entries a year is closed with", () => {
     )
     expect(items.length).toBe(2)
     expect(items.every((one) => one.confidence === 1)).toBe(true)
+    expect(items.every((one) => one.is === "add" && one.path === "adjustments/2027-03-31.journal")).toBe(true)
   })
 })
 

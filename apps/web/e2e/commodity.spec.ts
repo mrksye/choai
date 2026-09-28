@@ -55,7 +55,7 @@ test("a figure written without a symbol goes in carrying the declared one", asyn
     })
     if (!done.ok) return { failed: JSON.stringify(done.error) }
 
-    const back = await window.choai.journal.text({})
+    const back = await window.choai.journal.text({ path: "transactions.journal" })
     return {
       written: done.value.written,
       inTheFile: back.ok ? back.value.text.includes("expenses:food  $12.00") : false,

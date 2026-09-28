@@ -557,8 +557,16 @@ test("nothing that says it does not write, writes", async ({ page }) => {
   await openTheDemo(page)
 
   const out = await page.evaluate(async () => {
-    const before = await window.choai.journal.text({})
-    if (!before.ok) return { failed: "unreadable" }
+    /** Every file the book has, since the entry file holds only its includes. */
+    const everything = async (): Promise<string | undefined> => {
+      const summary = await window.choai.journal.summary({})
+      if (!summary.ok) return undefined
+      const texts = await Promise.all(summary.value.files.map((path) => window.choai.journal.text({ path })))
+      return JSON.stringify(summary.value.files.map((path, at) => [path, texts[at]]))
+    }
+
+    const before = await everything()
+    if (before === undefined) return { failed: "unreadable" }
 
     const quiet = Object.entries(window.choai.describe().capabilities).flatMap(
       ([name, told]) => (told.writes || told.leaves ? [] : [name]),
@@ -567,8 +575,7 @@ test("nothing that says it does not write, writes", async ({ page }) => {
     const wrote: string[] = []
     for (const name of quiet) {
       await window.choai.call(name, {})
-      const now = await window.choai.journal.text({})
-      if (!now.ok || now.value.text !== before.value.text) wrote.push(name)
+      if ((await everything()) !== before) wrote.push(name)
     }
     return { checked: quiet.length, wrote }
   })

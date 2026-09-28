@@ -144,7 +144,10 @@ test("an entry written here waits in the list, shows as a diff, and goes with th
   )
   expect(added.ok).toBe(true)
 
-  const file = page.getByRole("complementary").getByRole("button", { name: /main\.journal/ })
+  // Written to transactions.journal, which the books taken did not have yet, so
+  // main.journal waits beside it with the include that names it.
+  await expect(page.getByRole("complementary").getByRole("button", { name: /main\.journal/ })).toBeVisible()
+  const file = page.getByRole("complementary").getByRole("button", { name: /transactions\.journal/ })
   await expect(file).toBeVisible()
   await file.click()
   await expect(page.getByText("Since it was last sent")).toBeVisible()

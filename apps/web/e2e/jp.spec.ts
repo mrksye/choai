@@ -94,10 +94,14 @@ const writeTaggedEntries = async (page: Page): Promise<void> => {
 test("offering a change writes nothing, whichever kind of change it is", async ({ page }) => {
   await openTheDemo(page)
 
-  const text = async (): Promise<string> => {
-    const t = await page.evaluate(() => window.choai.journal.text({}))
-    return t.ok ? t.value.text : "unreadable"
-  }
+  /** Every file the book has, since the entry file holds only its includes. */
+  const text = async (): Promise<string> =>
+    page.evaluate(async () => {
+      const summary = await window.choai.journal.summary({})
+      if (!summary.ok) return "unreadable"
+      const texts = await Promise.all(summary.value.files.map((path) => window.choai.journal.text({ path })))
+      return JSON.stringify(summary.value.files.map((path, at) => [path, texts[at]]))
+    })
   const standing = async (): Promise<number> => {
     const l = await page.evaluate(() => window.choai.proposal.list({}))
     return l.ok ? l.value.length : -1
@@ -431,7 +435,7 @@ test("a heading written on an account declaration moves it, with no entry changi
     .toContain("fixed-assets:assets:bank:checking")
 
   // The heading is in the journal, on the account's own declaration.
-  const journal = await page.evaluate(() => window.choai.journal.text({}))
+  const journal = await page.evaluate(() => window.choai.journal.text({ path: "accounts.journal" }))
   expect(journal.ok && journal.value.text).toContain("account assets:bank:checking")
   expect(journal.ok && journal.value.text).toContain("jp:fixed-assets")
 

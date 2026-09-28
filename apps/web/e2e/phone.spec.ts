@@ -116,7 +116,7 @@ test("a window with room for both is left as it was", async ({ page }) => {
  * list, and choosing a file there is how the text is reached.
  */
 const theText = (page: Page) => page.getByRole("button", { name: "Edit the text", exact: true }).first()
-const theFile = (page: Page) => page.getByRole("button", { name: "demo.journal", exact: true })
+const theFile = (page: Page) => page.getByRole("button", { name: "main.journal", exact: true })
 
 test("on a narrow window the text is reached by choosing its file", async ({ page }) => {
   await page.setViewportSize(PHONE)
@@ -129,7 +129,7 @@ test("on a narrow window the text is reached by choosing its file", async ({ pag
   await theFile(page).click()
   await expect(theFile(page)).toBeHidden()
   await expect(back(page)).toBeVisible()
-  await expect(page).toHaveURL(/\/source#demo\.journal$/)
+  await expect(page).toHaveURL(/\/source#main\.journal$/)
   await expect(page.locator("textarea")).toBeVisible()
 })
 
@@ -145,10 +145,14 @@ test("on a wide window the text is opened beside its files", async ({ page }) =>
   await expect(page).toHaveURL(/\/source/)
   await expect(page.locator("textarea")).toBeVisible()
 
-  // Taking the files away is offered under them, and nowhere in the top bar.
+  // Taking the files away is offered under them, and nowhere in the top bar. A
+  // browser that cannot write a folder is handed one zip holding the layout.
+  await page.evaluate(() => {
+    delete (window as { showDirectoryPicker?: unknown }).showDirectoryPicker
+  })
   const download = page.waitForEvent("download")
   await page.getByRole("button", { name: "Export the journal" }).click()
-  expect((await download).suggestedFilename()).toBe("demo.journal")
+  expect((await download).suggestedFilename()).toBe("a demo journal.zip")
 })
 
 /**
@@ -162,7 +166,7 @@ test("unsaved text survives leaving the text, and its file is marked", async ({ 
 
   await page.locator("textarea").fill("; typed and not saved\n")
   await expect(theFile(page)).toBeHidden()
-  await expect(page.getByRole("button", { name: /^demo\.journal/ })).toContainText("•")
+  await expect(page.getByRole("button", { name: /^main\.journal/ })).toContainText("•")
 
   await page.getByRole("button", { name: "Journal", exact: true }).first().click()
   await theText(page).click()
