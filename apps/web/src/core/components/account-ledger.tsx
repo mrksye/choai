@@ -90,8 +90,8 @@ function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
           <tr class="text-xs text-muted-foreground">
             <HeaderCell class="w-8 pr-2 text-left">{t("ledger.day")}</HeaderCell>
             <HeaderCell class="pr-2 text-left">{t("ledger.description")}</HeaderCell>
-            <HeaderCell class="pl-2 text-right">{t("ledger.amount")}</HeaderCell>
-            <HeaderCell class="pl-2 text-right">{t("ledger.balance")}</HeaderCell>
+            <HeaderCell class="pl-4 text-right">{t("ledger.amount")}</HeaderCell>
+            <HeaderCell class="pl-4 text-right">{t("ledger.balance")}</HeaderCell>
           </tr>
         </thead>
         <For each={byMonth(props.ledger.lines)}>
@@ -152,7 +152,7 @@ function Line(props: { line: LedgerLine; account: string }): JSX.Element {
 /** A column with nothing in it is left empty; a zero there would read as a figure. */
 function Figure(props: { value: MixedAmount }): JSX.Element {
   return (
-    <td class="border-b border-border/50 py-1 pl-2 text-right font-mono whitespace-nowrap tabular-nums">
+    <td class="border-b border-border/50 py-1 pl-4 text-right font-mono whitespace-nowrap tabular-nums">
       {props.value.length === 0 ? "" : formatMixed(props.value)}
     </td>
   )
