@@ -218,7 +218,7 @@ for (const report of [
   })
 }
 
-test("a ledger's balances are hledger's running totals, and its other side is named", async ({ page }) => {
+test("a ledger's balances are hledger's running totals, and its other side is named without its kind", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/trial-balance?q=acct%3Aexpenses%3Afood#work")
 
@@ -226,7 +226,9 @@ test("a ledger's balances are hledger's running totals, and its other side is na
   await expect(rows).toHaveCount(3)
   await expect(page.locator("tbody th").first()).toHaveText("2026-01")
   await expect(rows.nth(0).locator("td").first()).toHaveText("07")
-  await expect(rows.nth(0)).toContainText("↔ liabilities:card")
-  await expect(rows.nth(2)).toContainText("↔ assets:bank:checking")
+  await expect(rows.nth(0)).toContainText("↔ card")
+  await expect(rows.nth(0).getByTitle("liabilities:card")).toBeVisible()
+  await expect(rows.nth(2)).toContainText("↔ bank:checking")
+  await expect(rows.nth(2).getByTitle("assets:bank:checking")).toBeVisible()
   await expect(rows.nth(2).locator("td").last()).toHaveText("$247.15")
 })

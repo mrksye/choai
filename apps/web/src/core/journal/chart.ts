@@ -3,7 +3,7 @@ import { createResource, createRoot } from "solid-js"
 import { ask } from "~/core/hledger/client"
 import type { AccountType } from "~/core/hledger/wire"
 import { getOrUndefined } from "~/core/lib/monad"
-import { inChartOrder, ofKinds, type Kind } from "./declarations"
+import { inChartOrder, ofKinds, withoutKind, type Kind } from "./declarations"
 import { journal } from "./store"
 
 /**
@@ -37,6 +37,12 @@ const placings = createRoot(() =>
  * whoever is asking: do not claim to know.
  */
 export const placingsNow = (): Readonly<Record<string, AccountType>> => placings[0]() ?? {}
+
+/**
+ * An account as a list beneath a heading shows it, without the top name that
+ * only says which kind it is. Whole until hledger has answered.
+ */
+export const withoutKindNow = (account: string): string => withoutKind(account, placingsNow())
 
 /**
  * The open journal's accounts, in the order its chart is read.

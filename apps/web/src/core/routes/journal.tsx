@@ -2,10 +2,10 @@ import { For, Show, createEffect, createResource, createSignal, on, type JSX } f
 
 import { ask } from "~/core/hledger/client"
 import { formatMixed } from "~/core/hledger/amount"
-import type { AccountType, Posting, Transaction } from "~/core/hledger/wire"
+import type { Posting, Transaction } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { byDay, weekdayOf } from "~/core/journal/days"
-import { withoutKind } from "~/core/journal/declarations"
+import { withoutKindNow } from "~/core/journal/chart"
 import { useQuery } from "~/core/journal/query"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
@@ -34,14 +34,6 @@ export default function Journal(): JSX.Element {
     (asked) => ask({ kind: "entries", query: asked.query, limit: PAGE, offset: asked.offset }),
   )
 
-  const [types] = createResource(
-    () => getOrUndefined(journal()),
-    async () => {
-      const reply = await ask({ kind: "accountTypes" })
-      return reply.ok ? reply.value : {}
-    },
-  )
-
   createEffect(on(query, () => setOffset(0), { defer: true }))
 
   return (
@@ -51,7 +43,7 @@ export default function Journal(): JSX.Element {
         Err: (trouble) => <TroubleNote trouble={trouble} />,
         Ok: (found) => (
           <div class={`flex flex-col gap-4 ${WIDTH}`}>
-            <Days entries={found.items} types={types() ?? {}} />
+            <Days entries={found.items} />
 
             <div class="flex items-center justify-between text-sm text-muted-foreground">
               <span>{describeRange(found.offset, found.total)}</span>
@@ -92,7 +84,7 @@ const describeRange = (offset: number, total: number): string =>
  * The heading stays pinned while its day scrolls under it, below whatever the
  * shell has already pinned above the work (`--stuck-above`).
  */
-function Days(props: { entries: readonly Transaction[]; types: Types }): JSX.Element {
+function Days(props: { entries: readonly Transaction[] }): JSX.Element {
   return (
     <div class="flex flex-col gap-4">
       <For each={byDay(props.entries)}>
@@ -101,7 +93,7 @@ function Days(props: { entries: readonly Transaction[]; types: Types }): JSX.Ele
             <h3 class="sticky top-[var(--stuck-above,0px)] z-[5] bg-background py-1 font-mono text-xs text-muted-foreground">
               {headingOf(day.date)}
             </h3>
-            <For each={day.entries}>{(entry) => <EntryCard transaction={entry} types={props.types} />}</For>
+            <For each={day.entries}>{(entry) => <EntryCard transaction={entry} />}</For>
           </section>
         )}
       </For>
@@ -121,7 +113,7 @@ const headingOf = (date: string): string => {
  * those lines. Reachable from the keyboard as well: a card that does something
  * has to be something you can get to without a pointer.
  */
-function EntryCard(props: { transaction: Transaction; types: Types }): JSX.Element {
+function EntryCard(props: { transaction: Transaction }): JSX.Element {
   const open = (): void => startEditingEntry(props.transaction)
   return (
     <div
@@ -138,20 +130,18 @@ function EntryCard(props: { transaction: Transaction; types: Types }): JSX.Eleme
     >
       <span class="truncate font-medium">{props.transaction.tdescription}</span>
       <div class="pl-4">
-        <For each={props.transaction.tpostings}>{(posting) => <PostingLine posting={posting} types={props.types} />}</For>
+        <For each={props.transaction.tpostings}>{(posting) => <PostingLine posting={posting} />}</For>
       </div>
     </div>
   )
 }
 
-type Types = Readonly<Record<string, AccountType>>
-
 /** The kind is left to the sign and to the name beneath it; the whole name is a hover away. */
-function PostingLine(props: { posting: Posting; types: Types }): JSX.Element {
+function PostingLine(props: { posting: Posting }): JSX.Element {
   return (
     <div class="flex justify-between gap-6 py-0.5 text-sm">
       <span class="min-w-0 truncate text-muted-foreground" title={props.posting.paccount}>
-        {withoutKind(props.posting.paccount, props.types)}
+        {withoutKindNow(props.posting.paccount)}
       </span>
       <span class="shrink-0 font-mono tabular-nums">{formatMixed(props.posting.pamount)}</span>
     </div>

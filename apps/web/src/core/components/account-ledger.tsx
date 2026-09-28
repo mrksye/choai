@@ -2,6 +2,7 @@ import { For, Show, createResource, type JSX } from "solid-js"
 
 import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount } from "~/core/hledger/wire"
+import { withoutKindNow } from "~/core/journal/chart"
 import { journal } from "~/core/journal/store"
 import { accountChosenIn, useQuery } from "~/core/journal/query"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
@@ -137,10 +138,14 @@ function Line(props: { line: LedgerLine; account: string }): JSX.Element {
         {/* A sub-account is named where the one chosen has children, so a
             parent's ledger still says which of them moved. */}
         <Show when={props.line.account !== props.account}>
-          <div class="text-xs text-muted-foreground">{props.line.account}</div>
+          <div class="text-xs text-muted-foreground" title={props.line.account}>
+            {withoutKindNow(props.line.account)}
+          </div>
         </Show>
         <Show when={props.line.counterparts.length > 0}>
-          <div class="text-xs text-muted-foreground">↔ {props.line.counterparts.join(", ")}</div>
+          <div class="text-xs text-muted-foreground" title={props.line.counterparts.join(", ")}>
+            ↔ {props.line.counterparts.map(withoutKindNow).join(", ")}
+          </div>
         </Show>
       </td>
       <Figure value={props.line.amount} class="font-medium" />
