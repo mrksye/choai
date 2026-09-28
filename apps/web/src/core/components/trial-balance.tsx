@@ -21,7 +21,11 @@ import { t } from "~/core/i18n"
  * and an account that came to nothing is one of the things a check is run to
  * see.
  */
-export function TrialBalanceView(props: { nothingToShow: string }): JSX.Element {
+export function TrialBalanceView(props: {
+  nothingToShow: string
+  /** Query terms of the screen's own, such as a period, added to the shared query. */
+  narrowing?: string
+}): JSX.Element {
   const [query] = useQuery()
 
   // The journal is part of what is asked, not only the query: the same question
@@ -29,7 +33,7 @@ export function TrialBalanceView(props: { nothingToShow: string }): JSX.Element 
   const [report] = createResource(
     () => {
       const open = getOrUndefined(journal())
-      return open === undefined ? undefined : { open, terms: narrowed(query()) }
+      return open === undefined ? undefined : { open, terms: narrowed(query(), props.narrowing) }
     },
     (asked) => askTrialBalance(asked.terms),
   )

@@ -291,3 +291,23 @@ test("the income statement's period is a filter that says it is on while put awa
   await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
   await expect(page.getByText("Nothing in this period.")).toBeHidden()
 })
+
+/**
+ * The period is one filter over all three reports, not one per screen: chosen
+ * on one, it narrows the others, and each of them says it is on.
+ */
+test("a period chosen on one report narrows the other two, and each says so", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/income-statement#work")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "Last year" }).click()
+
+  for (const [view, empty] of [
+    ["Balance sheet", "No asset, liability or equity accounts."],
+    ["Trial balance", "No accounts yet."],
+  ] as const) {
+    await page.getByRole("button", { name: view, exact: true }).first().click()
+    await expect(page.getByRole("button", { name: "Filters — narrowing this report" })).toBeVisible()
+    await expect(page.getByText(empty)).toBeVisible()
+  }
+})

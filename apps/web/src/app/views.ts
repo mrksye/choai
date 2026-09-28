@@ -64,6 +64,7 @@ const CORE: readonly View[] = [
     Explorer: TrialBalanceExplorer,
     page: TrialBalance,
     writes: false,
+    periodic: true,
     reached: { from: "rail" },
   },
   {
@@ -73,6 +74,7 @@ const CORE: readonly View[] = [
     Explorer: BalanceSheetExplorer,
     page: BalanceSheet,
     writes: false,
+    periodic: true,
     reached: { from: "rail" },
   },
   {

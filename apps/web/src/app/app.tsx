@@ -587,23 +587,25 @@ export function Layout(props: ParentProps) {
  */
 function FilterButton(): JSX.Element {
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
+      size="icon"
       aria-pressed={filtersShown()}
       aria-label={filtering() ? t("report.filtered") : t("report.filters")}
       title={filtering() ? t("report.filtered") : t("report.filters")}
       onClick={toggleFilters}
-      class="relative inline-flex size-6 items-center justify-center rounded transition-colors hover:bg-accent"
+      class="relative size-6"
       classList={{
         "bg-accent": filtersShown(),
         "text-primary": filtering(),
-        "text-muted-foreground hover:text-foreground": !filtering(),
+        "text-muted-foreground": !filtering(),
       }}
     >
-      <FunnelIcon class={`h-4 w-4 ${filtering() ? "[&_svg]:fill-current" : ""}`} />
+      {/* Left unsized, as the buttons beside it are: Button sizes any icon inside it. */}
+      <FunnelIcon class={filtering() ? "[&_svg]:fill-current" : ""} />
       <Show when={filtering()}>
-        <span class="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary ring-2 ring-card" />
+        <span class="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-card" />
       </Show>
-    </button>
+    </Button>
   )
 }
