@@ -812,14 +812,8 @@ const RICH = [
 ].join("\n")
 
 const writeRichEntry = async (page: Page): Promise<void> => {
-  const path = await page.evaluate(async () => {
-    const open = await window.choai.journal.summary({})
-    return open.ok ? open.value.files[0] : undefined
-  })
-  expect(typeof path).toBe("string")
-
-  await page.goto("/journal/source#work")
-  const box = page.getByRole("textbox").first()
+  await page.goto("/journal/source#transactions.journal")
+  const box = page.locator("textarea")
   await box.fill((await box.inputValue()) + RICH)
   await page.getByRole("button", { name: /^Save$|^保存$/ }).first().click()
 
@@ -861,7 +855,7 @@ test("classifying an entry keeps everything a draft could not have held", async 
 
   await page.evaluate((id) => window.choai.proposal.apply({ id } as never), offered.value.id)
 
-  const text = await page.evaluate(() => window.choai.journal.text({}))
+  const text = await page.evaluate(() => window.choai.journal.text({ path: "transactions.journal" }))
   expect(text.ok).toBe(true)
   if (!text.ok) return
 
