@@ -222,9 +222,10 @@ test("a ledger's balances are hledger's running totals, and its other side is na
   await openTheDemo(page)
   await page.goto("/trial-balance?q=acct%3Aexpenses%3Afood#work")
 
-  const rows = page.locator("tbody tr")
+  const rows = page.locator("tbody tr:has(td)")
   await expect(rows).toHaveCount(3)
-  await expect(rows.nth(0)).toContainText("2026-01-07")
+  await expect(page.locator("tbody th").first()).toHaveText("2026-01")
+  await expect(rows.nth(0).locator("td").first()).toHaveText("07")
   await expect(rows.nth(0)).toContainText("↔ liabilities:card")
   await expect(rows.nth(2)).toContainText("↔ assets:bank:checking")
   await expect(rows.nth(2).locator("td").last()).toHaveText("$247.15")

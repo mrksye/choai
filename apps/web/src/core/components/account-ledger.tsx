@@ -5,8 +5,7 @@ import type { MixedAmount } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { accountChosenIn, useQuery } from "~/core/journal/query"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
-import { creditsOf, debitsOf } from "~/core/reports/columns"
-import type { LedgerLine } from "~/core/reports/ledger"
+import { byMonth, dayOf, type LedgerLine } from "~/core/reports/ledger"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
 import { NeedsAJournal, Waiting } from "./balance-report"
 import { TroubleNote } from "./trouble-note"
@@ -68,6 +67,13 @@ function AccountLedger(props: { account: string; narrowing?: string }): JSX.Elem
   )
 }
 
+/**
+ * The header and the month under it stay pinned while the movements scroll,
+ * below whatever the shell has already pinned above the work (`--stuck-above`),
+ * so a phone never loses which column or which month it is reading. Four
+ * columns rather than a debit and a credit: the amount keeps hledger's sign,
+ * which is what the running balance is the sum of.
+ */
 function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
   return (
     <Show
@@ -79,31 +85,54 @@ function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
           {t("ledger.latest", { shown: props.ledger.lines.length, total: props.ledger.total })}
         </p>
       </Show>
-      <div class="max-w-3xl overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b text-xs text-muted-foreground">
-              <th class="py-1 pr-2 text-left font-medium whitespace-nowrap">{t("ledger.date")}</th>
-              <th class="py-1 pr-2 text-left font-medium">{t("ledger.description")}</th>
-              <th class="py-1 pl-2 text-right font-medium">{t("trialBalance.debit")}</th>
-              <th class="py-1 pl-2 text-right font-medium">{t("trialBalance.credit")}</th>
-              <th class="py-1 pl-2 text-right font-medium">{t("ledger.balance")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <For each={props.ledger.lines}>{(line) => <Line line={line} account={props.account} />}</For>
-          </tbody>
-        </table>
-      </div>
+      <table class="w-full max-w-3xl border-separate border-spacing-0 text-sm">
+        <thead>
+          <tr class="text-xs text-muted-foreground">
+            <HeaderCell class="w-8 pr-2 text-left">{t("ledger.day")}</HeaderCell>
+            <HeaderCell class="pr-2 text-left">{t("ledger.description")}</HeaderCell>
+            <HeaderCell class="pl-2 text-right">{t("ledger.amount")}</HeaderCell>
+            <HeaderCell class="pl-2 text-right">{t("ledger.balance")}</HeaderCell>
+          </tr>
+        </thead>
+        <For each={byMonth(props.ledger.lines)}>
+          {(month) => (
+            <tbody>
+              <tr>
+                <th
+                  scope="rowgroup"
+                  colSpan={4}
+                  class="sticky top-[calc(var(--stuck-above,0px)+1.75rem)] z-[4] h-6 border-b bg-muted py-0.5 pl-1 text-left font-mono text-xs font-medium text-muted-foreground"
+                >
+                  {month.month}
+                </th>
+              </tr>
+              <For each={month.lines}>{(line) => <Line line={line} account={props.account} />}</For>
+            </tbody>
+          )}
+        </For>
+      </table>
     </Show>
+  )
+}
+
+/** Its height is what the month row is pinned under. */
+function HeaderCell(props: { class: string; children: JSX.Element }): JSX.Element {
+  return (
+    <th
+      class={`sticky top-[var(--stuck-above,0px)] z-[5] h-7 border-b bg-background font-medium whitespace-nowrap ${props.class}`}
+    >
+      {props.children}
+    </th>
   )
 }
 
 function Line(props: { line: LedgerLine; account: string }): JSX.Element {
   return (
-    <tr class="border-b border-border/50 align-top last:border-0">
-      <td class="py-1 pr-2 font-mono text-xs whitespace-nowrap tabular-nums">{props.line.date ?? ""}</td>
-      <td class="py-1 pr-2">
+    <tr class="align-top">
+      <td class="border-b border-border/50 py-1 pr-2 pl-1 font-mono text-xs whitespace-nowrap tabular-nums">
+        {props.line.date === undefined ? "" : dayOf(props.line.date)}
+      </td>
+      <td class="border-b border-border/50 py-1 pr-2">
         <div>{props.line.description ?? ""}</div>
         {/* A sub-account is named where the one chosen has children, so a
             parent's ledger still says which of them moved. */}
@@ -114,8 +143,7 @@ function Line(props: { line: LedgerLine; account: string }): JSX.Element {
           <div class="text-xs text-muted-foreground">↔ {props.line.counterparts.join(", ")}</div>
         </Show>
       </td>
-      <Figure value={debitsOf(props.line.amount)} />
-      <Figure value={creditsOf(props.line.amount)} />
+      <Figure value={props.line.amount} />
       <Figure value={props.line.balance} />
     </tr>
   )
@@ -124,7 +152,7 @@ function Line(props: { line: LedgerLine; account: string }): JSX.Element {
 /** A column with nothing in it is left empty; a zero there would read as a figure. */
 function Figure(props: { value: MixedAmount }): JSX.Element {
   return (
-    <td class="py-1 pl-2 text-right font-mono whitespace-nowrap tabular-nums">
+    <td class="border-b border-border/50 py-1 pl-2 text-right font-mono whitespace-nowrap tabular-nums">
       {props.value.length === 0 ? "" : formatMixed(props.value)}
     </td>
   )

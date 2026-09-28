@@ -26,7 +26,7 @@ import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { byTop } from "~/core/explorer/tree"
 import { accountChosenIn, accountQuery } from "~/core/journal/account-query"
-import { counterpartsOf, ledgerOf, within } from "~/core/reports/ledger"
+import { byMonth, counterpartsOf, dayOf, ledgerOf, within } from "~/core/reports/ledger"
 import type { RegisterRow, Transaction } from "~/core/hledger/wire"
 import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
@@ -940,5 +940,20 @@ describe("an account's ledger", () => {
     expect(lines.map((line) => line.balance)).toEqual([[{ n: 0 }], [{ n: 1 }], [{ n: 2 }]] as never)
     expect(lines[1]).not.toHaveProperty("description")
     expect(lines[2]?.counterparts).toEqual(["expenses:rent"])
+  })
+
+  test("a ledger is cut at each change of month, and an undated line stays with its entry", () => {
+    const line = (date: string | undefined) => ({
+      ...(date === undefined ? {} : { date }),
+      account: "assets:bank",
+      counterparts: [],
+      amount: [],
+      balance: [],
+    })
+    const months = byMonth([line("2026-01-31"), line(undefined), line("2026-02-01"), line("2026-02-14")])
+    expect(months.map((month) => month.month)).toEqual(["2026-01", "2026-02"])
+    expect(months.map((month) => month.lines.length)).toEqual([2, 2])
+    expect(byMonth([])).toEqual([])
+    expect(dayOf("2026-02-01")).toBe("01")
   })
 })

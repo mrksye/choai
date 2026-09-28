@@ -41,3 +41,27 @@ export const ledgerOf = (
     balance: running,
   }))
 }
+
+/** The movements of one calendar month, under the `YYYY-MM` they share. */
+export interface LedgerMonth {
+  readonly month: string
+  readonly lines: readonly LedgerLine[]
+}
+
+export const monthOf = (date: string): string => date.slice(0, 7)
+
+export const dayOf = (date: string): string => date.slice(8, 10)
+
+/**
+ * The ledger cut at each change of month, as a passbook is. A line hledger left
+ * undated is a further posting of the entry above it, so it stays in that
+ * entry's month.
+ */
+export const byMonth = (lines: readonly LedgerLine[]): readonly LedgerMonth[] =>
+  lines.reduce<readonly LedgerMonth[]>((months, line) => {
+    const last = months.at(-1)
+    const month = line.date === undefined ? last?.month : monthOf(line.date)
+    return last !== undefined && (month === undefined || month === last.month)
+      ? [...months.slice(0, -1), { month: last.month, lines: [...last.lines, line] }]
+      : [...months, { month: month ?? "", lines: [line] }]
+  }, [])
