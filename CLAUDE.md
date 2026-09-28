@@ -359,6 +359,19 @@ three tsconfigs agree on where the seam resolves.
 
 ## Constraints
 
+- **Nothing hledger does not have is added — without exception.** The books are
+  plain hledger journals that must mean the same to `hledger -f main.journal` as
+  they do here, long after this app is gone. So before any new state, entry kind
+  or notion of accounting, ask whether hledger itself has it. If it does, use
+  hledger's way: dates and queries for periods, tags to classify, includes to
+  divide, `--historical` for a running balance — and where hledger has to be
+  asked something new, the answer is a change to `Bindings.hs`, not arithmetic
+  or a second parser here. If it does not, it is either expressed with those
+  same means or kept outside the journal (tax adjustments, companions), and
+  never invented as a feature: no fiscal-year state, no closing or
+  carry-forward entries, no entries that exist only when this app reads a file.
+  The design it comes to: **the ledger is continuous, periods are views, and
+  closing is a view plus adjustments.**
 - **GPL-3.0-or-later**, inherited by linking hledger-lib; publishing here is what
   satisfies it. Keep `core/lib/solid-workbench-ui` MIT and reusable.
 - **`lp/` is GPL by choice and must stay separable.** It links against nothing
