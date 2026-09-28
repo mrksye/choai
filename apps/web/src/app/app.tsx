@@ -1,4 +1,4 @@
-import type { ParentProps } from "solid-js"
+import type { JSX, ParentProps } from "solid-js"
 import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
 import { useLocation } from "@solidjs/router"
 import { Dynamic } from "solid-js/web"
@@ -7,7 +7,9 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ReportFilters } from "~/core/components/report-filters"
+import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
@@ -483,6 +485,9 @@ export function Layout(props: ParentProps) {
                 {/* One group at the far end, so the two ways of writing sit
                     together rather than being spread across the heading. */}
                 <div class="flex items-center gap-1">
+                  <Show when={current().periodic === true && getOrUndefined(journal()) !== undefined}>
+                    <FilterButton />
+                  </Show>
                   <Show when={current().writes && getOrUndefined(journal()) !== undefined}>
                     <Button
                       variant="outline"
@@ -501,6 +506,9 @@ export function Layout(props: ParentProps) {
               </>
             }
           >
+            <Show when={filtersShown() && current().periodic === true && getOrUndefined(journal()) !== undefined}>
+              <ReportFilters />
+            </Show>
             <Dynamic component={current().Explorer} onChosen={chose} />
           </SidePanel>
         }
@@ -566,5 +574,36 @@ export function Layout(props: ParentProps) {
         </div>
       </Shell>
     </>
+  )
+}
+
+/**
+ * Opens the filters above the list, and puts them away again.
+ *
+ * Two states it shows apart: pressed while the filters are open, and filled in
+ * with a mark beside it while anything is narrowing the report — which matters
+ * most once they are put away, since a report that is not all of the books
+ * looks like one that is.
+ */
+function FilterButton(): JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-pressed={filtersShown()}
+      aria-label={filtering() ? t("report.filtered") : t("report.filters")}
+      title={filtering() ? t("report.filtered") : t("report.filters")}
+      onClick={toggleFilters}
+      class="relative inline-flex size-6 items-center justify-center rounded transition-colors hover:bg-accent"
+      classList={{
+        "bg-accent": filtersShown(),
+        "text-primary": filtering(),
+        "text-muted-foreground hover:text-foreground": !filtering(),
+      }}
+    >
+      <FunnelIcon class={`h-4 w-4 ${filtering() ? "[&_svg]:fill-current" : ""}`} />
+      <Show when={filtering()}>
+        <span class="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-primary ring-2 ring-card" />
+      </Show>
+    </button>
   )
 }

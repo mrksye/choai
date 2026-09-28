@@ -82,6 +82,7 @@ const CORE: readonly View[] = [
     Explorer: IncomeStatementExplorer,
     page: IncomeStatement,
     writes: false,
+    periodic: true,
     reached: { from: "rail" },
   },
   {

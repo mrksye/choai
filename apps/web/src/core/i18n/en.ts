@@ -83,6 +83,9 @@ export const en = {
     total: "Total",
     working: "Working…",
     needsJournal: "Open a journal first.",
+    period: "Period",
+    filters: "Filters",
+    filtered: "Filters — narrowing this report",
   },
   propose: {
     title: "Written, not yet kept",

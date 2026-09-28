@@ -263,3 +263,31 @@ test("an account nothing was posted to is set back in the list beside a report",
   await expect(page.getByRole("button", { name: "cash", exact: true })).not.toHaveClass(/text-muted-foreground\/60/)
   await expect(liabilities).toHaveClass(/text-muted-foreground\/60/)
 })
+
+/**
+ * A period is a filter, opened from the button beside the list and put away
+ * again; what it narrows stays narrowed when it is put away, and the button
+ * says so rather than looking as it does over all of the books.
+ */
+test("the income statement's period is a filter that says it is on while put away", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/income-statement#work")
+
+  const period = page.getByRole("group", { name: "Period" })
+  await expect(period).toBeHidden()
+
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await period.getByRole("button", { name: "Last year" }).click()
+  await expect(page.getByText("Nothing in this period.")).toBeVisible()
+
+  const on = page.getByRole("button", { name: "Filters — narrowing this report" })
+  await on.click()
+  await expect(period).toBeHidden()
+  await expect(on).toBeVisible()
+  await expect(page.getByText("Nothing in this period.")).toBeVisible()
+
+  await on.click()
+  await period.getByRole("button", { name: "All time" }).click()
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
+  await expect(page.getByText("Nothing in this period.")).toBeHidden()
+})
