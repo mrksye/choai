@@ -145,6 +145,10 @@ test("on a wide window the text is opened beside its files", async ({ page }) =>
   await expect(page).toHaveURL(/\/source/)
   await expect(page.locator("textarea")).toBeVisible()
 
+  // Under the files, the book they make up: its name, and the ways to let it go.
+  await expect(page.getByRole("textbox", { name: "The current journal" })).toHaveValue("a demo journal")
+  await expect(page.getByRole("button", { name: "Close and clear from this device" })).toBeVisible()
+
   // Taking the files away is offered under them, and nowhere in the top bar. A
   // browser that cannot write a folder is handed one zip holding the layout.
   await page.evaluate(() => {
@@ -194,7 +198,6 @@ test("the settings list offers the page's own sections, and nothing else", async
   expect(offered).toEqual([
     "Language",
     "Appearance",
-    "The current journal",
   ])
 })
 
@@ -222,16 +225,6 @@ test("on a narrow window choosing a section is how the settings are reached", as
 
   await expect(back(page)).toBeVisible()
   await expect(page.locator("#appearance")).toBeInViewport()
-})
-
-test("a section the page will not draw is not offered", async ({ page }) => {
-  await page.setViewportSize(DESK)
-  // No journal at all, so there is nothing for the library section to be about.
-  await page.goto("/settings")
-
-  const offered = await settingsList(page).getByRole("button").allInnerTexts()
-  expect(offered).not.toContain("The current journal")
-  expect(offered).toContain("Appearance")
 })
 
 /**

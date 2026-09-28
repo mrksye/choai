@@ -37,7 +37,7 @@ export function SettingsExplorer(props: {
 
   return (
     <div class="py-1">
-      <For each={SECTIONS.filter((section) => section.when?.() ?? true)}>
+      <For each={SECTIONS}>
         {(section) => (
           <button
             type="button"

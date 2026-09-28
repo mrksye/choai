@@ -1,18 +1,10 @@
-import { For, Show, createEffect, createMemo, createResource, on, type JSX } from "solid-js"
+import { For, createEffect, createMemo, on, type JSX } from "solid-js"
 import { useLocation } from "@solidjs/router"
 
 import { LOCALES, LOCALE_NAMES, locale, setLocale, t } from "~/core/i18n"
 import { Button } from "~/core/components/ui/button"
-import { TextField, TextFieldInput } from "~/core/components/ui/text-field"
-import { journal, removeBook, renameBook } from "~/core/journal/store"
-import { handOver } from "~/core/journal/handover"
-import { keptForGood } from "~/core/journal/kept"
-import { getOrUndefined } from "~/core/lib/monad"
 import { pageOf } from "~/core/address/address"
 import { SCHEMES, scheme, setScheme } from "~/core/lib/theme"
-
-/** Whether there is a journal in hand for the library section to be about. */
-const inHand = (): boolean => getOrUndefined(journal()) !== undefined
 
 /**
  * What this page is made of, in the order it is made of it.
@@ -21,23 +13,17 @@ const inHand = (): boolean => getOrUndefined(journal()) !== undefined
  * beside it offers the same names in the same order. Written down once so the
  * two cannot come to disagree about what is on this page — a settings list
  * offering something that is not there is worse than no list.
- *
- * `when` is here rather than inside the section it belongs to for the same
- * reason: the list must not offer what the page will not draw.
  */
 export interface Section {
   /** What the page calls this section, and what the address says when it is the one being read. */
   readonly id: string
   /** Read at the moment it is shown, so it comes out in the reader's language. */
   readonly name: () => string
-  /** Whether the page will draw it at all. Always, where it is left out. */
-  readonly when?: () => boolean
 }
 
 export const SECTIONS: readonly Section[] = [
   { id: "language", name: () => t("settings.language") },
   { id: "appearance", name: () => t("settings.appearance") },
-  { id: "library", name: () => t("library.title"), when: inHand },
 ]
 
 /**
@@ -107,49 +93,6 @@ export default function Settings(): JSX.Element {
         </div>
         <p class="text-xs text-muted-foreground">{t("settings.appearanceHint")}</p>
       </section>
-      <Library />
     </div>
-  )
-}
-
-/**
- * The journal in hand: where it is kept, how to take it away, how to put it
- * down.
- *
- * Closing clears it from the device, so it says so on the button rather than in
- * a dialog afterwards.
- */
-function Library(): JSX.Element {
-  const [promised] = createResource(keptForGood)
-  return (
-    <Show when={inHand() && getOrUndefined(journal())}>
-      {(open) => (
-        <section id="library" class="flex flex-col gap-2">
-          <h2 class="text-sm font-medium">{t("library.title")}</h2>
-          {/* The name is the book's own, not the file's: two books can be kept
-              in files called the same thing. */}
-          <TextField class="max-w-56">
-            <TextFieldInput
-              type="text"
-              class="h-8 text-sm"
-              value={open().source.label}
-              onChange={(event) => void renameBook(event.currentTarget.value)}
-            />
-          </TextField>
-          <p class="text-xs text-muted-foreground">{t("library.nameLives")}</p>
-          <p class="text-xs text-muted-foreground">
-            {promised() === false ? t("library.notKept") : t("library.kept")}
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => void handOver(open().source)}>
-              {t("journal.export")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => void removeBook(open().bookId)}>
-              {t("library.close")}
-            </Button>
-          </div>
-        </section>
-      )}
-    </Show>
   )
 }
