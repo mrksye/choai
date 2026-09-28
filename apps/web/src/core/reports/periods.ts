@@ -1,24 +1,64 @@
 /**
- * The stretches of time a report can be narrowed to.
+ * The stretch of time a report is narrowed to, as two days.
  *
- * Periods are hledger query terms, so hledger decides what they mean — which is
- * also why anything else wanting to offer a period can take these terms rather
- * than working out dates of its own.
- *
- * Kept `as const` because the keys are looked up in the dictionary: widened to
- * `string` they would no longer be keys.
+ * Both days are included, because that is how a person reads a period — the
+ * first to the thirty-first — and either may be left open. hledger's own
+ * ranges end the day before their end date, so the day after `to` is what it
+ * is handed; that is the whole of the translation, and what the dates mean is
+ * still hledger's to decide.
  */
-export const PERIODS = [
-  { key: "incomeStatement.thisMonth", term: "date:thismonth" },
-  { key: "incomeStatement.thisYear", term: "date:thisyear" },
-  { key: "incomeStatement.lastYear", term: "date:lastyear" },
-  { key: "incomeStatement.allTime", term: "" },
+export interface Range {
+  /** YYYY-MM-DD, or empty for the beginning of the books. */
+  readonly from: string
+  /** YYYY-MM-DD, included; or empty for no end. */
+  readonly to: string
+}
+
+export const ALL_TIME: Range = { from: "", to: "" }
+
+const A_DAY = 24 * 60 * 60 * 1000
+
+/** Worked out in UTC so that the answer does not move with the browser's time zone. */
+export const dayAfter = (date: string): string =>
+  new Date(Date.parse(`${date}T00:00:00Z`) + A_DAY).toISOString().slice(0, 10)
+
+const lastOfMonth = (year: number, month: number): string =>
+  new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+
+const pad = (n: number): string => String(n).padStart(2, "0")
+
+/** The hledger query term a range comes to; empty where it narrows nothing. */
+export const termOf = (range: Range): string =>
+  range.from === "" && range.to === ""
+    ? ""
+    : `date:${range.from}..${range.to === "" ? "" : dayAfter(range.to)}`
+
+/**
+ * Ranges offered in one press, each worked out from today. They fill the two
+ * days in and are nothing more: the days are what narrows the report.
+ *
+ * Kept `as const` because the keys are looked up in the dictionary.
+ */
+export const SHORTCUTS = [
+  {
+    key: "incomeStatement.thisMonth",
+    of: (today: string): Range => {
+      const [year, month] = [Number(today.slice(0, 4)), Number(today.slice(5, 7))]
+      return { from: `${year}-${pad(month)}-01`, to: lastOfMonth(year, month) }
+    },
+  },
+  {
+    key: "incomeStatement.thisYear",
+    of: (today: string): Range => ({ from: `${today.slice(0, 4)}-01-01`, to: `${today.slice(0, 4)}-12-31` }),
+  },
+  {
+    key: "incomeStatement.lastYear",
+    of: (today: string): Range => {
+      const year = Number(today.slice(0, 4)) - 1
+      return { from: `${year}-01-01`, to: `${year}-12-31` }
+    },
+  },
+  { key: "incomeStatement.allTime", of: (): Range => ALL_TIME },
 ] as const
 
-export type Period = (typeof PERIODS)[number]
-
-/** The terms alone, for anything that has to be told which are allowed. */
-export const TERMS: readonly string[] = PERIODS.map((period) => period.term)
-
-export const periodByTerm = (term: string): Period | undefined =>
-  PERIODS.find((period) => period.term === term)
+export const sameRange = (a: Range, b: Range): boolean => a.from === b.from && a.to === b.to

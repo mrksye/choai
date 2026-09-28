@@ -84,6 +84,8 @@ export const en = {
     working: "Working…",
     needsJournal: "Open a journal first.",
     period: "Period",
+    from: "From (included)",
+    to: "To (included)",
     filters: "Filters",
     filtered: "Filters — narrowing this report",
   },

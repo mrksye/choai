@@ -345,3 +345,29 @@ test("the balance sheet's ledger under a period still shows the account's balanc
   await expect(rows.first().locator("td").nth(2)).toHaveText("$-10.00")
   await expect(rows.first().locator("td").last()).toHaveText("$7,932.00")
 })
+
+/**
+ * The period is the two days it runs between. A shortcut only writes them in,
+ * and days typed by hand narrow the report the same way, both of them included.
+ */
+test("a period is two days, which a shortcut fills in and which can be typed", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/income-statement#work")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  const period = page.getByRole("group", { name: "Period" })
+  const from = period.getByLabel("From (included)")
+  const to = period.getByLabel("To (included)")
+
+  const year = await page.evaluate(() => new Date().getFullYear())
+  await period.getByRole("button", { name: "Last year" }).click()
+  await expect(from).toHaveValue(`${year - 1}-01-01`)
+  await expect(to).toHaveValue(`${year - 1}-12-31`)
+
+  // One day, from and to the same one and so included: the restaurant, and not
+  // the rent paid on the first.
+  await from.fill("2026-02-14")
+  await to.fill("2026-02-14")
+  const report = page.locator("main")
+  await expect(report.getByText("food")).toBeVisible()
+  await expect(report.getByText("rent")).toBeHidden()
+})

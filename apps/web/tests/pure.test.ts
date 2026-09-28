@@ -9,7 +9,7 @@ import { textOf } from "~/core/lib/text"
 import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
 import { saidIn } from "~/core/ai/talker"
 import { narrowed } from "~/core/reports/ask"
-import { PERIODS, TERMS, periodByTerm } from "~/core/reports/periods"
+import { ALL_TIME, SHORTCUTS, dayAfter, sameRange, termOf } from "~/core/reports/periods"
 import {
   CAME_AND_WENT,
   OWNED_AND_OWED,
@@ -175,14 +175,26 @@ describe("query terms", () => {
 })
 
 describe("periods", () => {
-  test("every term is one hledger is given as written", () => {
-    expect(TERMS).toEqual(["date:thismonth", "date:thisyear", "date:lastyear", ""])
+  test("two days, both included, go to hledger with its end the day after", () => {
+    expect(termOf({ from: "2026-01-01", to: "2026-12-31" })).toBe("date:2026-01-01..2027-01-01")
+    expect(termOf({ from: "2026-02-01", to: "" })).toBe("date:2026-02-01..")
+    expect(termOf({ from: "", to: "2026-02-28" })).toBe("date:..2026-03-01")
+    expect(termOf(ALL_TIME)).toBe("")
   })
 
-  test("all time is the empty term, and is a period like any other", () => {
-    expect(periodByTerm("")?.key).toBe("incomeStatement.allTime")
-    expect(periodByTerm("date:whenever")).toBeUndefined()
-    expect(PERIODS.length).toBe(4)
+  test("the day after crosses months, years and a leap day as a calendar does", () => {
+    expect(dayAfter("2026-01-31")).toBe("2026-02-01")
+    expect(dayAfter("2026-12-31")).toBe("2027-01-01")
+    expect(dayAfter("2028-02-28")).toBe("2028-02-29")
+  })
+
+  test("a shortcut only writes the two days, worked out from today", () => {
+    const of = (key: string) => SHORTCUTS.find((one) => one.key === key)?.of("2028-02-10")
+    expect(of("incomeStatement.thisMonth")).toEqual({ from: "2028-02-01", to: "2028-02-29" })
+    expect(of("incomeStatement.thisYear")).toEqual({ from: "2028-01-01", to: "2028-12-31" })
+    expect(of("incomeStatement.lastYear")).toEqual({ from: "2027-01-01", to: "2027-12-31" })
+    expect(of("incomeStatement.allTime")).toEqual(ALL_TIME)
+    expect(sameRange({ from: "2028-01-01", to: "2028-12-31" }, of("incomeStatement.thisYear") ?? ALL_TIME)).toBe(true)
   })
 })
 
