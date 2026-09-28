@@ -63,7 +63,6 @@ export const ja: Dictionary = {
   },
   ledger: {
     lead: "この勘定科目と、その下の科目の動きを古い順に並べ、その時点の残高を添えたものです。hledger の register がそのまま元になっています。",
-    back: "すべての科目",
     day: "日",
     description: "摘要",
     amount: "増減",

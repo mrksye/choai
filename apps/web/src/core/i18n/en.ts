@@ -72,7 +72,6 @@ export const en = {
   },
   ledger: {
     lead: "Every movement in this account and the ones under it, oldest first, with the balance after each — hledger's register.",
-    back: "All accounts",
     day: "Day",
     description: "Description",
     amount: "Amount",

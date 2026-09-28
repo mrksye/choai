@@ -32,7 +32,7 @@ export function ReportOrLedger(props: {
 }
 
 function AccountLedger(props: { account: string; narrowing?: string }): JSX.Element {
-  const [query, setQuery] = useQuery()
+  const [query] = useQuery()
 
   const [ledger] = createResource(
     () => {
@@ -44,18 +44,9 @@ function AccountLedger(props: { account: string; narrowing?: string }): JSX.Elem
 
   return (
     <section class="flex flex-col gap-2">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-base font-semibold" title={props.account}>
-          {props.account}
-        </h2>
-        <button
-          type="button"
-          class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          onClick={() => setQuery("")}
-        >
-          {t("ledger.back")}
-        </button>
-      </div>
+      <h2 class="text-base font-semibold" title={props.account}>
+        {props.account}
+      </h2>
       <p class="text-xs text-muted-foreground">{t("ledger.lead")}</p>
       <Show when={getOrUndefined(journal())} fallback={<NeedsAJournal />}>
         {matchResource(ledger(), {
