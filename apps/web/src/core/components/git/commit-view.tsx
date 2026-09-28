@@ -9,10 +9,10 @@ import { DiffView } from "./diff-view"
 /**
  * One commit: what it said, who made it, and every file it changed.
  *
- * Each file is folded until opened, because a commit that touched a dozen
- * files is otherwise a page of patches to scroll past to reach the one wanted.
- * One that changed a single file is opened already, since there is no choosing
- * to do.
+ * Every file is opened already. A book is a handful of files that change
+ * together — an entry and the include that names its file, a declaration and
+ * the entries that use it — so what a commit did is read across all of them at
+ * once; each can still be folded away.
  */
 export function CommitView(props: { readonly sha: string }): JSX.Element {
   const [detail] = createResource(() => props.sha, detailOf)
@@ -42,7 +42,7 @@ export function CommitView(props: { readonly sha: string }): JSX.Element {
             </header>
             <For each={commit().files}>
               {(file) => (
-                <details open={commit().files.length === 1}>
+                <details open>
                   <summary class="cursor-pointer text-xs">
                     <span class="font-mono">{file.path}</span>{" "}
                     <span class="text-success-foreground">+{file.additions}</span>{" "}

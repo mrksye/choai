@@ -40,6 +40,9 @@ const HISTORY = [
 
 const PATCH = "@@ -1,3 +1,3 @@\n 2026-07-01 Opening\n-    assets:bank:checking  $900.00\n+    assets:bank:checking  $1,000.00\n     equity:opening"
 
+/** A second file in the same commit, as a declaration beside the entries using it would be. */
+const ACCOUNTS_PATCH = "@@ -1,1 +1,2 @@\n account assets  ; type:A\n+account assets:bank:checking"
+
 /** Every commit from `head` back, a page at a time, as GitHub walks them. */
 const walked = (history: readonly ReturnType<typeof commit>[], head: string, page: number) => {
   const from = history.findIndex((each) => each.sha === head)
@@ -75,7 +78,10 @@ const answerGitHub = async (
       const found = history.find((each) => each.sha === url.pathname.split("/").at(-1))
       return asJson(route, {
         ...found,
-        files: [{ filename: "books/main.journal", status: "modified", additions: 1, deletions: 1, patch: PATCH }],
+        files: [
+          { filename: "books/main.journal", status: "modified", additions: 1, deletions: 1, patch: PATCH },
+          { filename: "books/accounts.journal", status: "modified", additions: 1, deletions: 0, patch: ACCOUNTS_PATCH },
+        ],
       })
     }
     if (url.pathname.includes("/contents/") && request.method() === "PUT") {
@@ -171,8 +177,10 @@ test("the history is drawn from every branch, and a commit opens to what it chan
   await expect(page.getByText("phone", { exact: true })).toBeVisible()
 
   await page.getByText("Update books/main.journal").click()
-  await expect(page.getByText("1 files changed")).toBeVisible()
+  // Every file it changed is open already, not only when there is one.
+  await expect(page.getByText("2 files changed")).toBeVisible()
   await expect(page.getByRole("cell", { name: "assets:bank:checking  $900.00" })).toBeVisible()
+  await expect(page.getByRole("cell", { name: "account assets:bank:checking", exact: true })).toBeVisible()
 })
 
 test("what was read is still shown when GitHub cannot be asked again", async ({ page }) => {
