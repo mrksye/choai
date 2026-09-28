@@ -168,6 +168,25 @@ three tsconfigs agree on where the seam resolves.
   and `reached: { from: "rail", group }` puts a run of them under one heading, so
   an edition bringing five screens does not silently make the rail nine of equal
   standing.
+- **`core/journal/layout.ts` is where each kind of thing is written.** A book
+  is `main.journal` — its title, `D`, and one `include` per file, never a
+  pattern, so a file hledger finds missing has a name it can be fetched by —
+  beside `accounts.journal`, one `transactions.journal`, and
+  `adjustments/<closing date>.journal`. The ledger is continuous and is never
+  cut into years: a period is `-b`/`-e`, a balance is `-e`, so nothing is ever
+  written to close a year or open the next, and nothing holds a fiscal year as
+  state. A closing is a date handed to the closing work, and what it writes is
+  real entries on that date, kept in their own file so they are read and taken
+  out as one piece; a reversal is worked out from its adjustment and written
+  into the same file, dated the next day, so plain hledger sees what the app
+  sees. Tax adjustments are not entries and do not belong in the journal. New
+  entries go to the transactions, declarations to the accounts; a write that
+  starts a journal file names it in `main.journal` in the same write
+  (`writtenInto`, and `filesOf` for proposals). `D` stays in `main.journal`
+  because hledger carries it into every file included after it. The worker
+  builds real folders for these (`treeOf`), and `journal/handover.ts` hands the
+  same layout over — into a chosen folder where the browser can write one, as a
+  zip where it cannot.
 - **`core/journal/companions.ts` is how a non-journal file travels with a book.**
   A line reading `; choai-file: fixed-assets.jsonl` is a comment to hledger and a
   declaration to this app, written under the title so a rename cannot overwrite
