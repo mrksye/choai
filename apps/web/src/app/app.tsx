@@ -14,7 +14,7 @@ import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
 import { handOver } from "~/core/journal/handover"
 import { searchFor, useQuery } from "~/core/journal/query"
-import { AiChat } from "~/core/components/ai-chat"
+import { AiChat, AiConnection } from "~/core/components/ai-chat"
 import { ProposalReview } from "~/core/components/proposal-review"
 import { sending } from "~/core/ai/store"
 import { createRenewal } from "~/core/lib/renewal"
@@ -42,6 +42,8 @@ const dockTitle = (showing: InTheDock | undefined): string => {
       return t("propose.title")
     case "chatting":
       return t("ai.dock")
+    case "connecting":
+      return t("ai.connection")
     case "composing":
     case undefined:
       return t("compose.title")
@@ -440,6 +442,18 @@ export function Layout(props: ParentProps) {
                     </button>
                   )}
                 </Show>
+                <Show when={getOrUndefined(journal()) !== undefined}>
+                  <button
+                    type="button"
+                    onClick={() => (dock.is("chatting") ? putDown() : chat())}
+                    aria-label={t("ai.dock")}
+                    title={t("ai.dock")}
+                    class="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    classList={{ "bg-accent text-foreground": dock.is("chatting") || dock.is("connecting") }}
+                  >
+                    <SparklesIcon class="h-4 w-4" />
+                  </button>
+                </Show>
                 {/* Last, and there whether or not a journal is open: the keys
                     work either way. */}
                 <ShortcutsHelp />
@@ -528,18 +542,6 @@ export function Layout(props: ParentProps) {
                       <PlusIcon />
                     </Button>
                   </Show>
-                  <Show when={getOrUndefined(journal()) !== undefined}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={chat}
-                      aria-label={t("ai.dock")}
-                      title={t("ai.dock")}
-                      class="size-6 text-muted-foreground"
-                    >
-                      <SparklesIcon />
-                    </Button>
-                  </Show>
                 </div>
               </>
             }
@@ -568,6 +570,9 @@ export function Layout(props: ParentProps) {
             </Show>
             <Show when={dock.showing() === "chatting"}>
               <AiChat />
+            </Show>
+            <Show when={dock.showing() === "connecting"}>
+              <AiConnection />
             </Show>
             <Show when={dock.showing() === "composing"}>
               <ComposePanel />

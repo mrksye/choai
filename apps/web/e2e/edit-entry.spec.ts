@@ -118,9 +118,9 @@ test("a proposal taking the panel keeps it, rather than being closed by the entr
 })
 
 /**
- * The journal's own text is still the journal, and asking is offered wherever a
- * journal is open at all — so the one that comes and goes is the one that moves,
- * and the other keeps the same place on every screen.
+ * The journal's own text is still the journal, so the header beside it offers
+ * the same things. Asking is not the journal's: it sits in the top bar, in the
+ * same place on every screen a journal is open on.
  */
 test("the header offers the same things on the journal and on its text", async ({ page }) => {
   await openTheDemo(page)
@@ -130,16 +130,19 @@ test("the header offers the same things on the journal and on its text", async (
       .first()
       .locator("button[aria-label]")
       .evaluateAll((all) => all.map((one) => one.getAttribute("aria-label")))
+  const ask = page.getByRole("button", { name: "Ask", exact: true })
 
-  await expect.poll(icons).toEqual(["Edit the text", "New entry", "Ask"])
+  await expect.poll(icons).toEqual(["Edit the text", "New entry"])
+  await expect(ask).toBeVisible()
 
   await page.getByRole("button", { name: "Edit the text" }).click()
   await expect(page).toHaveURL(/\/source/)
-  await expect.poll(icons).toEqual(["Edit the text", "New entry", "Ask"])
+  await expect.poll(icons).toEqual(["Edit the text", "New entry"])
+  await expect(ask).toBeVisible()
 
-  // Asking stays at the far end where writing an entry is not offered at all.
   await page.getByRole("button", { name: "Trial balance", exact: true }).first().click()
-  await expect.poll(icons).toEqual(["Ask"])
+  await expect.poll(icons).toEqual([])
+  await expect(ask).toBeVisible()
 })
 
 /**

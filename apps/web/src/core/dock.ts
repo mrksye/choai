@@ -6,9 +6,9 @@ import type { Layer } from "~/core/address/address"
 /**
  * The panel beside the journal, and who has it.
  *
- * Four things want that space and none of them wants it at the same time as
- * another: writing an entry, correcting one, talking about the books, and
- * deciding about entries something else wrote. It is one space, so it is one
+ * Five things want that space and none of them wants it at the same time as
+ * another: writing an entry, correcting one, talking about the books, saying
+ * who to talk to about them, and deciding about entries something else wrote. It is one space, so it is one
  * piece of state — the name of whoever it is lent to — rather than a flag on
  * each of them and a rule deciding which flag wins.
  *
@@ -19,13 +19,14 @@ import type { Layer } from "~/core/address/address"
  * corrected: each is kept by whoever owns it, and putting the panel down costs
  * none of them.
  */
-export type InTheDock = "composing" | "editing" | "chatting" | "reviewing"
+export type InTheDock = "composing" | "editing" | "chatting" | "connecting" | "reviewing"
 
 /** What each is called in the address. */
 export const LAYER_OF: Readonly<Record<InTheDock, Layer>> = {
   composing: "compose",
   editing: "edit",
   chatting: "chat",
+  connecting: "connect",
   reviewing: "review",
 }
 

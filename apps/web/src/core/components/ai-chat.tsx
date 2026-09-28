@@ -19,47 +19,50 @@ import {
   stoppable,
 } from "~/core/ai/store"
 import type { Shown, Spent } from "~/core/ai/talker"
-import { wording } from "~/core/components/ai-key-panel"
+import { AiKeyPanel, wording } from "~/core/components/ai-key-panel"
 import { HitchNote } from "~/core/components/hitch-note"
 import { ProposalReview } from "~/core/components/proposal-review"
 import { underReview } from "~/core/journal/proposals"
 import type { Hitch } from "~/core/api/hitch"
 import { Button } from "~/core/components/ui/button"
 import { Ellipsis } from "~/core/lib/ui/ellipsis"
-import { CircleStopIcon, PaperclipIcon, SendIcon, XIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, CircleStopIcon, PaperclipIcon, SendIcon, SettingsIcon, XIcon } from "~/core/lib/ui/icons"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
-import { useMoves } from "~/core/address/moves"
 import { dock } from "~/core/dock"
-import { narrow } from "~/core/lib/narrow"
 
 /**
- * Said in place of the conversation until there is a key to hold one with.
- *
- * A move rather than a link: the panel is in the address beside the page, and
- * a link names a whole address and would close the panel on the way there.
- * Where the window is too narrow for both, the panel covers the page, so it is
- * put down instead — left open, it would hide the very settings it pointed to.
+ * Said in place of the conversation until there is a key to hold one with, and
+ * followed by where one is saved — here, so that saving it is seen to take.
  */
 function NeedsKey(): JSX.Element {
-  const moves = useMoves()
-  const toWhereKeysAreSaved = (): void => {
-    moves.goTo("/settings#ai")
-    if (narrow()) dock.close()
-  }
   return (
-    <p class="text-sm text-muted-foreground">
-      {t("ai.needsKey")}
-      <br />
+    <div class="flex flex-col gap-4">
+      <p class="text-sm text-muted-foreground">{t("ai.needsKey")}</p>
+      <AiKeyPanel />
+    </div>
+  )
+}
+
+/**
+ * Who is being asked, and with which key, in the same panel as the asking.
+ *
+ * Its own occupant of the dock rather than a part of the conversation, so the
+ * way back to the conversation is the browser's back as well as the button.
+ */
+export function AiConnection(): JSX.Element {
+  return (
+    <div class="flex flex-col gap-4 p-3">
       <button
         type="button"
-        class="underline underline-offset-2 hover:text-foreground"
-        onClick={toWhereKeysAreSaved}
+        class="inline-flex items-center gap-1 self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        onClick={() => dock.show("chatting")}
       >
-        {t("ai.saveKeyInSettings")}
+        <ChevronLeftIcon class="h-3 w-3" />
+        {t("ai.backToChat")}
       </button>
-      {t("ai.saveKeyAfter")}
-    </p>
+      <AiKeyPanel />
+    </div>
   )
 }
 
@@ -224,6 +227,15 @@ export function AiChat(): JSX.Element {
               }}
             />
           </label>
+          <button
+            type="button"
+            class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            aria-label={t("ai.connection")}
+            title={t("ai.connection")}
+            onClick={() => dock.show("connecting")}
+          >
+            <SettingsIcon class="h-4 w-4" />
+          </button>
           <Show when={anythingSaid()}>
             <Button size="sm" variant="ghost" disabled={sending()} onClick={forgetChat}>
               {t("ai.forget")}

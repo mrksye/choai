@@ -312,7 +312,7 @@ const answerWith = async (
 
 /** Saving sends nothing, so every request a test counts is one it asked for. */
 const connect = async (page: Page, wire: Wire): Promise<void> => {
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: wire.label, exact: true }).click()
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
@@ -339,14 +339,12 @@ const askThat = async (page: Page, question: string): Promise<void> => {
 }
 
 /**
- * With no key, the panel says where one is saved and goes there, and stays
- * open beside the settings so that saving one is seen to take.
+ * With no key, the panel asks for one where it stands, so saving it is seen to
+ * take without going anywhere.
  */
-test("a missing key leads to where one is saved, and saving it is seen at once", async ({ page }) => {
+test("a missing key is asked for in the panel, and saving it is seen at once", async ({ page }) => {
   await page.goto("/journal#work+chat")
   await expect(page.getByText("No API key is set for the AI.")).toBeVisible()
-  await page.getByRole("button", { name: "Save an API key in settings" }).click()
-  await expect(page).toHaveURL(/\/settings#ai\+/)
 
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
@@ -354,14 +352,25 @@ test("a missing key leads to where one is saved, and saving it is seen at once",
   await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
 })
 
-/** On a phone the panel covers the page, so it is put down to show the settings. */
-test("on a phone, the way to a key puts the panel down to show where it goes", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+/**
+ * The connection is in the panel beside the conversation, not among the
+ * settings, and going to it is a change of address that back undoes.
+ */
+test("the connection is reached from the conversation and left by going back", async ({ page }) => {
+  await connect(page, CLAUDE)
   await page.goto("/journal#work+chat")
-  await page.getByRole("button", { name: "Save an API key in settings" }).click()
-  await expect(page).toHaveURL(/\/settings#ai(?!.*chat)/)
-  await expect(page.getByLabel("API key")).toBeInViewport()
-  await expect(page.getByText("No API key is set for the AI.")).toBeHidden()
+
+  await page.getByRole("button", { name: "AI connection" }).click()
+  await expect(page).toHaveURL(/#work\+connect$/)
+  await expect(page.getByRole("button", { name: "Disconnect and forget the key" })).toBeVisible()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#work\+chat$/)
+  await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
+
+  await page.getByRole("button", { name: "AI connection" }).click()
+  await page.getByRole("button", { name: "Back to the conversation" }).click()
+  await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
 })
 
 /**
@@ -375,7 +384,7 @@ test("on a phone, the way to a key puts the panel down to show where it goes", a
 test("a key that is not accepted is said so when it is checked", async ({ page }) => {
   await page.route(CLAUDE.host, (route) => asJson(route, {}, 401))
 
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Check the connection" }).click()
 
@@ -596,7 +605,7 @@ test("what a model takes is what it is sent, and both are offered", async ({ pag
 
   // The same conversation, to a model that would refuse every one of those. The
   // picker still holds them on the way back, without another request for it.
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByLabel("Model").fill("claude-sonnet-4-5")
   await page.getByRole("button", { name: "Save", exact: true }).click()
   await expect(page.getByText("Claude Sonnet 4.5").last()).toBeVisible()
@@ -1058,7 +1067,7 @@ test("ChatGPT: a key that lists nothing says so rather than showing one model", 
     route.request().method() === "GET" ? asJson(route, {}, 401) : asJson(route, OPENAI.answers),
   )
 
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: "ChatGPT", exact: true }).click()
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
@@ -1074,7 +1083,7 @@ test("ChatGPT: a key reaching nothing usable says which way it failed", async ({
       : asJson(route, OPENAI.answers),
   )
 
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: "ChatGPT", exact: true }).click()
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
@@ -1098,7 +1107,7 @@ test("ChatGPT: clearing the model box leaves it cleared", async ({ page }) => {
 
   // Empty before anything has been saved: an unasked-for name in the box reads
   // as a decision, and what would be used instead is in the placeholder.
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: "ChatGPT", exact: true }).click()
   await expect(page.getByLabel("Model")).toHaveValue("")
 
@@ -1160,7 +1169,7 @@ test("ChatGPT: a check that answers keeps the setting", async ({ page }) => {
     route.request().method() === "GET" ? asJson(route, OPENAI_LISTS) : asJson(route, OPENAI.answers),
   )
 
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: "ChatGPT", exact: true }).click()
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByLabel("Model").fill("gpt-4.1")
@@ -1347,7 +1356,7 @@ test("Qwen and OpenRouter are the same talker at another address", async ({ page
   }
 
   for (const label of ["Qwen", "OpenRouter"]) {
-    await page.goto("/settings")
+    await page.goto("/journal#work+connect")
     await page.getByRole("button", { name: label, exact: true }).click()
     await page.getByLabel("API key").fill(NOT_A_KEY)
     await page.getByRole("button", { name: "Check the connection" }).click()
@@ -1370,7 +1379,7 @@ test("Qwen and OpenRouter are the same talker at another address", async ({ page
  * anybody seeing it.
  */
 test("a provider's caveat is said before its key is asked for", async ({ page }) => {
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
 
   await page.getByRole("button", { name: "DeepSeek", exact: true }).click()
   await expect(page.getByText("only deepseek-flash takes images")).toBeVisible()

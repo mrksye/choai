@@ -722,7 +722,7 @@ const askAndCatchWhatWasSent = async (page: Page): Promise<string> => {
 
   await openTheDemo(page)
 
-  await page.goto("/settings")
+  await page.goto("/journal#work+connect")
   await page.getByRole("button", { name: "Claude", exact: true }).click()
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
