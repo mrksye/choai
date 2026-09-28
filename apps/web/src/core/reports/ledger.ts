@@ -1,4 +1,4 @@
-import type { MixedAmount, RegisterRow, Transaction } from "~/core/hledger/wire"
+import type { BalanceReport, MixedAmount, RegisterRow, Transaction } from "~/core/hledger/wire"
 
 /** One movement in an account's ledger, oldest first, with the balance after it. */
 export interface LedgerLine {
@@ -65,3 +65,14 @@ export const byMonth = (lines: readonly LedgerLine[]): readonly LedgerMonth[] =>
       ? [...months.slice(0, -1), { month: last.month, lines: [...last.lines, line] }]
       : [...months, { month: month ?? "", lines: [line] }]
   }, [])
+
+/** The accounts a report has a row for, leaving out the totals row, which names none. */
+export const namedIn = (report: BalanceReport): readonly string[] =>
+  report.prRows.flatMap((row) => (typeof row.prrName === "string" ? [row.prrName] : []))
+
+/**
+ * Whether an account has a ledger to show: it, or something beneath it, was
+ * posted to. Asked of `moved` whole, so a parent with a busy child is not empty.
+ */
+export const hasMovement = (account: string, moved: readonly string[]): boolean =>
+  moved.some((candidate) => within(account, candidate))

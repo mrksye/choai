@@ -1,6 +1,7 @@
 import { For, Show, type JSX } from "solid-js"
 
 import { journal } from "~/core/journal/store"
+import { hasMovementNow } from "~/core/journal/moved"
 import { accountQuery, useQuery } from "~/core/journal/query"
 import { ofKindsNow } from "~/core/journal/chart"
 import { CAME_AND_WENT } from "~/core/journal/declarations"
@@ -64,6 +65,7 @@ export function IncomeStatementExplorer(props: {
                         "bg-accent text-accent-foreground": chosen(account),
                         "sticky top-0 z-10 font-medium": depthOf(account) === 0,
                         "bg-card": depthOf(account) === 0 && !chosen(account),
+                        "text-muted-foreground/60": !chosen(account) && !hasMovementNow(account),
                       }}
                       style={{ "padding-left": `${0.75 + depthOf(account) * 0.75}rem` }}
                     >

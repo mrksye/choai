@@ -232,3 +232,34 @@ test("a ledger's balances are hledger's running totals, and its other side is na
   await expect(rows.nth(2).getByTitle("assets:bank:checking")).toBeVisible()
   await expect(rows.nth(2).locator("td").last()).toHaveText("$247.15")
 })
+
+/**
+ * An account nothing was posted to has no ledger, so the list beside a report
+ * sets it back rather than offering it as though choosing it would show
+ * something. A parent is set back only while everything beneath it is empty.
+ */
+test("an account nothing was posted to is set back in the list beside a report", async ({ page }) => {
+  await page.goto("/")
+  await page.evaluate(() => window.choai.ready)
+  await page.getByRole("button", { name: "Start an empty journal" }).click()
+  await expect.poll(async () => (await page.evaluate(() => window.choai.journal.summary({}))).ok).toBe(true)
+  await page.goto("/balance-sheet#work")
+
+  const assets = page.getByRole("button", { name: "assets", exact: true })
+  const liabilities = page.getByRole("button", { name: "liabilities", exact: true })
+  await expect(assets).toHaveClass(/text-muted-foreground\/60/)
+  await expect(liabilities).toHaveClass(/text-muted-foreground\/60/)
+
+  const done = await page.evaluate(() =>
+    window.choai.transaction.create({
+      date: "2026-07-03",
+      payee: "First",
+      postings: [{ account: "assets:cash", amount: "10.00" }, { account: "equity:opening" }],
+    }),
+  )
+  expect(done.ok).toBe(true)
+
+  await expect(assets).not.toHaveClass(/text-muted-foreground\/60/)
+  await expect(page.getByRole("button", { name: "cash", exact: true })).not.toHaveClass(/text-muted-foreground\/60/)
+  await expect(liabilities).toHaveClass(/text-muted-foreground\/60/)
+})

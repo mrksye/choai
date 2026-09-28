@@ -26,8 +26,8 @@ import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { byTop } from "~/core/explorer/tree"
 import { accountChosenIn, accountQuery } from "~/core/journal/account-query"
-import { byMonth, counterpartsOf, dayOf, ledgerOf, within } from "~/core/reports/ledger"
-import type { RegisterRow, Transaction } from "~/core/hledger/wire"
+import { byMonth, counterpartsOf, dayOf, hasMovement, ledgerOf, namedIn, within } from "~/core/reports/ledger"
+import type { BalanceReport, RegisterRow, Transaction } from "~/core/hledger/wire"
 import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
@@ -955,5 +955,19 @@ describe("an account's ledger", () => {
     expect(months.map((month) => month.lines.length)).toEqual([2, 2])
     expect(byMonth([])).toEqual([])
     expect(dayOf("2026-02-01")).toBe("01")
+  })
+
+  test("an account has movement where it or anything beneath it was posted to", () => {
+    const report = {
+      prRows: [{ prrName: "assets:bank:checking", prrTotal: [] }, { prrName: "liabilities:card", prrTotal: [] }],
+      prTotals: { prrName: [], prrTotal: [] },
+    } as BalanceReport
+    const moved = namedIn(report)
+    expect(moved).toEqual(["assets:bank:checking", "liabilities:card"])
+    expect(hasMovement("assets", moved)).toBe(true)
+    expect(hasMovement("assets:bank", moved)).toBe(true)
+    expect(hasMovement("assets:cash", moved)).toBe(false)
+    expect(hasMovement("assets:bank:checking:old", moved)).toBe(false)
+    expect(hasMovement("liabilities:car", moved)).toBe(false)
   })
 })
