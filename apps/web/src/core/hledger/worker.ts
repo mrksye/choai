@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { WASI, File, OpenFile, PreopenDirectory, ConsoleStdout } from "@bjorn3/browser_wasi_shim"
+import { WASI, Directory, File, OpenFile, PreopenDirectory, ConsoleStdout } from "@bjorn3/browser_wasi_shim"
 import ghcJsffi from "./ghc-jsffi.mjs"
 import type { Request, Trouble } from "./wire"
 
@@ -35,7 +35,7 @@ type WithoutId<T> = T extends { id: number } ? Omit<T, "id"> : never
 export type Ask = WithoutId<Incoming>
 export type Reply = WithoutId<Outgoing>
 
-const directory = new Map<string, File>()
+const directory = new Map<string, File | Directory>()
 
 const started: { instance?: Exports } = {}
 
@@ -90,16 +90,45 @@ const running = async (): Promise<Exports> => {
   return instance
 }
 
+type Entry = readonly [string, File | Directory]
+
+/**
+ * The files as the folders their names say they are in.
+ *
+ * The shim walks a path one folder at a time, so `adjustments/2027-08-20.journal`
+ * has to be a file inside a folder called `adjustments` — held as one name with
+ * a slash in it, an `include` of it is never found, and a folder hledger lists
+ * holds a name no file has.
+ */
+const treeOf = (files: readonly (readonly [string, string])[]): readonly Entry[] => {
+  const encoder = new TextEncoder()
+  const here = files.filter(([path]) => !path.includes("/"))
+  const below = files.filter(([path]) => path.includes("/"))
+  const folders = [...new Set(below.map(([path]) => path.slice(0, path.indexOf("/"))))]
+  return [
+    ...here.map(([name, contents]): Entry => [name, new File(encoder.encode(contents))]),
+    ...folders.map((folder): Entry => [
+      folder,
+      new Directory(
+        new Map(
+          treeOf(
+            below
+              .filter(([path]) => path.startsWith(`${folder}/`))
+              .map(([path, contents]) => [path.slice(folder.length + 1), contents] as const),
+          ),
+        ),
+      ),
+    ]),
+  ]
+}
+
 /**
  * Replace what is in the filesystem, keeping the instance and with it the
- * compiled module.
+ * compiled module. The map itself is kept because the preopened directory holds it.
  */
 const replaceFiles = (files: Readonly<Record<string, string>>): void => {
-  const encoder = new TextEncoder()
   directory.clear()
-  for (const [name, contents] of Object.entries(files)) {
-    directory.set(name, new File(encoder.encode(contents)))
-  }
+  treeOf(Object.entries(files)).forEach(([name, entry]) => directory.set(name, entry))
 }
 
 /** Open the envelope Bindings.hs wrapped its answer in. */
