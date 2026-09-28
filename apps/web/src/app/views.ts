@@ -1,14 +1,23 @@
 import { edition } from "~/edition"
 import { viewsWith, type View } from "~/edition/types"
-import { JOURNAL } from "~/core/address/address"
+import { JOURNAL, SOURCE } from "~/core/address/address"
 import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
 import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
 import { GitExplorer } from "~/core/explorer/GitExplorer"
 import { JournalExplorer } from "~/core/explorer/JournalExplorer"
+import { SourceExplorer } from "~/core/explorer/SourceExplorer"
 import { SettingsExplorer } from "~/core/explorer/SettingsExplorer"
 import { TrialBalanceExplorer } from "~/core/explorer/TrialBalanceExplorer"
 import { t } from "~/core/i18n"
-import { BookOpenIcon, GitBranchIcon, ReceiptIcon, ScaleIcon, SettingsIcon, TrendingUpIcon } from "~/core/lib/ui/icons"
+import {
+  BookOpenIcon,
+  FileCodeIcon,
+  GitBranchIcon,
+  ReceiptIcon,
+  ScaleIcon,
+  SettingsIcon,
+  TrendingUpIcon,
+} from "~/core/lib/ui/icons"
 import Add from "~/core/routes/add"
 import BalanceSheet from "~/core/routes/balance-sheet"
 import Git from "~/core/routes/git"
@@ -31,10 +40,10 @@ import TrialBalance from "~/core/routes/trial-balance"
  * gathered and checked, and the two statements are what the check makes it safe
  * to read. The daily journal is first on both counts — it is where the books
  * are kept and it is what the app is opened for; the rest are things you go and
- * look at.
+ * look at. Last among them is the text all of it is read from, for what no
+ * screen writes — a correction, a directive, a comment.
  */
-/** The journal's own text, which sits under it rather than beside it. */
-export const SOURCE = `${JOURNAL}/source`
+export { SOURCE }
 
 export const ADD = "/add"
 
@@ -73,6 +82,15 @@ const CORE: readonly View[] = [
     Explorer: IncomeStatementExplorer,
     page: IncomeStatement,
     writes: false,
+    reached: { from: "rail" },
+  },
+  {
+    href: SOURCE,
+    label: () => t("source.title"),
+    Icon: FileCodeIcon,
+    Explorer: SourceExplorer,
+    page: Source,
+    writes: true,
     reached: { from: "rail" },
   },
   // Neither is one of the books, so both sit at the foot of the rail,
@@ -114,15 +132,6 @@ const CORE: readonly View[] = [
     Explorer: JournalExplorer,
     page: Add,
     writes: false,
-    reached: { from: "within", under: JOURNAL },
-  },
-  {
-    href: SOURCE,
-    label: () => t("source.title"),
-    Icon: ReceiptIcon,
-    Explorer: JournalExplorer,
-    page: Source,
-    writes: true,
     reached: { from: "within", under: JOURNAL },
   },
 ]

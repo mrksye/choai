@@ -7,8 +7,8 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, DownloadIcon, FileCodeIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
-import { ADD, FOOT, NAV, SOURCE, railOf, viewAt } from "./views"
+import { ChevronLeftIcon, DownloadIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
@@ -25,7 +25,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { JOURNAL, atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
+import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -345,7 +345,6 @@ export function Layout(props: ParentProps) {
   })
 
   /** Whether the journal's own text is what is on screen. */
-  const onSource = (): boolean => location.pathname === SOURCE
 
   /** The view being shown, which is what the explorer beside it belongs to. */
   const current = (): View => viewAt(location.pathname)
@@ -498,36 +497,6 @@ export function Layout(props: ParentProps) {
                 {/* One group at the far end, so the two ways of writing sit
                     together rather than being spread across the heading. */}
                 <div class="flex items-center gap-1">
-                  <Show when={railOf(current()) === JOURNAL && getOrUndefined(journal()) !== undefined}>
-                    {/* The text behind the view being looked at, which is the
-                        journal's own business rather than a view of its own.
-                        A switch that shows it is on, rather than a button that
-                        turns into an arrow: the rail cannot say you are here —
-                        the text sits under the journal and lights the same lamp
-                        — so this is the only thing on screen that can, and
-                        something already lit is not something anybody presses to
-                        leave. */}
-                    {/* A plain button rather than the one beside it: that one
-                        sets every icon inside it to 16px, and a page with code
-                        on it needs the extra two to be read as one. */}
-                    <button
-                      type="button"
-                      aria-pressed={onSource()}
-                      onClick={() => {
-                        moves.goTo(onSource() ? JOURNAL : SOURCE)
-                        showTheWork()
-                      }}
-                      aria-label={t("source.title")}
-                      title={t("source.title")}
-                      class="inline-flex size-6 items-center justify-center rounded transition-colors hover:bg-accent hover:text-foreground"
-                      classList={{
-                        "bg-accent text-accent-foreground": onSource(),
-                        "text-muted-foreground": !onSource(),
-                      }}
-                    >
-                      <FileCodeIcon class="h-[18px] w-[18px]" />
-                    </button>
-                  </Show>
                   <Show when={current().writes && getOrUndefined(journal()) !== undefined}>
                     <Button
                       variant="outline"

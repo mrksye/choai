@@ -111,84 +111,57 @@ test("a window with room for both is left as it was", async ({ page }) => {
 })
 
 /**
- * Going to the text behind the journal is going to the work, not staying in the
- * list — so it puts the list away like choosing an account does.
- *
- * The way in is a switch rather than a button that turns into an arrow. The rail
- * cannot say you are on the text, because the text sits under the journal and
- * lights the same lamp; this is the only thing on screen that can, and something
- * already lit is not something anybody presses to leave.
+ * The journal's text is a view of its own on the rail, and the list beside it
+ * is the files the journal is written in. On a phone the rail leads to that
+ * list, and choosing a file there is how the text is reached.
  */
-const theText = (page: Page) => page.getByRole("button", { name: "Edit the text" })
+const theText = (page: Page) => page.getByRole("button", { name: "Edit the text", exact: true }).first()
+const theFile = (page: Page) => page.getByRole("button", { name: "demo.journal", exact: true })
 
-test("going to the journal's text opens it as the work", async ({ page }) => {
+test("on a narrow window the text is reached by choosing its file", async ({ page }) => {
   await page.setViewportSize(PHONE)
   await openTheDemo(page)
   await back(page).click()
 
   await theText(page).click()
+  await expect(theFile(page)).toBeVisible()
 
-  await expect(explorer(page)).toBeHidden()
+  await theFile(page).click()
+  await expect(theFile(page)).toBeHidden()
   await expect(back(page)).toBeVisible()
-  await expect(page).toHaveURL(/\/source/)
-
-  // Back to the list, where the switch says where you are.
-  await back(page).click()
-  await expect(explorer(page)).toBeVisible()
-  await expect(theText(page)).toHaveAttribute("aria-pressed", "true")
-
-  // And the same switch is how it is left.
-  await theText(page).click()
-  await expect(page).toHaveURL(/\/journal(\?[^#]*)?(#work)?$/)
-  await expect(explorer(page)).toBeHidden()
+  await expect(page).toHaveURL(/\/source#demo\.journal$/)
+  await expect(page.locator("textarea")).toBeVisible()
 })
 
-/** With room for both, it is a filter's neighbour and moves nothing. */
-test("on a wide window the text is opened beside the list, not instead of it", async ({ page }) => {
+/** With room for both, the file list and the text are side by side. */
+test("on a wide window the text is opened beside its files", async ({ page }) => {
   await page.setViewportSize(DESK)
   await openTheDemo(page)
 
   await theText(page).click()
 
-  await expect(explorer(page)).toBeVisible()
+  await expect(theFile(page)).toBeVisible()
   await expect(back(page)).toBeHidden()
   await expect(page).toHaveURL(/\/source/)
-
-  // The switch is lit, and pressing it is the way back — the rail cannot be,
-  // since the journal's lamp is already on while the text is showing.
-  await expect(theText(page)).toHaveAttribute("aria-pressed", "true")
-  await theText(page).click()
-  await expect(page).toHaveURL(/\/journal(\?[^#]*)?(#work)?$/)
-  await expect(theText(page)).toHaveAttribute("aria-pressed", "false")
+  await expect(page.locator("textarea")).toBeVisible()
 })
 
 /**
- * The list is also the way out of the text.
- *
- * The text borrows the journal's account list and has no use for what the list
- * sets, so choosing there changed a query behind a page that does not read it:
- * nothing moved, and the only way out was the switch that led in.
+ * Text typed and not saved is kept while the text is left, and the file it is
+ * typed over says so in the list.
  */
-test("choosing an account leaves the journal's text, carrying the choice with it", async ({
-  page,
-}) => {
+test("unsaved text survives leaving the text, and its file is marked", async ({ page }) => {
   await page.setViewportSize(DESK)
   await openTheDemo(page)
   await theText(page).click()
-  await expect(page).toHaveURL(/\/source/)
 
-  await anAccount(page).click()
+  await page.locator("textarea").fill("; typed and not saved\n")
+  await expect(theFile(page)).toBeHidden()
+  await expect(page.getByRole("button", { name: /^demo\.journal/ })).toContainText("•")
 
-  // The page and the query change together. Set one after the other they are two
-  // navigations in a tick, and the router keeps the last of them, which is how a
-  // query set first comes to be dropped by the page that follows it.
-  await expect(page).toHaveURL(/\/journal\?q=/)
-  await expect(page.getByRole("searchbox")).toHaveValue("acct:expenses:food")
-  await expect(theText(page)).toHaveAttribute("aria-pressed", "false")
-
-  // Leaving a page is going somewhere, so the text is still behind you.
-  await page.goBack()
-  await expect(page).toHaveURL(/\/source/)
+  await page.getByRole("button", { name: "Journal", exact: true }).first().click()
+  await theText(page).click()
+  await expect(page.locator("textarea")).toHaveValue("; typed and not saved\n")
 })
 
 /**

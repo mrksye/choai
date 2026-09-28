@@ -1,6 +1,9 @@
-import { For, Show, createSignal, type JSX } from "solid-js"
+import { Show, createSignal, type JSX } from "solid-js"
+import { useLocation } from "@solidjs/router"
 
 import { journal, rewriteFile, type OpenJournal } from "~/core/journal/store"
+import { differsFrom, holdText, letTextGo, unsavedText } from "~/core/journal/unsaved-text"
+import { fileOfSource } from "~/core/address/address"
 import type { Trouble } from "~/core/hledger/wire"
 import { getOrUndefined } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
@@ -27,54 +30,35 @@ export default function Source(): JSX.Element {
   )
 }
 
+/**
+ * One file at a time, the one the address names — chosen in the list beside
+ * this page — or the one entries are read from where it names none.
+ */
 function Editor(props: { open: OpenJournal }): JSX.Element {
-  const paths = (): string[] => Object.keys(props.open.source.files)
-  const [path, setPath] = createSignal(entryPath(props.open))
-  const [edits, setEdits] = createSignal<Readonly<Record<string, string>>>({})
+  const location = useLocation()
+  const path = (): string => fileShown(location.hash, props.open)
   const [trouble, setTrouble] = createSignal<Trouble | undefined>(undefined)
   const [saving, setSaving] = createSignal(false)
 
   const stored = (): string => props.open.source.files[path()] ?? ""
   /** What is in the box: the edit in progress, or the file as it stands. */
-  const text = (): string => edits()[path()] ?? stored()
-  const changed = (): boolean => text() !== stored()
-
-  /**
-   * Edits are held per file rather than in one box, so that looking at another
-   * file and coming back does not throw away what was typed.
-   */
-  const edit = (written: string): void => {
-    setEdits({ ...edits(), [path()]: written })
-  }
+  const text = (): string => unsavedText(path()) ?? stored()
+  const changed = (): boolean => differsFrom(path(), stored())
 
   const save = async (): Promise<void> => {
+    const saved = path()
     setSaving(true)
-    const result = await rewriteFile(path(), text())
+    const result = await rewriteFile(saved, text())
     setSaving(false)
     setTrouble(result.ok ? undefined : result.error)
-    if (result.ok) setEdits(withoutKey(edits(), path()))
+    if (result.ok) letTextGo(saved)
   }
 
   return (
     /* flex-1 asks the page column for the height it has; see app.tsx. */
     <div class="flex flex-1 flex-col gap-2">
-      <Show when={paths().length > 1}>
-        <div class="flex flex-wrap gap-1">
-          <For each={paths()}>
-            {(each) => (
-              <Button
-                variant={each === path() ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPath(each)}
-              >
-                {each}
-                <Show when={edits()[each] !== undefined && edits()[each] !== props.open.source.files[each]}>
-                  <span aria-hidden="true"> •</span>
-                </Show>
-              </Button>
-            )}
-          </For>
-        </div>
+      <Show when={Object.keys(props.open.source.files).length > 1}>
+        <p class="font-mono text-xs text-muted-foreground">{path()}</p>
       </Show>
 
       {/* The box takes the height the screen has rather than a fixed number of
@@ -90,7 +74,7 @@ function Editor(props: { open: OpenJournal }): JSX.Element {
         autocapitalize="off"
         autocorrect="off"
         value={text()}
-        onInput={(event) => edit(event.currentTarget.value)}
+        onInput={(event) => holdText(path(), event.currentTarget.value)}
       />
 
       <div class="flex items-center gap-2">
@@ -109,10 +93,10 @@ function Editor(props: { open: OpenJournal }): JSX.Element {
 }
 
 /** The file entries are read from, as it is keyed among the others. */
-const entryPath = (open: OpenJournal): string => open.source.entry.replace(/^\//, "")
+export const entryPath = (open: OpenJournal): string => open.source.entry.replace(/^\//, "")
 
-const withoutKey = (
-  edits: Readonly<Record<string, string>>,
-  key: string,
-): Readonly<Record<string, string>> =>
-  Object.fromEntries(Object.entries(edits).filter(([each]) => each !== key))
+/** The file the address names, where the journal has one by that name; otherwise the entry file. */
+export const fileShown = (hash: string, open: OpenJournal): string => {
+  const named = fileOfSource(hash)
+  return named !== undefined && named in open.source.files ? named : entryPath(open)
+}
