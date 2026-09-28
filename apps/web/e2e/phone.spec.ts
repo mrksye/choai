@@ -144,6 +144,11 @@ test("on a wide window the text is opened beside its files", async ({ page }) =>
   await expect(back(page)).toBeHidden()
   await expect(page).toHaveURL(/\/source/)
   await expect(page.locator("textarea")).toBeVisible()
+
+  // Taking the files away is offered under them, and nowhere in the top bar.
+  const download = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Export the journal" }).click()
+  expect((await download).suggestedFilename()).toBe("demo.journal")
 })
 
 /**

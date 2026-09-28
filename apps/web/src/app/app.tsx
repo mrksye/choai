@@ -7,12 +7,11 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, DownloadIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
-import { handOver } from "~/core/journal/handover"
 import { searchFor, useQuery } from "~/core/journal/query"
 import { AiChat, AiConnection } from "~/core/components/ai-chat"
 import { ProposalReview } from "~/core/components/proposal-review"
@@ -427,19 +426,6 @@ export function Layout(props: ParentProps) {
                   >
                     <RefreshIcon class="h-4 w-4" />
                   </button>
-                </Show>
-                <Show when={getOrUndefined(journal())}>
-                  {(open) => (
-                    <button
-                      type="button"
-                      onClick={() => void handOver(open().source)}
-                      aria-label={t("journal.export")}
-                      title={t("journal.export")}
-                      class="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    >
-                      <DownloadIcon class="h-4 w-4" />
-                    </button>
-                  )}
                 </Show>
                 <Show when={getOrUndefined(journal()) !== undefined}>
                   <button

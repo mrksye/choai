@@ -2,6 +2,8 @@ import { For, Show, type JSX } from "solid-js"
 import { useLocation } from "@solidjs/router"
 
 import { journal } from "~/core/journal/store"
+import { handOver } from "~/core/journal/handover"
+import { DownloadIcon } from "~/core/lib/ui/icons"
 import { differsFrom } from "~/core/journal/unsaved-text"
 import { SOURCE, addressOfSourceFile } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
@@ -16,6 +18,9 @@ import { t } from "~/core/i18n"
  * them. Choosing one is a change of address, so going back returns to the file
  * before it; a file with text typed over it and not saved is marked, since that
  * text is still there to be saved or lost.
+ *
+ * Taking the files away is offered under them, because what is handed over is
+ * these files as they are saved.
  */
 export function SourceExplorer(props: {
   /** Called once something has been chosen here, whatever it was. */
@@ -57,6 +62,14 @@ export function SourceExplorer(props: {
               </button>
             )}
           </For>
+          <button
+            type="button"
+            onClick={() => void handOver(open().source)}
+            class="mt-2 flex w-full items-center gap-1.5 px-3 py-1 text-left text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <DownloadIcon class="h-3.5 w-3.5" />
+            {t("journal.export")}
+          </button>
         </div>
       )}
     </Show>
