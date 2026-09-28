@@ -339,15 +339,19 @@ const askThat = async (page: Page, question: string): Promise<void> => {
 }
 
 /**
- * With no key, the panel asks for one where it stands, so saving it is seen to
- * take without going anywhere.
+ * With no key, saying so is the way to where one is saved, and the
+ * conversation it comes back to is ready.
  */
-test("a missing key is asked for in the panel, and saving it is seen at once", async ({ page }) => {
+test("a missing key leads to where one is saved, and back to a conversation that can start", async ({ page }) => {
   await page.goto("/journal#work+chat")
-  await expect(page.getByText("No API key is set for the AI.")).toBeVisible()
+  await page.getByRole("button", { name: "No API key is set for the AI." }).click()
+  await expect(page).toHaveURL(/#work\+connect$/)
 
   await page.getByLabel("API key").fill(NOT_A_KEY)
   await page.getByRole("button", { name: "Save", exact: true }).click()
+  await expect(page.getByRole("button", { name: "Disconnect and forget the key" })).toBeVisible()
+
+  await page.getByRole("button", { name: "Back to the conversation" }).click()
   await expect(page.getByText("No API key is set for the AI.")).toBeHidden()
   await expect(page.getByPlaceholder("Ask about these books")).toBeEnabled()
 })

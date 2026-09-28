@@ -33,14 +33,17 @@ import { dock } from "~/core/dock"
 
 /**
  * Said in place of the conversation until there is a key to hold one with, and
- * followed by where one is saved — here, so that saving it is seen to take.
+ * pressed to go where one is saved — the same move as the button beside the box.
  */
 function NeedsKey(): JSX.Element {
   return (
-    <div class="flex flex-col gap-4">
-      <p class="text-sm text-muted-foreground">{t("ai.needsKey")}</p>
-      <AiKeyPanel />
-    </div>
+    <button
+      type="button"
+      class="text-left text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      onClick={() => dock.show("connecting")}
+    >
+      {t("ai.needsKey")}
+    </button>
   )
 }
 
@@ -227,8 +230,11 @@ export function AiChat(): JSX.Element {
               }}
             />
           </label>
+          {/* Out of the tab order: from the box, the next key press is for
+              sending what was written, not for the way to the key. */}
           <button
             type="button"
+            tabindex={-1}
             class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             aria-label={t("ai.connection")}
             title={t("ai.connection")}
