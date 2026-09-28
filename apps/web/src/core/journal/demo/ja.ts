@@ -1,3 +1,5 @@
+import type { Book } from "../layout"
+
 /**
  * The demo journal in Japanese.
  *
@@ -14,17 +16,18 @@
  * front, thousands grouped, no fractional part — and stands as the commodity for
  * any amount written without one, which is what a new journal starts with too.
  */
-export const demoJa = `; デモ帳簿
+export const demoJa: Book = {
+  preamble: `; デモ帳簿
 
 D ¥1,000.
-
-account 資産  ; type:A
+`,
+  accounts: `account 資産  ; type:A
 account 負債  ; type:L
 account 資本  ; type:E
 account 収益  ; type:R
 account 費用  ; type:X
-
-2026-01-01 開始残高
+`,
+  transactions: `2026-01-01 開始残高
     資産:銀行:普通預金        ¥620000
     資産:現金                  ¥27000
     負債:クレジットカード     ¥-48000
@@ -61,4 +64,5 @@ account 費用  ; type:X
 2026-02-25 勤務先
     資産:銀行:普通預金        ¥452000
     収益:給与
-`
+`,
+}

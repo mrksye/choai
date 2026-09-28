@@ -1,5 +1,6 @@
 import type { Draft } from "~/core/compose/draft"
 import type { Item } from "~/core/journal/proposals"
+import { adjustmentsOn } from "~/core/journal/layout"
 
 /**
  * The entries a year is closed with, other than depreciation.
@@ -128,5 +129,6 @@ export const closingItems = (
     .map((adjustment) => ({
       is: "add" as const,
       draft: closingDraft(adjustment, on, describedAs(adjustment)),
+      path: adjustmentsOn(on),
       confidence: 1,
     }))

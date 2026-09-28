@@ -1,11 +1,11 @@
 import type { Trouble } from "~/core/hledger/wire"
 import { replaceAt, type Span } from "~/core/journal/lines"
 import {
-  appendToEntry,
   declaredCommodity,
-  entryText,
   journal,
   rewriteFile,
+  transactionsText,
+  writeTransactions,
   type OpenJournal,
 } from "~/core/journal/store"
 import { Err, getOrUndefined, type Result } from "~/core/lib/monad"
@@ -20,11 +20,11 @@ import { appendToJournal, type Draft } from "./draft"
  * worked, so the caller still has something to show for a refusal.
  */
 
-/** Write one transaction at the end of the journal. */
+/** Write one transaction at the end of the transactions. */
 export const commitDraft = async (draft: Draft): Promise<Result<OpenJournal, Trouble>> => {
-  const text = entryText()
+  const text = transactionsText()
   if (text === undefined) return Err({ kind: "no-journal" })
-  return appendToEntry(appendToJournal(text, draft, declaredCommodity()))
+  return writeTransactions(appendToJournal(text, draft, declaredCommodity()))
 }
 
 /** Put an entry's lines back, or take it out by writing nothing in their place. */

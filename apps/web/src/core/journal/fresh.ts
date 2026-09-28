@@ -3,6 +3,7 @@ import type { Result } from "~/core/lib/monad"
 import type { Remote } from "./kept"
 import { startBook, type OpenJournal } from "./store"
 import { starterJournal } from "./starter"
+import { MAIN, laidOut } from "./layout"
 
 /**
  * Beginning with nothing written yet.
@@ -14,12 +15,9 @@ import { starterJournal } from "./starter"
  * entries are. Leaving those out is not neutrality, it is a trap.
  *
  * Beyond those declarations there is nothing: no entries, and no chart of
- * accounts beyond the five names every chart hangs from. The rest of the file
- * belongs to whoever keeps it.
+ * accounts beyond the five names every chart hangs from. The rest belongs to
+ * whoever keeps it. The files are laid out as `layout.ts` says from the start.
  */
-
-/** What a journal is called when nothing else says. */
-const PLAIN = "main.journal"
 
 /**
  * Start one, named to match the repository if one is given.
@@ -29,8 +27,8 @@ const PLAIN = "main.journal"
  * beside it.
  */
 export const startFresh = async (remote?: Remote): Promise<Result<OpenJournal, Trouble>> => {
-  const name = nameOf(remote?.path) ?? PLAIN
-  return startBook({ label: name, files: { [name]: starterJournal() }, entry: `/${name}` }, remote)
+  const name = nameOf(remote?.path) ?? MAIN
+  return startBook({ label: name, files: laidOut(starterJournal(), name), entry: `/${name}` }, remote)
 }
 
 const nameOf = (path: string | undefined): string | undefined => {

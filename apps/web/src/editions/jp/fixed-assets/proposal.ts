@@ -3,6 +3,7 @@ import type { Item } from "~/core/journal/proposals"
 import { writeDecimal } from "../money"
 import type { Depreciation } from "./depreciation"
 import { ASSET } from "./register"
+import { adjustmentsOn } from "~/core/journal/layout"
 
 /**
  * A year's depreciation, written out as entries nobody has agreed to yet.
@@ -88,5 +89,6 @@ export const depreciationItems = (
   charges.map((charge) => ({
     is: "add" as const,
     draft: depreciationDraft(charge, on, describedAs(charge), into(charge)),
+    path: adjustmentsOn(on),
     confidence: 1,
   }))

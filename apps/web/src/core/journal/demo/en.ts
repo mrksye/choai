@@ -1,3 +1,5 @@
+import type { Book } from "../layout"
+
 /**
  * The demo journal in English.
  *
@@ -11,17 +13,18 @@
  * grouped — and stands as the commodity for any amount written without one,
  * which is what a new journal starts with too.
  */
-export const demoEn = `; a demo journal
+export const demoEn: Book = {
+  preamble: `; a demo journal
 
 D $1,000.00
-
-account assets                  ; type:A
+`,
+  accounts: `account assets                  ; type:A
 account liabilities             ; type:L
 account equity                  ; type:E
 account income                  ; type:R
 account expenses                ; type:X
-
-2026-01-01 opening balance
+`,
+  transactions: `2026-01-01 opening balance
     assets:bank:checking      $4200.00
     assets:cash                $180.00
     liabilities:card          $-320.00
@@ -58,4 +61,5 @@ account expenses                ; type:X
 2026-02-25 employer
     assets:bank:checking      $3100.00
     income:salary
-`
+`,
+}

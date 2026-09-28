@@ -11,6 +11,7 @@ import { Err, None, Ok, Some, getOrUndefined, type Option, type Result } from "~
 import { t } from "~/core/i18n"
 import { atTheJournal } from "~/core/hledger/turn"
 import { demoJournal } from "./demo"
+import { MAIN, TRANSACTIONS, including, laidOut } from "./layout"
 import { retitled, titleOf } from "./title"
 import {
   allBooks,
@@ -380,16 +381,23 @@ const missingFrom = (trouble: Trouble): string | undefined => {
 }
 
 /**
- * Add text to the end of the open journal.
+ * Replace the file new entries are written to with its text and one more.
  *
  * A draft that does not balance must not cost anyone the books they had open,
- * so it is offered to hledger before it is kept.
+ * so it is offered to hledger before it is kept. A book without the file yet
+ * has it started, and named in the entry file's includes in the same write.
  */
-export const appendToEntry = async (text: string): Promise<Result<OpenJournal, Trouble>> => {
+export const writeTransactions = async (text: string): Promise<Result<OpenJournal, Trouble>> => {
   const current = getOrUndefined(opened())
   if (current === undefined) return Err({ kind: "no-journal" })
-  const name = entryName(current.source)
-  return change(current, { ...current.source.files, [name]: text })
+  const files: Readonly<Record<string, string>> = { ...current.source.files, [TRANSACTIONS]: text }
+  const entry = entryName(current.source)
+  return change(
+    current,
+    current.source.files[TRANSACTIONS] === undefined
+      ? { ...files, [entry]: including(files[entry] ?? "", TRANSACTIONS) }
+      : files,
+  )
 }
 
 /**
@@ -451,10 +459,10 @@ export const putFiles = async (
 /** The entry path as hledger sees it, back to the key the files are held under. */
 const entryName = (source: Source): string => source.entry.replace(/^\//, "")
 
-/** The text of the file new entries are added to. */
-export const entryText = (): string | undefined => {
+/** The text of the file new entries are added to: empty where it is not started yet. */
+export const transactionsText = (): string | undefined => {
   const current = getOrUndefined(opened())
-  return current === undefined ? undefined : current.source.files[entryName(current.source)]
+  return current === undefined ? undefined : (current.source.files[TRANSACTIONS] ?? "")
 }
 
 /**
@@ -470,11 +478,10 @@ export const declaredCommodity = (): DefaultCommodity | undefined =>
 
 /** Open the journal that ships with the app, so a first visit has something to look at. */
 export const openDemo = (): Promise<Result<OpenJournal, Trouble>> => {
-  const demo = demoJournal()
   return startBook({
     label: t("welcome.demoLabel"),
-    files: { [demo.filename]: demo.contents },
-    entry: `/${demo.filename}`,
+    files: laidOut(demoJournal()),
+    entry: `/${MAIN}`,
   })
 }
 

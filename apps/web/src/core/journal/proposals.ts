@@ -4,6 +4,7 @@ import type { DefaultCommodity, JournalSummary, Trouble } from "~/core/hledger/w
 import { appendToJournal, draftToJournal, type Draft, type Tag } from "~/core/compose/draft"
 import { Err, Ok, getOrUndefined, type Result } from "~/core/lib/monad"
 import { replaceAt, type Span } from "./lines"
+import { TRANSACTIONS, including } from "./layout"
 import { journal, putFiles, tryOut, type OpenJournal } from "./store"
 import { withTags } from "./tagging"
 
@@ -32,7 +33,16 @@ export type Item = {
   /** For whoever gathers them afterwards. Written in, where the doubt is kept. */
   readonly doubt?: Doubt
 } & (
-  | { readonly is: "add"; readonly draft: Draft }
+  | {
+      readonly is: "add"
+      readonly draft: Draft
+      /**
+       * The file it is written into: the transactions, unless it is an entry
+       * that belongs with others of its kind — a closing's adjustments. A path
+       * the book does not have yet is started, and included from the entry file.
+       */
+      readonly path?: string
+    }
   | {
       readonly is: "remove"
       readonly at: Span
@@ -254,10 +264,10 @@ const marked = (item: Item): Item => {
 const entryPath = (open: OpenJournal): string => open.source.entry.replace(/^\//, "")
 
 /** Where one item writes, which is what staleness is judged on. */
-const writesTo = (item: Item, entry: string): readonly string[] => {
+const writesTo = (item: Item): readonly string[] => {
   switch (item.is) {
     case "add":
-      return [entry]
+      return [item.path ?? TRANSACTIONS]
     case "remove":
     case "rewrite":
       return [item.at.path]
@@ -266,27 +276,39 @@ const writesTo = (item: Item, entry: string): readonly string[] => {
   }
 }
 
-/** Every file a proposal would touch, so staleness is judged on those and no others. */
-export const touches = (items: readonly Item[], entry: string): readonly string[] => [
-  ...new Set(items.flatMap((item) => writesTo(item, entry))),
-]
+/**
+ * Journal files a proposal writes that the book does not have yet, each of
+ * which the entry file will name in an include.
+ */
+const startedIn = (paths: readonly string[], files: Readonly<Record<string, string>>): readonly string[] =>
+  paths.filter((path) => files[path] === undefined && path.endsWith(".journal"))
 
 /**
- * Every file it would touch that the book does not have.
- *
- * Only an append may name one. A span comes from an entry hledger read out of a
- * file that therefore exists, and an addition goes to the entry file — so a path
- * nobody knows arriving any other way is a proposal about a journal that has
- * moved, and applying it would write a new file out of a span into nothing.
+ * Every file a proposal would touch, so staleness is judged on those and no
+ * others — the entry file among them where a file is started, since its
+ * include is written there.
  */
-const unknownIn = (
+export const touches = (
   items: readonly Item[],
-  files: Readonly<Record<string, string>>,
   entry: string,
-): readonly string[] =>
+  files: Readonly<Record<string, string>>,
+): readonly string[] => {
+  const written = [...new Set(items.flatMap(writesTo))]
+  return startedIn(written, files).length === 0 ? written : [...new Set([...written, entry])]
+}
+
+/**
+ * Every file a span points into that the book does not have.
+ *
+ * A span comes from an entry hledger read out of a file that therefore exists,
+ * so a path nobody knows arriving that way is a proposal about a journal that
+ * has moved, and applying it would write a new file out of a span into nothing.
+ * Additions and appends are free to start a file; that is how one is started.
+ */
+const unknownIn = (items: readonly Item[], files: Readonly<Record<string, string>>): readonly string[] =>
   items
-    .filter((item) => item.is !== "append")
-    .flatMap((item) => writesTo(item, entry))
+    .filter((item) => item.is === "remove" || item.is === "rewrite")
+    .flatMap(writesTo)
     .filter((path) => files[path] === undefined)
 
 /**
@@ -331,24 +353,24 @@ export const filesOf = (
       { ...from },
     )
 
-  const adding = taking.flatMap((item) => (item.is === "add" ? [item.draft] : []))
-  const afterAdditions =
-    adding.length === 0
-      ? afterSpans
-      : {
-          ...afterSpans,
-          [entry]: adding.reduce(
-            (text, draft) => appendToJournal(text, draft, declared),
-            afterSpans[entry] ?? "",
-          ),
-        }
+  const afterAdditions = taking
+    .flatMap((item) => (item.is === "add" ? [item] : []))
+    .reduce<Record<string, string>>((files, one) => {
+      const path = one.path ?? TRANSACTIONS
+      return { ...files, [path]: appendToJournal(files[path] ?? "", one.draft, declared) }
+    }, afterSpans)
 
-  return taking
+  const afterAppends = taking
     .flatMap((item) => (item.is === "append" ? [item] : []))
     .reduce<Record<string, string>>(
       (files, one) => ({ ...files, [one.path]: withLines(files[one.path] ?? "", one.text) }),
       afterAdditions,
     )
+
+  return startedIn(Object.keys(afterAppends), from).reduce<Record<string, string>>(
+    (files, path) => ({ ...files, [entry]: including(files[entry] ?? "", path) }),
+    afterAppends,
+  )
 }
 
 /**
@@ -413,7 +435,9 @@ export const propose = async (
   const all = onto === undefined ? items : [...onto.items, ...items]
   const entry = entryPath(open)
   const basedOn = {
-    ...Object.fromEntries(touches(all, entry).map((path) => [path, open.source.files[path] ?? ""])),
+    ...Object.fromEntries(
+      touches(all, entry, open.source.files).map((path) => [path, open.source.files[path] ?? ""]),
+    ),
     ...(onto?.basedOn ?? {}),
   }
 
@@ -473,9 +497,8 @@ export const apply = async (
   if (moved) return Err({ at: "stale-proposal", id })
 
   // A span into a file the book no longer has would be written out of nothing
-  // into a file nobody asked for. Only an append may name a path that is not
-  // there yet, and that is a register being started.
-  if (unknownIn(chosen(proposal, how.only), open.source.files, entryPath(open)).length > 0) {
+  // into a file nobody asked for.
+  if (unknownIn(chosen(proposal, how.only), open.source.files).length > 0) {
     return Err({ at: "stale-proposal", id })
   }
 

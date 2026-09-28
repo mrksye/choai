@@ -1,3 +1,5 @@
+import type { Book } from "../layout"
+
 /**
  * What a new journal starts with, in Japanese.
  *
@@ -18,15 +20,18 @@
  * No entries, no example accounts below these five: the rest of the file is for
  * whoever owns it.
  */
-export const starterJa = `; 帳簿
+export const starterJa: Book = {
+  preamble: `; 帳簿
 
 ; 金額の書き方。¥ を省いて 500000 と書いても ¥500,000 として扱われます。
 D ¥1,000.
-
-; 科目の種類。下位の科目は親の種類を継ぎます。
+`,
+  accounts: `; 科目の種類。下位の科目は親の種類を継ぎます。
 account 資産    ; type:A
 account 負債    ; type:L
 account 純資産  ; type:E
 account 収益    ; type:R
 account 費用    ; type:X
-`
+`,
+  transactions: "",
+}

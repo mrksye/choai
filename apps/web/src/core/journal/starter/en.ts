@@ -1,3 +1,5 @@
+import type { Book } from "../layout"
+
 /**
  * What a new journal starts with, in English.
  *
@@ -10,15 +12,18 @@
  *
  * `D` gives amounts written with no symbol their commodity and their styling.
  */
-export const starterEn = `; Journal
+export const starterEn: Book = {
+  preamble: `; Journal
 
 ; How amounts are written. 1000 with no symbol is read as $1,000.00.
 D $1,000.00
-
-; What kind of account each one is. Accounts below these inherit their kind.
+`,
+  accounts: `; What kind of account each one is. Accounts below these inherit their kind.
 account assets       ; type:A
 account liabilities  ; type:L
 account equity       ; type:E
 account revenues     ; type:R
 account expenses     ; type:X
-`
+`,
+  transactions: "",
+}

@@ -1,6 +1,7 @@
 import type { Tag, Trouble } from "~/core/hledger/wire"
 import { declaringCompanion } from "~/core/journal/companions"
-import { putFiles, rewriteFile, type OpenJournal } from "~/core/journal/store"
+import { putFiles, type OpenJournal } from "~/core/journal/store"
+import { ACCOUNTS, writtenInto } from "~/core/journal/layout"
 import { Err, type Result } from "~/core/lib/monad"
 import { declaringAccount, declaringAccounts } from "../chart/directives"
 import { appended, type AssetEvent } from "../fixed-assets/events"
@@ -32,12 +33,16 @@ export const takePreset = async (
   const entry = entryPathNow()
   if (open === undefined || entry === undefined) return Err({ kind: "no-journal" })
 
-  const text = open.source.files[entry] ?? ""
-  return rewriteFile(
-    entry,
-    declaringAccounts(
-      text,
-      offered.map((one) => ({ account: one.account, tags: tagsFor(one) })),
+  const text = open.source.files[ACCOUNTS] ?? ""
+  return putFiles(
+    writtenInto(
+      open.source.files,
+      entry,
+      ACCOUNTS,
+      declaringAccounts(
+        text,
+        offered.map((one) => ({ account: one.account, tags: tagsFor(one) })),
+      ),
     ),
   )
 }
@@ -63,13 +68,13 @@ export const placeAccount = async (
   const tags: readonly Tag[] = section === undefined ? others : [...others, [JP, section]]
 
   // Written into whichever file already declares it, so a declaration does not
-  // migrate to the entry file just because its heading changed.
+  // move just because its heading changed; a new one goes with the others.
   const where =
     Object.entries(open.source.files).find(([, text]) =>
       new RegExp(`^account\\s+${account.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`, "m").test(text),
-    )?.[0] ?? entry
+    )?.[0] ?? ACCOUNTS
 
-  return rewriteFile(where, declaringAccount(open.source.files[where] ?? "", account, tags))
+  return putFiles(writtenInto(open.source.files, entry, where, declaringAccount(open.source.files[where] ?? "", account, tags)))
 }
 
 /**

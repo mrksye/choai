@@ -133,7 +133,7 @@ describe("every edition", () => {
  * the books with no diff ever existing, and it would look like ordinary code.
  */
 describe("writing to the journal", () => {
-  const WAYS = ["appendToEntry", "rewriteFile", "rewriteFiles", "putFiles"] as const
+  const WAYS = ["writeTransactions", "rewriteFile", "rewriteFiles", "putFiles"] as const
 
   /** Every module that names one of the four, wherever in it the name appears. */
   const writers = (): readonly string[] =>

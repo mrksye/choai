@@ -1,7 +1,8 @@
 import { For, Show, createResource, createSignal, type JSX } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
-import { journal, rewriteFile } from "~/core/journal/store"
+import { journal, putFiles } from "~/core/journal/store"
+import { ACCOUNTS, writtenInto } from "~/core/journal/layout"
 import { KINDS, declaring, guess, unplaced, type Kind } from "~/core/journal/declarations"
 import { getOrUndefined } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
@@ -51,13 +52,14 @@ export function DeclareTypes(): JSX.Element {
   const write = async (names: readonly string[]): Promise<void> => {
     const open = getOrUndefined(journal())
     if (open === undefined) return
-    const path = open.source.entry.replace(/^\//, "")
-    const file = open.source.files[path]
-    if (file === undefined) return
+    const files = open.source.files
+    const entry = open.source.entry.replace(/^\//, "")
 
     setWriting(true)
     setTrouble(undefined)
-    const result = await rewriteFile(path, declaring(file, decided(names)))
+    const result = await putFiles(
+      writtenInto(files, entry, ACCOUNTS, declaring(files[ACCOUNTS] ?? "", decided(names))),
+    )
     setWriting(false)
     if (!result.ok) {
       setTrouble(result.error)

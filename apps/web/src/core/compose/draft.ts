@@ -148,5 +148,7 @@ const amountPart = (posting: DraftPosting, declared: DefaultCommodity | undefine
  * is text somebody wrote by hand and keeps in version control; reformatting it
  * would spread a diff across the whole thing for the sake of one new entry.
  */
-export const appendToJournal = (journal: string, draft: Draft, declared?: DefaultCommodity): string =>
-  `${journal.replace(/\s*$/, "")}\n\n${draftToJournal(draft, declared)}`
+export const appendToJournal = (journal: string, draft: Draft, declared?: DefaultCommodity): string => {
+  const before = journal.replace(/\s*$/, "")
+  return before === "" ? draftToJournal(draft, declared) : `${before}\n\n${draftToJournal(draft, declared)}`
+}
