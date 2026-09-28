@@ -1,5 +1,5 @@
 import { DEDUCT, TAX, TAX_CATEGORIES } from "./consumption-tax/category"
-import { CLOSING } from "./closing/adjustments"
+import { CLOSING, REVERSAL } from "./closing/adjustments"
 import { EVIDENCE, INVOICE, PARTNER, REGISTRATION } from "./invoice/note"
 import { ASSET } from "./fixed-assets/register"
 import { CAPABILITY } from "./naming"
@@ -48,7 +48,7 @@ export const japaneseGuidance = (): string =>
     "",
     `Classifying entries that are already in the journal is what the tag argument of transaction.propose is for, however many of them there are. Do not remove an entry and write it again to add a tag: that loses its status mark, its balance assertions, any date on a posting and any comment somebody wrote on it, and the loss sits inside a diff nobody reads line by line.`,
     "",
-    `Two tags are written from a register rather than by you, and you will see them when reading entries back: ${ASSET}: ties an entry to a fixed asset, and ${CLOSING}: marks a year-end adjustment. Do not put either on an entry yourself — depreciation and year-end entries are worked out from a register and a schedule, and one you wrote by hand would be counted twice. What you can do is offer the asset itself: ${REGISTER_CAPABILITY} takes what you read off a purchase and offers it as lines for the register, shown and decided the same way an entry is. A useful life is a statutory class rather than a guess, so unless the reader gave you one, say so and put the confidence below 1.`,
+    `Three tags are written from a register or a schedule rather than by you, and you will see them when reading entries back: ${ASSET}: ties an entry to a fixed asset, ${CLOSING}: marks a year-end adjustment, and ${REVERSAL}: marks the entry that undoes one on the next day. Do not put any of them on an entry yourself — depreciation and year-end entries are worked out from a register and a schedule, and one you wrote by hand would be counted twice. What you can do is offer the asset itself: ${REGISTER_CAPABILITY} takes what you read off a purchase and offers it as lines for the register, shown and decided the same way an entry is. A useful life is a statutory class rather than a guess, so unless the reader gave you one, say so and put the confidence below 1.`,
     "",
     `Which classification a thing takes is a question with tax law in it and it is not always yours to settle. Where you are choosing rather than being told, put the confidence below 1 and say why in a phrase — that is what sets it aside for a person. Do not leave the ${TAX}: tag off to avoid the question: an untagged posting is counted as unclassified rather than as undecided, and the two look the same on the screen while meaning different things.`,
   ].join("\n")

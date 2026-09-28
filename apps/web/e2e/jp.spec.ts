@@ -969,3 +969,40 @@ test("an asset is offered for the register, and the register is not written unti
   )
   expect(again.ok).toBe(false)
 })
+
+/**
+ * A year-end adjustment asked to be reversed brings its reversal with it: worked
+ * out from the adjustment rather than typed again, dated the next day, and kept
+ * in the closing's own file, which main.journal names as soon as it exists.
+ */
+test("an adjustment reversed the next day is written with its reversal, in the closing's file", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/jp/closing")
+
+  await page.getByLabel("Expense or revenue account").fill("expenses:utilities")
+  await page.getByLabel("Account carrying it across").fill("liabilities:accrued")
+  await page.getByLabel("Amount", { exact: true }).fill("$30.00")
+  await page.getByLabel("Reverse it on the next day").check()
+
+  await page.getByRole("button", { name: "Offer 2 entries for review" }).click()
+  await page.getByRole("button", { name: "Add 2 to the journal" }).click()
+
+  const adjustments = async (): Promise<readonly string[]> => {
+    const summary = await page.evaluate(() => window.choai.journal.summary({}))
+    return summary.ok ? summary.value.files.filter((path) => path.startsWith("adjustments/")) : []
+  }
+  await expect.poll(adjustments).toHaveLength(1)
+  const path = (await adjustments())[0] ?? ""
+  expect(path).toMatch(/^adjustments\/\d{4}-\d{2}-\d{2}\.journal$/)
+
+  const main = await page.evaluate(() => window.choai.journal.text({ path: "main.journal" }))
+  expect(main.ok && main.value.text).toContain(`include ${path}`)
+
+  const file = await page.evaluate((one) => window.choai.journal.text({ path: one }), path)
+  const text = file.ok ? file.value.text : ""
+  const closedOn = path.slice("adjustments/".length, -".journal".length)
+  expect(text).toContain(`${closedOn} Carried across the year end`)
+  expect(text).toContain("closing:accrued-expense")
+  expect(text).toContain("reversal:accrued-expense")
+  expect(text).toMatch(/\d{4}-\d{2}-\d{2} Reversal of a year-end adjustment/)
+})

@@ -11,7 +11,7 @@ import { checkChart, checkConsumptionTax, checkRegister, settledBy, type Finding
 import { normalize } from "./consumption-tax/normalize"
 import { DEDUCT, DEDUCT_VALUES, TAX, TAX_CATEGORIES } from "./consumption-tax/category"
 import { EVIDENCE, INVOICE, INVOICE_STATUSES, PARTNER, REGISTRATION } from "./invoice/note"
-import { ACCRUALS, CLOSING } from "./closing/adjustments"
+import { ACCRUALS, CLOSING, REVERSAL } from "./closing/adjustments"
 import { JP } from "./chart/mapping"
 import { SECTIONS } from "./chart/sections"
 import { summarizeConsumptionTax, type NotWorkedOut } from "./consumption-tax/summarize"
@@ -656,6 +656,12 @@ const conventions = async (): Promise<Result<Vocabulary, Hitch>> =>
         on: "entry",
         values: [...ACCRUALS],
         says: "That this is a year-end adjustment. Written from the year-end screen rather than by hand.",
+      },
+      {
+        name: REVERSAL,
+        on: "entry",
+        values: [...ACCRUALS],
+        says: "That this undoes a year-end adjustment on the day after the closing, worked out from it and kept in the same file. Written from the year-end screen rather than by hand.",
       },
     ],
     accountTag: {

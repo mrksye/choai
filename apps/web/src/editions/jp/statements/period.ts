@@ -57,6 +57,10 @@ const A_DAY = 24 * 60 * 60 * 1000
 export const lastDayOf = (year: FiscalYear): string =>
   new Date(Date.parse(`${year.to}T00:00:00Z`) - A_DAY).toISOString().slice(0, 10)
 
+/** The day after an ISO date, worked out in UTC for the same reason as `lastDayOf`. */
+export const dayAfter = (date: string): string =>
+  new Date(Date.parse(`${date}T00:00:00Z`) + A_DAY).toISOString().slice(0, 10)
+
 /** The month a year begins in, read back off it. 1 is January. */
 export const startingMonthOf = (year: FiscalYear): number => Number(year.from.slice(5, 7))
 

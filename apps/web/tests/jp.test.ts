@@ -59,6 +59,7 @@ import {
   ACCRUALS,
   closingDraft,
   closingItems,
+  reversalDraft,
   isAccrual,
   isWritable,
   whatIsWanting,
@@ -1451,7 +1452,7 @@ describe("the entries a year is closed with", () => {
     const half = { ...of("accrued-expense", "", "負債:未払費用"), amount: " " }
     expect(whatIsWanting(half)).toEqual(["amount", "working"])
     expect(isWritable(half)).toBe(false)
-    expect(closingItems([half], "2027-03-31", () => "決算整理")).toEqual([])
+    expect(closingItems([half], "2027-03-31", () => "決算整理", () => "戻し入れ")).toEqual([])
   })
 
   test("the ready ones come out as one proposal", () => {
@@ -1459,10 +1460,47 @@ describe("the entries a year is closed with", () => {
       [of("accrued-expense", "費用:支払手数料", "負債:未払費用"), of("prepaid-expense", "費用:地代家賃", "資産:前払費用")],
       "2027-03-31",
       () => "決算整理",
+      () => "戻し入れ",
     )
     expect(items.length).toBe(2)
     expect(items.every((one) => one.confidence === 1)).toBe(true)
     expect(items.every((one) => one.is === "add" && one.path === "adjustments/2027-03-31.journal")).toBe(true)
+  })
+})
+
+describe("undoing a year-end adjustment the next day", () => {
+  const accrued: Adjustment = {
+    kind: "accrued-expense",
+    amount: "¥30,000",
+    working: "費用:水道光熱費",
+    carried: "負債:未払費用",
+  }
+
+  test("is the adjustment the other way round, the day after, with the same figure", () => {
+    const made = closingDraft(accrued, "2027-08-20", "決算整理")
+    const undone = reversalDraft(accrued, "2027-08-20", "戻し入れ")
+    expect(undone.date).toBe("2027-08-21")
+    expect(undone.postings.map((one) => [one.account, one.amount])).toEqual([
+      ["負債:未払費用", "¥30,000"],
+      ["費用:水道光熱費", ""],
+    ])
+    expect(made.postings.map((one) => [one.account, one.amount])).toEqual([
+      ["費用:水道光熱費", "¥30,000"],
+      ["負債:未払費用", ""],
+    ])
+    expect(undone.tags).toEqual([{ name: "reversal", value: "accrued-expense" }])
+  })
+
+  test("crosses a month and a year end as a calendar does", () => {
+    expect(reversalDraft(accrued, "2027-12-31", "戻し入れ").date).toBe("2028-01-01")
+    expect(reversalDraft(accrued, "2028-02-28", "戻し入れ").date).toBe("2028-02-29")
+  })
+
+  test("is offered only where it was asked for, into the same file as the adjustment", () => {
+    const items = closingItems([accrued, { ...accrued, reversed: true }], "2027-08-20", () => "決算整理", () => "戻し入れ")
+    expect(items.length).toBe(3)
+    expect(items.every((one) => one.is === "add" && one.path === "adjustments/2027-08-20.journal")).toBe(true)
+    expect(items.map((one) => (one.is === "add" ? one.draft.date : ""))).toEqual(["2027-08-20", "2027-08-20", "2027-08-21"])
   })
 })
 
@@ -1671,7 +1709,8 @@ describe("what a model is told about how these books are kept", () => {
   })
 
   test("it tells the model not to put a register's own tags on an entry itself", () => {
-    expect(said).toContain("Do not put either on an entry yourself")
+    expect(said).toContain("Do not put any of them on an entry yourself")
+    expect(said).toContain("reversal:")
   })
 
   test("it points at the act that classifies an entry already written", () => {

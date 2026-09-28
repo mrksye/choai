@@ -1,6 +1,7 @@
 import type { Draft } from "~/core/compose/draft"
 import type { Item } from "~/core/journal/proposals"
 import { adjustmentsOn } from "~/core/journal/layout"
+import { dayAfter } from "../statements/period"
 
 /**
  * The entries a year is closed with, other than depreciation.
@@ -17,14 +18,25 @@ import { adjustmentsOn } from "~/core/journal/layout"
  * into the right entry the right way round, which is the part that is easy to
  * get backwards at half past eleven at night.
  *
- * Reversing them in the new year is not done here and is not assumed. Whether
- * these are reversed on the first day of the next year or left to be worked off
- * against the payment when it comes is a company's own practice, and both are
- * ordinary. They are tagged so that either way they can be found again.
+ * Reversing them in the new year is not assumed. Whether these are reversed on
+ * the first day of the next year or left to be worked off against the payment
+ * when it comes is a company's own practice, and both are ordinary — so it is
+ * asked of each one, and off unless asked. Where it is asked, the reversal is
+ * not typed a second time: it is worked out from the adjustment, written as an
+ * ordinary entry dated the next day, and kept in the same file, so the two are
+ * offered, applied and taken out together and plain hledger reads both. They
+ * are tagged so that either way they can be found again.
  */
 
 /** The tag every closing entry carries, so a year's adjustments can be queried back. */
 export const CLOSING = "closing"
+
+/**
+ * The tag a reversal carries instead, with the same kind as its value. Not
+ * `closing`: a reversal is not an adjustment, and counting it as one would
+ * count every reversed accrual twice.
+ */
+export const REVERSAL = "reversal"
 
 export const ACCRUALS = [
   /** 未払費用 — incurred this year, to be paid in the next. */
@@ -58,6 +70,8 @@ export interface Adjustment {
   /** The receivable or the payable: what carries it into the next year. */
   readonly carried: string
   readonly note?: string
+  /** Undone on the day after the closing, by an entry worked out from this one. */
+  readonly reversed?: boolean
 }
 
 /**
@@ -99,6 +113,34 @@ export const closingDraft = (
   }
 }
 
+/**
+ * The adjustment undone, on the day after it.
+ *
+ * The same two accounts the other way round, with the figure on the side the
+ * adjustment left blank — so the reversal cannot disagree with it about an
+ * amount or an account, and nothing somebody typed is negated on the way.
+ */
+export const reversalDraft = (
+  adjustment: Adjustment,
+  on: string,
+  describedAs: string,
+): Draft => {
+  const debit = DEBITS[adjustment.kind]
+  const debited = debit === "working" ? adjustment.carried : adjustment.working
+  const credited = debit === "working" ? adjustment.working : adjustment.carried
+
+  return {
+    date: dayAfter(on),
+    payee: describedAs,
+    note: adjustment.note ?? "",
+    tags: [{ name: REVERSAL, value: adjustment.kind }],
+    postings: [
+      { account: debited, amount: adjustment.amount, tags: [] },
+      { account: credited, amount: "", tags: [] },
+    ],
+  }
+}
+
 /** Something has to be said before there is an entry to write. */
 export type Wanting = "amount" | "working" | "carried"
 
@@ -123,12 +165,23 @@ export const closingItems = (
   adjustments: readonly Adjustment[],
   on: string,
   describedAs: (adjustment: Adjustment) => string,
+  reversalDescribedAs: (adjustment: Adjustment) => string,
 ): readonly Item[] =>
-  adjustments
-    .filter(isWritable)
-    .map((adjustment) => ({
+  adjustments.filter(isWritable).flatMap((adjustment) => [
+    {
       is: "add" as const,
       draft: closingDraft(adjustment, on, describedAs(adjustment)),
       path: adjustmentsOn(on),
       confidence: 1,
-    }))
+    },
+    ...(adjustment.reversed === true
+      ? [
+          {
+            is: "add" as const,
+            draft: reversalDraft(adjustment, on, reversalDescribedAs(adjustment)),
+            path: adjustmentsOn(on),
+            confidence: 1,
+          },
+        ]
+      : []),
+  ])

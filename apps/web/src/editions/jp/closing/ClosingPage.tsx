@@ -73,7 +73,12 @@ export function ClosingPage(): JSX.Element {
           () => words().closing.depreciation,
           (charge) => posted(charge.account),
         )),
-    ...closingItems(rows(), on(), () => words().closing.accruals),
+    ...closingItems(
+      rows(),
+      on(),
+      () => words().closing.accruals,
+      () => words().closing.reversal,
+    ),
   ])
 
   const offer = async (): Promise<void> => {
@@ -231,6 +236,14 @@ function Row(props: {
         value={props.row.amount}
         onInput={(amount) => props.onChange({ ...props.row, amount })}
       />
+      <label class="col-span-4 flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={props.row.reversed === true}
+          onChange={(event) => props.onChange({ ...props.row, reversed: event.currentTarget.checked })}
+        />
+        {words().closing.reverse}
+      </label>
     </div>
   )
 }
