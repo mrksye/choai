@@ -3,7 +3,7 @@ import { useLocation } from "@solidjs/router"
 
 import { Button } from "~/core/components/ui/button"
 import { SnagNote, outcomeWords } from "~/core/components/github-panel"
-import { unsentNow } from "~/core/components/git/kept-in-view"
+import { behindNow, unsentNow } from "~/core/components/git/kept-in-view"
 import { GIT, addressOf, lookingAt, type Looking } from "~/core/components/git/looking"
 import { agreements, token } from "~/core/github/kept"
 import { pull, push, type Outcome, type Snag } from "~/core/github/sync"
@@ -105,12 +105,18 @@ export function GitExplorer(props: {
             value={message()}
             onInput={(event) => setMessage(event.currentTarget.value)}
           />
+          <Show when={behindNow().length > 0}>
+            <p role="status" class="flex items-start gap-1.5 text-xs text-foreground">
+              <span class="mt-1 size-2 shrink-0 rounded-full bg-red-500" aria-hidden="true" />
+              {waiting().length > 0 ? t("git.behindWhileWaiting") : t("git.behind")}
+            </p>
+          </Show>
           <div class="flex gap-2">
             <Button size="sm" class="h-8 flex-1" disabled={busy() || waiting().length === 0} onClick={() => void send()}>
               {t("git.send")}
             </Button>
             <Button
-              variant="outline"
+              variant={behindNow().length > 0 && waiting().length === 0 ? "default" : "outline"}
               size="sm"
               class="h-8 flex-1"
               disabled={busy() || waiting().length > 0}

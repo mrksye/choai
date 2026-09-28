@@ -4,6 +4,7 @@ import { JOURNAL, SOURCE } from "~/core/address/address"
 import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
 import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
 import { GitExplorer } from "~/core/explorer/GitExplorer"
+import { behindNow } from "~/core/components/git/kept-in-view"
 import { JournalExplorer } from "~/core/explorer/JournalExplorer"
 import { SourceExplorer } from "~/core/explorer/SourceExplorer"
 import { SettingsExplorer } from "~/core/explorer/SettingsExplorer"
@@ -106,6 +107,7 @@ const CORE: readonly View[] = [
     Explorer: GitExplorer,
     page: Git,
     writes: false,
+    attention: () => behindNow().length > 0,
     reached: { from: "foot" },
   },
   {

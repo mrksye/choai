@@ -369,6 +369,7 @@ export function Layout(props: ParentProps) {
       label: entry.label(),
       icon: <entry.Icon class="h-5 w-5" />,
       active: railOf(current()) === entry.href,
+      attention: entry.attention?.() === true,
       onSelect: () => select(entry.href),
       ...groupOf(entry),
     }))

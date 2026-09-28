@@ -279,6 +279,8 @@ export const en = {
     message: "Message",
     messagePlaceholder: "Blank names each commit after its file",
     pullAfterPush: "Send what is waiting first: taking the repository's copy replaces what is here.",
+    behind: "GitHub has changes this device has not taken yet. Take them before writing more.",
+    behindWhileWaiting: "GitHub has changes this device has not taken yet. Sending lays what was written here after them, where both sides only added entries.",
     history: "History",
     graph: "Commit graph",
     reading: "Reading the history…",

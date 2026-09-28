@@ -53,6 +53,8 @@ interface Answered {
   message: string | undefined
   /** Every path asked of GitHub, in order, so a test can say what was not asked. */
   readonly asked: string[]
+  /** The blob GitHub says its files are at, changed to stand for a send from elsewhere. */
+  sha?: string
 }
 
 const answerGitHub = async (
@@ -92,7 +94,7 @@ const answerGitHub = async (
       return asJson(route, {
         content: Buffer.from(JOURNAL, "utf-8").toString("base64"),
         encoding: "base64",
-        sha: "abc123",
+        sha: answered.sha ?? "abc123",
       })
     }
     return asJson(route, {}, 404)
@@ -217,4 +219,30 @@ test("the graph is a hundred commits at a time, and the next hundred are read wh
     "/repos/mrksye/books/commits?sha=c49&per_page=100&page=1",
   ])
   await expect(page.getByRole("button", { name: "100 older" })).toBeHidden()
+})
+
+
+/**
+ * Opening the app asks GitHub whether its files are still what was last agreed
+ * here. Where one has moved on — sent from another device — the rail marks the
+ * source control button, and its list says so and leads to taking; taking
+ * agrees again, and the mark goes.
+ */
+test("changes on GitHub not yet taken mark the rail when the app opens, until they are taken", async ({ page }) => {
+  const github: Answered = { message: undefined, asked: [] }
+  await answerGitHub(page, github)
+  await takeTheBooks(page)
+  const git = page.getByRole("button", { name: "Source control", exact: true }).first()
+  await page.waitForTimeout(500)
+  await expect(git.locator("[data-attention]")).toHaveCount(0)
+
+  github.sha = "sent-from-the-phone"
+  await page.goto("/journal")
+  await expect(git.locator("[data-attention]")).toHaveCount(1)
+
+  await git.click()
+  await expect(page.getByRole("status")).toContainText("GitHub has changes this device has not taken yet")
+  await page.getByRole("button", { name: "Take", exact: true }).click()
+  await expect(git.locator("[data-attention]")).toHaveCount(0)
+  await expect(page.getByRole("status")).toBeHidden()
 })

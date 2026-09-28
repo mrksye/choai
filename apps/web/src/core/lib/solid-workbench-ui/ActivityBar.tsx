@@ -6,6 +6,12 @@ export type ActivityItem = {
   label: string
   icon: JSX.Element
   active?: boolean
+  /**
+   * Draws a dot on the icon: something there wants doing. What that is belongs
+   * to the caller, which should say it on the screen the item leads to — a dot
+   * is a reason to look, not the thing itself.
+   */
+  attention?: boolean
   onSelect?: () => void
   /**
    * What this item is one of, where some of them belong together.
@@ -145,7 +151,16 @@ function ActivityButton(props: {
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')
       }
     >
-      <span class="flex h-5 w-5 shrink-0 items-center justify-center">{props.item.icon}</span>
+      <span class="relative flex h-5 w-5 shrink-0 items-center justify-center">
+        {props.item.icon}
+        <Show when={props.item.attention}>
+          <span
+            data-attention
+            class="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-muted"
+            aria-hidden="true"
+          />
+        </Show>
+      </span>
       <Show when={props.expanded}>
         <span class="truncate text-sm">{props.item.label}</span>
       </Show>

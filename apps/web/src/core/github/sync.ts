@@ -193,6 +193,34 @@ export const unsent = async (open: OpenJournal): Promise<readonly Unsent[]> =>
   }))
 
 /**
+ * The files GitHub has moved on from since they were last agreed here — sent
+ * from another device, or edited on GitHub — which taking would bring.
+ *
+ * Asked of the files agreed on and no others, by the blob each was agreed at,
+ * so it is a question with an exact answer rather than a guess from dates. A
+ * file gone from the repository has moved too. Reads only.
+ */
+export const behind = async (): Promise<Result<readonly string[], Snag>> => {
+  const reach = await reachable()
+  if (!reach.ok) return reach
+  const { token: key, open } = reach.value
+  const remote = open.remote as Remote
+
+  const agreed = (
+    await Promise.all(Object.keys(open.source.files).map((path) => agreedOn(open.bookId, path)))
+  ).flatMap((one) => (one === undefined ? [] : [one]))
+  const asked = await Promise.all(
+    agreed.map(async (one) => ({ one, now: await fetchFile(key, where(remote, one.repoPath)) })),
+  )
+
+  const unanswered = asked.flatMap(({ now }) => (!now.ok && now.error.kind !== "no-such-file" ? [now.error] : []))
+  const [failure] = unanswered
+  if (failure !== undefined) return Err({ at: "github", failure })
+
+  return Ok(asked.filter(({ one, now }) => !now.ok || now.value.sha !== one.sha).map(({ one }) => one.path))
+}
+
+/**
  * Send whatever has changed here.
  *
  * `message` is what each commit is called; left out, each is named after the

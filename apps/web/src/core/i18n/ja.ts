@@ -269,6 +269,8 @@ export const ja: Dictionary = {
     message: "メッセージ",
     messagePlaceholder: "空欄なら、コミットはファイル名で名付けられます",
     pullAfterPush: "先に送信待ちの分を送ってください。取り込むと、ここにある内容はリポジトリのもので置き換わります。",
+    behind: "GitHub に、この端末へまだ取り込んでいない変更があります。書き足す前に取り込んでください。",
+    behindWhileWaiting: "GitHub に、この端末へまだ取り込んでいない変更があります。どちらも仕訳を書き足しただけなら、送信するとここで書いた分がその後ろに並びます。",
     history: "履歴",
     graph: "コミットグラフ",
     reading: "履歴を読んでいます…",

@@ -2,7 +2,7 @@ import { createEffect, createResource, createRoot, createSignal, on, type Access
 
 import { agreements, token } from "~/core/github/kept"
 import { STEP, drawn, readHistory, readOlder, type History, type Read } from "~/core/github/history"
-import { unsent, type Snag, type Unsent } from "~/core/github/sync"
+import { behind, unsent, type Snag, type Unsent } from "~/core/github/sync"
 import { journal } from "~/core/journal/store"
 import { getOrUndefined, type Result } from "~/core/lib/monad"
 
@@ -22,6 +22,31 @@ const [waiting] = createRoot(() =>
 
 /** Every file a push would send now, beside what it was when last sent. */
 export const unsentNow: Resource<readonly Unsent[]> = waiting
+
+/**
+ * What GitHub has that this device has not taken, asked when a book is opened
+ * and again whenever sending or taking moves what is agreed.
+ *
+ * Keyed on the book and on the agreements rather than on the journal itself,
+ * which changes with every entry written: that would put a question to GitHub
+ * for each one. A book not connected, or a question GitHub could not answer,
+ * comes to nothing to take — a mark that is there only when it is sure.
+ */
+const [moved] = createRoot(() =>
+  createResource(
+    () => {
+      const open = getOrUndefined(journal())
+      return open?.remote === undefined || open.remote.path === "" ? undefined : `${open.bookId}:${agreements()}`
+    },
+    async (): Promise<readonly string[]> => {
+      const asked = await behind()
+      return asked.ok ? asked.value : []
+    },
+  ),
+)
+
+/** The files GitHub has moved on from here; empty where there is nothing to take, or no way to know. */
+export const behindNow = (): readonly string[] => moved() ?? []
 
 const [saved] = createRoot(() => createResource(agreements, () => token()))
 
