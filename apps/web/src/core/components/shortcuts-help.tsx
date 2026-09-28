@@ -1,4 +1,5 @@
 import { For, Show, createSignal, type JSX } from "solid-js"
+import { A } from "@solidjs/router"
 
 import { HelpIcon, XIcon } from "~/core/lib/ui/icons"
 import { SHORTCUTS, shortcutKeys } from "~/core/lib/shortcuts"
@@ -15,7 +16,8 @@ import { locale, t, type Locale } from "~/core/i18n"
  * where it was rather than being replaced by the card — in a bar of buttons, one
  * that vanished when pressed would take the row's shape with it — and the card
  * hangs from it, carrying its own ✕ so the way out is where the way in was.
- * Below the keys, set off by a rule, is the way to the page that explains the app.
+ * Below the keys, set off by a rule, are the licences this app is under and
+ * made of, and the way to the page that explains it.
  */
 /**
  * The page that explains the app, in the language the app is speaking — the
@@ -68,7 +70,14 @@ export function ShortcutsHelp(): JSX.Element {
               )}
             </For>
           </dl>
-          <div class="mt-3 border-t border-border pt-2 text-right">
+          <div class="mt-3 flex items-baseline justify-between gap-2 border-t border-border pt-2">
+            <A
+              href="/licenses#work"
+              onClick={() => setOpen(false)}
+              class="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {t("licenses.title")}
+            </A>
             <a
               href={DOCS[locale()]}
               target="_blank"

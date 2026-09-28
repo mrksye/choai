@@ -137,3 +137,15 @@ test("asking for one panel puts down whoever had it", async ({ page }) => {
   await expect(page.getByPlaceholder("who it was with")).toBeHidden()
   await expect(page.getByPlaceholder("Ask about these books")).toBeVisible()
 })
+
+/** The licences are reached from the help at the end of the top bar, not from the settings. */
+test("the licences are a link in the help, and not a section of the settings", async ({ page }) => {
+  await page.goto("/settings")
+  await expect(page.locator("#licenses")).toHaveCount(0)
+
+  await page.getByRole("button", { name: "Keyboard shortcuts" }).click()
+  await page.getByRole("link", { name: "Licences" }).click()
+  await expect(page).toHaveURL(/\/licenses/)
+  await expect(page.getByText("choai is free software")).toBeVisible()
+  await expect(page.getByRole("link", { name: "Licences" })).toBeHidden()
+})

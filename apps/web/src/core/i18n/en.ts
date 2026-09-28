@@ -302,7 +302,6 @@ export const en = {
       "It comes with absolutely no warranty, to the extent the law allows. You are welcome to redistribute it under the terms of that licence.",
     hledger:
       "The accounting is done by hledger itself, compiled to WebAssembly. hledger is copyright Simon Michael and contributors, under the same licence — which is why this app is under it too.",
-    show: "Every package and its licence",
     fullText: "Licence in full",
     loading: "Reading the licences…",
     engine: "In the engine — {{ count }} packages",

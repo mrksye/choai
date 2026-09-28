@@ -195,7 +195,6 @@ test("the settings list offers the page's own sections, and nothing else", async
     "Language",
     "Appearance",
     "The current journal",
-    "Licences",
   ])
 })
 
@@ -204,10 +203,10 @@ test("choosing a section brings it into view and says so in the address", async 
   await openTheDemo(page)
   await page.getByRole("button", { name: "Settings", exact: true }).first().click()
 
-  await settingsList(page).getByRole("button", { name: "Licences", exact: true }).click()
+  await settingsList(page).getByRole("button", { name: "Appearance", exact: true }).click()
 
-  await expect(page).toHaveURL(/#licenses$/)
-  await expect(page.locator("#licenses")).toBeInViewport()
+  await expect(page).toHaveURL(/#appearance$/)
+  await expect(page.locator("#appearance")).toBeInViewport()
 })
 
 test("on a narrow window choosing a section is how the settings are reached", async ({ page }) => {
@@ -217,12 +216,12 @@ test("on a narrow window choosing a section is how the settings are reached", as
   await page.getByRole("button", { name: "Settings", exact: true }).first().click()
 
   // Still the list: the rail changes which list, it does not leave.
-  await expect(settingsList(page).getByRole("button", { name: "Licences", exact: true })).toBeVisible()
+  await expect(settingsList(page).getByRole("button", { name: "Appearance", exact: true })).toBeVisible()
 
-  await settingsList(page).getByRole("button", { name: "Licences", exact: true }).click()
+  await settingsList(page).getByRole("button", { name: "Appearance", exact: true }).click()
 
   await expect(back(page)).toBeVisible()
-  await expect(page.locator("#licenses")).toBeInViewport()
+  await expect(page.locator("#appearance")).toBeInViewport()
 })
 
 test("a section the page will not draw is not offered", async ({ page }) => {
@@ -232,7 +231,7 @@ test("a section the page will not draw is not offered", async ({ page }) => {
 
   const offered = await settingsList(page).getByRole("button").allInnerTexts()
   expect(offered).not.toContain("The current journal")
-  expect(offered).toContain("Licences")
+  expect(offered).toContain("Appearance")
 })
 
 /**

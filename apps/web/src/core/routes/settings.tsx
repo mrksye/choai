@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createMemo, createResource, on, type JSX } from "solid-js"
-import { A, useLocation } from "@solidjs/router"
+import { useLocation } from "@solidjs/router"
 
 import { LOCALES, LOCALE_NAMES, locale, setLocale, t } from "~/core/i18n"
 import { Button } from "~/core/components/ui/button"
@@ -38,7 +38,6 @@ export const SECTIONS: readonly Section[] = [
   { id: "language", name: () => t("settings.language") },
   { id: "appearance", name: () => t("settings.appearance") },
   { id: "library", name: () => t("library.title"), when: inHand },
-  { id: "licenses", name: () => t("licenses.title") },
 ]
 
 /**
@@ -109,17 +108,6 @@ export default function Settings(): JSX.Element {
         <p class="text-xs text-muted-foreground">{t("settings.appearanceHint")}</p>
       </section>
       <Library />
-      <section id="licenses" class="flex flex-col gap-2">
-        <h2 class="text-sm font-medium">{t("licenses.title")}</h2>
-        <p class="text-xs text-muted-foreground">{t("licenses.app")}</p>
-        <p class="text-xs text-muted-foreground">{t("licenses.copyright")}</p>
-        <A
-          href="/licenses#work"
-          class="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-        >
-          {t("licenses.show")}
-        </A>
-      </section>
     </div>
   )
 }

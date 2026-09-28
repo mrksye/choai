@@ -292,7 +292,6 @@ export const ja: Dictionary = {
       "法律が認める範囲で、一切の保証はありません。このライセンスの条件のもとで再配布できます。",
     hledger:
       "計算しているのは hledger 本体を WebAssembly にしたものです。hledger の著作権は Simon Michael と貢献者にあり、同じライセンスで公開されています。このアプリが同じライセンスなのはそのためです。",
-    show: "すべてのパッケージとライセンス",
     fullText: "ライセンス全文",
     loading: "ライセンスを読み込んでいます…",
     engine: "エンジンに含まれるもの — {{ count }} パッケージ",
