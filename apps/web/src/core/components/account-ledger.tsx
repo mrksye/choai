@@ -128,7 +128,7 @@ function HeaderCell(props: { class: string; children: JSX.Element }): JSX.Elemen
 
 function Line(props: { line: LedgerLine; account: string }): JSX.Element {
   return (
-    <tr class="align-top">
+    <tr class="align-baseline">
       <td class="border-b border-border/50 py-1 pr-2 pl-1 font-mono text-xs whitespace-nowrap tabular-nums">
         {props.line.date === undefined ? "" : dayOf(props.line.date)}
       </td>
@@ -143,16 +143,21 @@ function Line(props: { line: LedgerLine; account: string }): JSX.Element {
           <div class="text-xs text-muted-foreground">↔ {props.line.counterparts.join(", ")}</div>
         </Show>
       </td>
-      <Figure value={props.line.amount} />
-      <Figure value={props.line.balance} />
+      <Figure value={props.line.amount} class="font-medium" />
+      <Figure value={props.line.balance} class="text-xs text-muted-foreground" />
     </tr>
   )
 }
 
-/** A column with nothing in it is left empty; a zero there would read as a figure. */
-function Figure(props: { value: MixedAmount }): JSX.Element {
+/**
+ * A column with nothing in it is left empty; a zero there would read as a figure.
+ *
+ * The amount is what the line is about and the balance is where it left the
+ * account, so the balance is set back rather than the two competing side by side.
+ */
+function Figure(props: { value: MixedAmount; class: string }): JSX.Element {
   return (
-    <td class="border-b border-border/50 py-1 pl-4 text-right font-mono whitespace-nowrap tabular-nums">
+    <td class={`border-b border-border/50 py-1 pl-4 text-right font-mono whitespace-nowrap tabular-nums ${props.class}`}>
       {props.value.length === 0 ? "" : formatMixed(props.value)}
     </td>
   )
