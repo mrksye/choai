@@ -311,3 +311,37 @@ test("a period chosen on one report narrows the other two, and each says so", as
     await expect(page.getByText(empty)).toBeVisible()
   }
 })
+
+/**
+ * A balance sheet narrowed to a period is the balances at its end, so the
+ * ledger beside it counts from the beginning of the books, as
+ * `register --historical` does — not from the first day of the period, which
+ * would put a figure in the balance column that is nobody's balance.
+ */
+test("the balance sheet's ledger under a period still shows the account's balance", async ({ page }) => {
+  await openTheDemo(page)
+  const today = await page.evaluate(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+  })
+  const added = await page.evaluate(
+    (date) =>
+      window.choai.transaction.create({
+        date,
+        payee: "Today",
+        postings: [{ account: "expenses:food", amount: "$10.00" }, { account: "assets:bank:checking" }],
+      }),
+    today,
+  )
+  expect(added.ok).toBe(true)
+
+  await page.goto("/balance-sheet#work")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "This month" }).click()
+  await page.getByRole("button", { name: "checking", exact: true }).click()
+
+  const rows = page.locator("tbody tr:has(td)")
+  await expect(rows).toHaveCount(1)
+  await expect(rows.first().locator("td").nth(2)).toHaveText("$-10.00")
+  await expect(rows.first().locator("td").last()).toHaveText("$7,932.00")
+})

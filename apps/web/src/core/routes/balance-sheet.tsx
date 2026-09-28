@@ -9,7 +9,7 @@ import { t } from "~/core/i18n"
 export default function BalanceSheet(): JSX.Element {
   return (
     <div class="flex flex-col gap-4">
-      <ReportOrLedger narrowing={periodNow()}>
+      <ReportOrLedger narrowing={periodNow()} historical>
         <p class="text-sm text-muted-foreground">{t("balanceSheet.lead")}</p>
         <DeclareTypes />
         <BalanceReportView

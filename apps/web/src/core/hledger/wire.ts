@@ -162,7 +162,18 @@ export interface JournalSummary {
 
 export type Request =
   | { readonly kind: "entries"; readonly query: string; readonly limit: number; readonly offset: number }
-  | { readonly kind: "register"; readonly query: string; readonly limit: number; readonly offset: number }
+  | {
+      readonly kind: "register"
+      readonly query: string
+      readonly limit: number
+      readonly offset: number
+      /**
+       * Whether the running total starts from everything before the query's
+       * dates, as `register --historical` does, rather than from zero: an
+       * account's balance, rather than what moved in a period.
+       */
+      readonly historical?: boolean
+    }
   | { readonly kind: "balance"; readonly query: string }
   | { readonly kind: "balancesheet"; readonly query: string }
   | { readonly kind: "incomestatement"; readonly query: string }

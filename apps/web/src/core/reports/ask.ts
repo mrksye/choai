@@ -58,8 +58,8 @@ export interface Ledger {
  * The entries are asked for under the same query only to say where each
  * movement's other side went; every figure is the register's.
  */
-export const askLedger = async (account: string, query: string): Promise<Reply<Ledger>> => {
-  const register = await ask({ kind: "register", query, limit: LEDGER_LIMIT, offset: 0 })
+export const askLedger = async (account: string, query: string, historical = false): Promise<Reply<Ledger>> => {
+  const register = await ask({ kind: "register", query, limit: LEDGER_LIMIT, offset: 0, historical })
   if (!register.ok) return register
   const entries = await ask({ kind: "entries", query, limit: LEDGER_LIMIT, offset: 0 })
   if (!entries.ok) return entries

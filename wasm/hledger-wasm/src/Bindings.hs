@@ -180,6 +180,10 @@ data Request = Request
   -- exactly the shape its own reports emit.
   , reqDescription :: Text
   -- ^ For @similar@: the description to find past transactions like.
+  , reqHistorical :: Bool
+  -- ^ For @register@: whether the running total starts from everything before
+  -- the query's dates, as @register --historical@ does, rather than from zero.
+  -- An account's balance is the first; what moved in a period is the second.
   }
 
 parseRequest :: A.Value -> A.Parser Request
@@ -191,6 +195,7 @@ parseRequest = A.withObject "request" $ \o ->
     <*> (maybe 0 id <$> o .:? "offset")
     <*> o .:? "transaction"
     <*> (maybe "" id <$> o .:? "description")
+    <*> (maybe False id <$> o .:? "historical")
 
 -- | Run the report a request names.
 --
@@ -201,7 +206,7 @@ parseRequest = A.withObject "request" $ \o ->
 report :: Journal -> Request -> IO (Either Failure A.Value)
 report journal request = case reqKind request of
   "entries" -> withSpec [] PerPeriod AsTree (\spec -> page request (entriesReport spec journal))
-  "register" -> withSpec [] PerPeriod AsTree (\spec -> page request (postingsReport spec journal))
+  "register" -> withSpec [] (if reqHistorical request then Historical else PerPeriod) AsTree (\spec -> page request (postingsReport spec journal))
   "balance" -> withSpec [] PerPeriod AsTree (\spec -> A.toJSON (multiBalanceReport spec journal))
   "balancesheet" -> withSpec ["type:ALE"] Historical AsTree (\spec -> A.toJSON (multiBalanceReport spec journal))
   "incomestatement" -> withSpec ["type:RX"] PerPeriod AsTree (\spec -> A.toJSON (multiBalanceReport spec journal))

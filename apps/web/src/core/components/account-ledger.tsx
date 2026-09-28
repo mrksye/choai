@@ -21,25 +21,33 @@ import { t } from "~/core/i18n"
 export function ReportOrLedger(props: {
   /** Query terms of the screen's own, such as a period, narrowing the ledger too. */
   narrowing?: string
+  /**
+   * Whether the balance column is the account's balance, counted from the
+   * beginning of the books whatever the period — a balance sheet's — rather
+   * than what has moved since the period began.
+   */
+  historical?: boolean
   children: JSX.Element
 }): JSX.Element {
   const [query] = useQuery()
   return (
     <Show when={accountChosenIn(query())} fallback={props.children} keyed>
-      {(account) => <AccountLedger account={account} narrowing={props.narrowing} />}
+      {(account) => <AccountLedger account={account} narrowing={props.narrowing} historical={props.historical} />}
     </Show>
   )
 }
 
-function AccountLedger(props: { account: string; narrowing?: string }): JSX.Element {
+function AccountLedger(props: { account: string; narrowing?: string; historical?: boolean }): JSX.Element {
   const [query] = useQuery()
 
   const [ledger] = createResource(
     () => {
       const open = getOrUndefined(journal())
-      return open === undefined ? undefined : { open, terms: narrowed(query(), props.narrowing) }
+      return open === undefined
+        ? undefined
+        : { open, terms: narrowed(query(), props.narrowing), historical: props.historical === true }
     },
-    (asked) => askLedger(props.account, asked.terms),
+    (asked) => askLedger(props.account, asked.terms, asked.historical),
   )
 
   return (
