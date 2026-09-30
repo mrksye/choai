@@ -325,6 +325,8 @@ export const en = {
     tagName: "name",
     tagValue: "value",
     addTag: "+ tag",
+    /** A tag this build's edition offers, named in its own words. */
+    addNamedTag: "+ {{ name }}",
     removeTag: "Remove tag",
     postings: "Postings",
     account: "account",

@@ -60,8 +60,8 @@ second is the order of a spread in `capabilitiesWith`. So no edition can
 quietly change what a balance sheet means, and reading core tells you the whole
 of what core does.
 
-**The contract stays small.** Two tables and a paragraph, because this app has
-three doors: `views` is how a person arrives, `capabilities` is how a script or
+**The contract stays small.** Two tables, a paragraph and a vocabulary, because
+this app has three doors: `views` is how a person arrives, `capabilities` is how a script or
 a test arrives, and a model arrives through both of them at once — it is handed
 the capabilities as tools, and it is told what it is doing. `guidance` is the
 second half of that third door.
@@ -73,10 +73,19 @@ one and the report it had just been given came back saying so. That is not a
 hook and not a lifecycle; it is the contract catching up with a door it already
 had part of.
 
+`tags` is the same catching up, on the person's side. A model was told which
+tags entries here carry; somebody typing in the composer was told nothing, and
+had to know `tax` and its nine exact values by heart or leave the entry for the
+consumption tax screen to report as unclassified. So the composer offers an
+edition's tags as buttons beside its own "+ tag", and their values as
+suggestions in a box that can still be typed in. It offers and never writes:
+nothing goes into an entry that was not pressed, and which value applies stays
+the reader's.
+
 Do not grow it further into a plugin framework — no hooks, no lifecycle, no
 registry, no dependency injection. If something genuinely cannot be said as a
-view, a capability or a paragraph, that is worth a conversation, not a fourth
-abstraction added in advance.
+view, a capability, a paragraph or a tag, that is worth a conversation, not
+another abstraction added in advance.
 
 **What an edition says to a model is added, never in place of anything.** It
 goes after core's instructions and cannot remove or contradict them: what a
@@ -117,7 +126,8 @@ editions/jp/
 
 It may reach into core the way any code here does — the journal, hledger, the
 reports, the components, the shape checkers. It reaches the app only through
-`JapanEdition`, and only as one of the two tables or the paragraph:
+`JapanEdition`, and only as one of the two tables, the paragraph or the
+vocabulary:
 
 - A **view** is a screen with an address, a place on the rail and an explorer
   beside it. It carries its own `label` as a function, so it can bring words the
@@ -132,8 +142,12 @@ reports, the components, the shape checkers. It reaches the app only through
   constants the code already reads, so it cannot fall behind them, and leave the
   deciding to the reader — say where a classification goes, not which one a
   particular purchase takes.
+- **`tags`** is the same said to a person writing an entry by hand: each tag's
+  name, where it goes — the entry or a posting — and the values to suggest.
+  Read it off the same constants as `guidance`, and offer only what a person
+  would write; a tag a register or a schedule writes is not a button.
 
-All three are `readonly` data. None of them needs core to be edited.
+All four are `readonly` data. None of them needs core to be edited.
 
 ## What holds these rules
 

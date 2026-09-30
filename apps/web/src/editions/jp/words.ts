@@ -156,6 +156,15 @@ const en = {
       "out-of-scope": "Out of scope",
     },
   },
+  offered: {
+    tax: "Consumption tax",
+    deduct: "Deductible",
+    deductYes: "The tax on it can be deducted",
+    deductNo: "It cannot — write the reason after no:",
+    invoice: "Invoice",
+    partner: "With",
+    registration: "Registration number",
+  },
   invoice: {
     title: "The paper behind each purchase",
     lead: "Whether the tax on a purchase can be deducted turns on what the supplier gave you and who they are — facts about a document rather than about the accounting. Nothing here is judged; the entries where the question arises are put in one place.",
@@ -405,6 +414,15 @@ const ja: typeof en = {
       "tax-exempt": "免税（輸出等）",
       "out-of-scope": "対象外（不課税）",
     },
+  },
+  offered: {
+    tax: "消費税区分",
+    deduct: "仕入税額控除",
+    deductYes: "控除できる",
+    deductNo: "控除できない（理由は no: の後に）",
+    invoice: "インボイス",
+    partner: "相手先",
+    registration: "登録番号",
   },
   invoice: {
     title: "各仕入の証憑",

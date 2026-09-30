@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { amountExample } from "~/core/compose/hint"
 import { asWritten, ghostOf, isBare } from "~/core/compose/commodity"
 import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/core/compose/draft"
+import { followingPrevious } from "~/core/compose/following"
 import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/core/lib/monad/shape"
 import { looksTabular, rowsOf } from "~/core/lib/csv"
 import { textOf } from "~/core/lib/text"
@@ -659,6 +660,9 @@ describe("what an edition joins on", () => {
     // Including the third table: it belongs to nowhere, so there are no local
     // conventions for it to describe to a model.
     expect(StandardEdition.guidance).toBeUndefined()
+    // Nor a vocabulary: its tags are the reader's own, and the composer offers
+    // no names it would have to have made up.
+    expect(StandardEdition.tags).toBeUndefined()
   })
 
   test("what an edition says to a model is added to core's, never in place of it", () => {
@@ -1018,5 +1022,77 @@ describe("how a set of books is laid out in files", () => {
     })
     expect(writtenInto(files, MAIN, TRANSACTIONS, "x\n")).toEqual({ [TRANSACTIONS]: "x\n" })
     expect(writtenInto(files, MAIN, "register.jsonl", "{}\n")).toEqual({ "register.jsonl": "{}\n" })
+  })
+})
+
+describe("an entry written after one like it", () => {
+  const posting = (paccount: string, pcomment: string, ptags: readonly (readonly [string, string])[]) => ({
+    paccount,
+    pamount: [],
+    pcomment,
+    pdate: null,
+    pstatus: "Unmarked",
+    ptags,
+  })
+  const previous = {
+    tindex: 1,
+    tsourcepos: [
+      { sourceName: "t", sourceLine: 1, sourceColumn: 1 },
+      { sourceName: "t", sourceLine: 3, sourceColumn: 1 },
+    ],
+    tdate: "2026-04-01",
+    tdescription: "NTT",
+    tcomment: "partner:NTT\nneeds-checking:\n",
+    ttags: [
+      ["partner", "NTT"],
+      ["needs-checking", ""],
+    ],
+    tpostings: [
+      // What hledger sends: the account's tags among the posting's own, and
+      // both where they disagree.
+      posting("費用:通信費", "tax:taxable-purchase-10\ndeduct:yes\n", [
+        ["tax", "taxable-purchase-10"],
+        ["deduct", "yes"],
+        ["type", "X"],
+        ["tax", "out-of-scope"],
+      ]),
+      posting("資産:普通預金", "", [["type", "A"]]),
+    ],
+  } satisfies Transaction
+
+  test("the accounts and what was written on them come across", () => {
+    const next = followingPrevious(emptyDraft("2026-05-01"), previous)
+    expect(next.postings.map((one) => one.account)).toEqual(["費用:通信費", "資産:普通預金"])
+    expect(next.postings[0]?.tags).toEqual([
+      { name: "tax", value: "taxable-purchase-10" },
+      { name: "deduct", value: "yes" },
+    ])
+    expect(next.postings[1]?.tags).toEqual([])
+  })
+
+  test("what a posting had from its account is left with the account", () => {
+    const next = followingPrevious(emptyDraft("2026-05-01"), previous)
+    expect(next.postings.flatMap((one) => one.tags.map((tag) => tag.name))).not.toContain("type")
+  })
+
+  test("a doubt about the last entry is not carried into the next", () => {
+    expect(followingPrevious(emptyDraft("2026-05-01"), previous).tags).toEqual([{ name: "partner", value: "NTT" }])
+  })
+
+  test("nothing already written is replaced", () => {
+    const begun = {
+      ...emptyDraft("2026-05-01"),
+      tags: [{ name: "memo", value: "" }],
+      postings: [
+        { account: "費用:会議費", amount: "", tags: [] },
+        { account: "", amount: "", tags: [{ name: "x", value: "1" }] },
+      ],
+    }
+    const next = followingPrevious(begun, previous)
+    expect(next.tags).toEqual(begun.tags)
+    // On an account of its own choosing, what was said about another is no guide.
+    expect(next.postings[0]).toEqual(begun.postings[0])
+    expect(next.postings[1]?.account).toBe("資産:普通預金")
+    expect(next.postings[1]?.tags).toEqual([{ name: "x", value: "1" }])
   })
 })

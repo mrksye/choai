@@ -315,6 +315,7 @@ export const ja: Dictionary = {
     tagName: "名前",
     tagValue: "値",
     addTag: "＋ タグ",
+    addNamedTag: "＋ {{ name }}",
     removeTag: "タグを消す",
     postings: "仕訳",
     account: "勘定科目",

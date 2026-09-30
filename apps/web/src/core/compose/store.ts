@@ -1,10 +1,11 @@
 import { createSignal, type Accessor } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
-import type { Transaction, Trouble } from "~/core/hledger/wire"
+import type { Trouble } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { getOrUndefined, None, Some, type Option } from "~/core/lib/monad"
 import { commitDraft } from "./commit"
+import { followingPrevious } from "./following"
 import {
   emptyDraft,
   emptyPosting,
@@ -37,9 +38,14 @@ export const addPosting = (): void => {
   setDraft((was) => ({ ...was, postings: [...was.postings, emptyPosting()] }))
 }
 
-/** Metadata on the transaction as a whole. Any name, any value. */
-export const addTag = (): void => {
-  setDraft((was) => ({ ...was, tags: [...was.tags, { name: "", value: "" }] }))
+/**
+ * Metadata on the transaction as a whole. Any name, any value.
+ *
+ * The name is given where the tag was offered by one — the edition's tags are
+ * buttons that start the line with the name already written.
+ */
+export const addTag = (name: string): void => {
+  setDraft((was) => ({ ...was, tags: [...was.tags, { name, value: "" }] }))
 }
 
 export const editTag = (index: number, change: Partial<Tag>): void => {
@@ -51,11 +57,11 @@ export const removeTag = (index: number): void => {
 }
 
 /** Metadata on one posting. hledger reads these apart from the transaction's. */
-export const addPostingTag = (posting: number): void => {
+export const addPostingTag = (posting: number, name: string): void => {
   setDraft((was) => ({
     ...was,
     postings: replaceAt(was.postings, posting, {
-      tags: [...(was.postings[posting]?.tags ?? []), { name: "", value: "" }],
+      tags: [...(was.postings[posting]?.tags ?? []), { name, value: "" }],
     }),
   }))
 }
@@ -82,13 +88,16 @@ const replaceAt = <T,>(items: readonly T[], index: number, change: Partial<T>): 
   items.map((item, at) => (at === index ? { ...item, ...change } : item))
 
 /**
- * Offer the accounts used last time this payee was written.
+ * Offer the accounts used last time this payee was written, and what they were
+ * tagged with.
  *
  * hledger decides what counts as similar — the same lookup its own `add`
  * consults — and comparing on the payee alone is why the note can differ every
- * time without costing a match. Only accounts are taken: the figure differs even
- * when the accounts do not, so filling it in would mostly be something to
- * delete.
+ * time without costing a match. The figure is not taken: it differs even when
+ * the accounts do not, so filling it in would mostly be something to delete.
+ * The tags are, because a tag is how a book says what kind of thing an entry
+ * is, and the same payee on the same accounts is usually the same kind of
+ * thing again.
  */
 export const suggestFromPayee = async (payee: string): Promise<void> => {
   if (payee.trim() === "" || getOrUndefined(journal()) === undefined) return
@@ -99,21 +108,7 @@ export const suggestFromPayee = async (payee: string): Promise<void> => {
   const previous = reply.value[0]
   if (previous === undefined) return
 
-  setDraft((was) => ({ ...was, postings: fillEmptyAccounts(was, previous) }))
-}
-
-/** Only empty account boxes are filled, so nothing already typed is overwritten. */
-const fillEmptyAccounts = (was: Draft, previous: Transaction): DraftPosting[] => {
-  const suggested = previous.tpostings.map((posting) => posting.paccount)
-  const grown = [
-    ...was.postings,
-    ...Array.from({ length: Math.max(0, suggested.length - was.postings.length) }, emptyPosting),
-  ]
-
-  return grown.map((posting, at) => {
-    const offer = suggested[at]
-    return posting.account.trim() === "" && offer !== undefined ? { ...posting, account: offer } : posting
-  })
+  setDraft((was) => followingPrevious(was, previous))
 }
 
 export const writable = (): boolean => isWritable(draft())

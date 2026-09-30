@@ -14,6 +14,7 @@ import { asFigure, includedAt, isZero, negated, plus, sumOf, times, whole, write
 import { said, toldOf } from "~/editions/jp/tags"
 import {
   DEDUCT,
+  DEDUCT_VALUES,
   TAX,
   TAX_CATEGORIES,
   isTaxCategory,
@@ -30,6 +31,7 @@ import {
 import {
   EVIDENCE,
   INVOICE,
+  INVOICE_STATUSES,
   PARTNER,
   REGISTRATION,
   looksLikeRegistration,
@@ -37,6 +39,7 @@ import {
   saysSomething,
 } from "~/editions/jp/invoice/note"
 import { evidenceAt, inRepository } from "~/editions/jp/invoice/where"
+import { JAPAN_TAGS } from "~/editions/jp/offering"
 import {
   declarationsIn,
   declaredAcross,
@@ -50,13 +53,15 @@ import { INCOME_SECTIONS, isSection } from "~/editions/jp/chart/sections"
 import { during, fiscalYearFrom, lastDayOf, upTo } from "~/editions/jp/statements/period"
 import { balanceSheetFrom, incomeStatementFrom } from "~/editions/jp/statements/layout"
 import { appended, asLine, readEvents } from "~/editions/jp/fixed-assets/events"
-import { inUseAt, registerFrom, type FixedAsset } from "~/editions/jp/fixed-assets/register"
+import { ASSET, inUseAt, registerFrom, type FixedAsset } from "~/editions/jp/fixed-assets/register"
 import { depreciationFor, monthsInService, type Depreciation } from "~/editions/jp/fixed-assets/depreciation"
 import { scheduleThrough } from "~/editions/jp/fixed-assets/schedule"
 import { depreciationDraft, depreciationItems } from "~/editions/jp/fixed-assets/proposal"
 import { draftToJournal } from "~/core/compose/draft"
 import {
   ACCRUALS,
+  CLOSING,
+  REVERSAL,
   closingDraft,
   closingItems,
   reversalDraft,
@@ -1722,5 +1727,48 @@ describe("what a model is told about how these books are kept", () => {
 
   test("it names the capability that offers an asset, by the name that capability has", () => {
     expect(said).toContain(CAPABILITY.recordAssets)
+  })
+})
+
+describe("the tags offered to somebody writing an entry by hand", () => {
+  const offered = (name: string) => JAPAN_TAGS.find((tag) => tag.name === name)
+  const valuesOf = (name: string): readonly string[] => offered(name)?.values.map((one) => one.value) ?? []
+
+  test("every band is offered, and nothing that is not one", () => {
+    // Read off the same constant the report is, so a band added there is a
+    // button's suggestion the same day — and a suggestion that is not a band
+    // would be a way of writing what the report calls a mistake.
+    expect(valuesOf(TAX)).toEqual([...TAX_CATEGORIES])
+    expect(valuesOf(DEDUCT)).toEqual([...DEDUCT_VALUES])
+    expect(valuesOf(INVOICE)).toEqual([...INVOICE_STATUSES])
+  })
+
+  test("a classification is offered on the posting and a document's facts on the entry", () => {
+    expect(offered(TAX)?.on).toBe("posting")
+    expect(offered(DEDUCT)?.on).toBe("posting")
+    expect(offered(INVOICE)?.on).toBe("entry")
+    expect(offered(PARTNER)?.on).toBe("entry")
+    expect(offered(REGISTRATION)?.on).toBe("entry")
+  })
+
+  test("a person is offered nothing a model is not told about", () => {
+    JAPAN_TAGS.forEach((tag) => expect(japaneseGuidance()).toContain(`${tag.name}:`))
+  })
+
+  test("nothing a register or a schedule writes is offered", () => {
+    const names = JAPAN_TAGS.map((tag) => tag.name)
+    expect(names).not.toContain(ASSET)
+    expect(names).not.toContain(CLOSING)
+    expect(names).not.toContain(REVERSAL)
+  })
+
+  test("every button and every suggestion has words in both languages", () => {
+    ;[englishWords(), japaneseWords()].forEach((words) =>
+      Object.values(words.offered).forEach((said) => expect(said.trim()).not.toBe("")),
+    )
+    JAPAN_TAGS.forEach((tag) => {
+      expect(tag.label().trim()).not.toBe("")
+      tag.values.forEach((one) => expect(one.label?.().trim() ?? "").not.toBe(""))
+    })
   })
 })

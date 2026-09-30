@@ -7,6 +7,8 @@ import { TextField, TextFieldInput } from "~/core/components/ui/text-field"
 import { TroubleNote } from "~/core/components/trouble-note"
 import { XIcon } from "~/core/lib/ui/icons"
 import { t } from "~/core/i18n"
+import { edition } from "~/edition"
+import type { OfferedTag } from "~/edition/types"
 import type { DefaultCommodity } from "~/core/hledger/wire"
 import { ghostOf } from "./commodity"
 import { draftToJournal, type Tag } from "./draft"
@@ -87,6 +89,7 @@ export function ComposePanel(): JSX.Element {
 
       <Tags
         tags={draft().tags}
+        offered={offeredOn("entry")}
         onAdd={addTag}
         onEdit={editTag}
         onRemove={removeTag}
@@ -96,6 +99,13 @@ export function ComposePanel(): JSX.Element {
       <datalist id="known-accounts">
         <For each={accounts()}>{(account) => <option value={account} />}</For>
       </datalist>
+      <For each={OFFERED.filter((tag) => tag.values.length > 0)}>
+        {(tag) => (
+          <datalist id={valuesListOf(tag.name)}>
+            <For each={tag.values}>{(one) => <option value={one.value}>{one.label?.() ?? one.value}</option>}</For>
+          </datalist>
+        )}
+      </For>
 
       <div class="flex flex-col gap-2">
         <span class="text-xs font-medium text-muted-foreground">{t("compose.postings")}</span>
@@ -132,7 +142,8 @@ export function ComposePanel(): JSX.Element {
               </div>
               <Tags
                 tags={posting().tags}
-                onAdd={() => addPostingTag(index)}
+                offered={offeredOn("posting")}
+                onAdd={(name) => addPostingTag(index, name)}
                 onEdit={(at, change) => editPostingTag(index, at, change)}
                 onRemove={(at) => removePostingTag(index, at)}
                 label={t("compose.postingTags")}
@@ -168,19 +179,43 @@ export function ComposePanel(): JSX.Element {
 }
 
 /**
+ * The tags this build's edition offers, and where each of them goes.
+ *
+ * Read once: an edition is settled before the app runs.
+ */
+const OFFERED: readonly OfferedTag[] = edition.tags ?? []
+
+const offeredOn = (on: OfferedTag["on"]): readonly OfferedTag[] => OFFERED.filter((tag) => tag.on === on)
+
+/** One list per offered name, shared by every box that tag is written in. */
+const valuesListOf = (name: string): string => `offered-tag-values-${name}`
+
+/** The values offered for whatever name a box's tag has, if it has one that is offered. */
+const valuesFor = (name: string): string | undefined =>
+  OFFERED.some((tag) => tag.name === name.trim() && tag.values.length > 0) ? valuesListOf(name.trim()) : undefined
+
+/**
  * Any number of name-and-value pairs, with any names.
  *
  * hledger puts no vocabulary on these — a tag is whatever you write in a comment
- * — so neither does this.
+ * — so neither does this. What an edition offers is a button that starts the
+ * line with the name written and suggestions in the value box, and never a
+ * limit on what can be typed there. A button leaves once its tag is on the
+ * line, since a second one of the same name is not what anybody pressing it
+ * meant.
  */
 function Tags(props: {
   tags: readonly Tag[]
+  offered: readonly OfferedTag[]
   label: string
   indented?: boolean
-  onAdd: () => void
+  onAdd: (name: string) => void
   onEdit: (index: number, change: Partial<Tag>) => void
   onRemove: (index: number) => void
 }): JSX.Element {
+  const notYetWritten = (): readonly OfferedTag[] =>
+    props.offered.filter((offer) => !props.tags.some((tag) => tag.name.trim() === offer.name))
+
   return (
     <div class="flex flex-col gap-1" classList={{ "pl-3": props.indented }}>
       <Show when={props.tags.length > 0}>
@@ -203,6 +238,7 @@ function Tags(props: {
                 type="text"
                 class="h-7 text-xs"
                 placeholder={t("compose.tagValue")}
+                list={valuesFor(tag().name)}
                 value={tag().value}
                 onInput={(event) => props.onEdit(index, { value: event.currentTarget.value })}
               />
@@ -219,9 +255,24 @@ function Tags(props: {
           </div>
         )}
       </Index>
-      <Button variant="ghost" size="sm" class="self-start px-1 text-xs" onClick={props.onAdd}>
-        {t("compose.addTag")}
-      </Button>
+      <div class="flex flex-wrap gap-x-1">
+        <Button variant="ghost" size="sm" class="px-1 text-xs" onClick={() => props.onAdd("")}>
+          {t("compose.addTag")}
+        </Button>
+        <For each={notYetWritten()}>
+          {(offer) => (
+            <Button
+              variant="ghost"
+              size="sm"
+              class="px-1 text-xs"
+              title={`${offer.name}:`}
+              onClick={() => props.onAdd(offer.name)}
+            >
+              {t("compose.addNamedTag", { name: offer.label() })}
+            </Button>
+          )}
+        </For>
+      </div>
     </div>
   )
 }

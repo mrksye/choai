@@ -78,10 +78,57 @@ export interface View {
   readonly reached: Reached
 }
 
+/**
+ * One value a tag takes, as the composer offers it.
+ *
+ * The value is what is written; the label is what is shown beside it, where
+ * the value alone — `taxable-purchase-10` — is a key rather than a sentence.
+ */
+export interface TagValue {
+  readonly value: string
+  readonly label?: () => string
+}
+
+/**
+ * A tag these books carry, offered to whoever is writing an entry by hand.
+ *
+ * `on` is where it belongs — the entry, or one posting of it — and decides
+ * which of the composer's tag lists its button appears under. `values` are
+ * offered as suggestions in the box and never as the whole of what can be
+ * written: a tag is whatever somebody writes in a comment, and the box stays one
+ * you can type in. Empty where the value is the reader's own, like a name.
+ */
+export interface OfferedTag {
+  readonly name: string
+  readonly label: () => string
+  readonly on: "entry" | "posting"
+  readonly values: readonly TagValue[]
+}
+
 export interface Edition {
   readonly id: EditionId
   readonly views: readonly View[]
   readonly capabilities: Readonly<Record<string, SomeCapability>>
+  /**
+   * The tags these books carry, said to a person writing an entry.
+   *
+   * The same gap `guidance` closed for a model, found again on the other side.
+   * A model was told which tags entries here take; somebody typing in the
+   * composer was told nothing, and had to know `tax` and nine exact values by
+   * heart or leave the entry for the consumption tax screen to report as
+   * unclassified. This is the person's half of what `guidance` is the model's
+   * half of, and like it, it is read off the constants the code reads.
+   *
+   * **Offered, never written.** The composer shows a button per tag and the
+   * values as suggestions; nothing is put into an entry that the person did not
+   * press, and which value applies stays theirs to choose. Nothing core does
+   * with a tag changes because it was offered here — a tag written by hand from
+   * memory is the same text.
+   *
+   * Left out where there is nothing to offer, which is what the standard
+   * edition does.
+   */
+  readonly tags?: readonly OfferedTag[]
   /**
    * How these books are kept, said to a model.
    *

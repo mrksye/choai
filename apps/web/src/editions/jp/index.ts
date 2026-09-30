@@ -2,17 +2,23 @@ import type { Edition } from "~/edition/types"
 
 import { JAPAN_CAPABILITIES } from "./capabilities"
 import { japaneseGuidance } from "./guidance"
+import { JAPAN_TAGS } from "./offering"
 import { JAPAN_VIEWS } from "./views"
 
 /**
  * The Japan edition — the same app, with somewhere for Japanese tax work to go.
  *
- * Two tables and a paragraph, which is the whole of what an edition is.
+ * Two tables, a paragraph and a vocabulary, which is the whole of what an
+ * edition is.
  *
  * The paragraph is the third door. A model is handed the capabilities as tools
  * and is told what it is doing, and without the second half it would write
  * entries with nothing for the first half to count — then be shown its own
  * entries in the list of ones nobody has classified.
+ *
+ * The vocabulary is the same thing said to a person: the composer offers the
+ * tags these books carry, so that somebody writing an entry by hand is not
+ * the one writer left to know them by heart.
  *
  * Core is untouched by any of it: nothing under `core/` imports anything here,
  * nothing under `core/` asks which edition it is running under, and a build
@@ -31,6 +37,7 @@ export const JapanEdition: Edition = {
   views: JAPAN_VIEWS,
   capabilities: JAPAN_CAPABILITIES,
   guidance: japaneseGuidance,
+  tags: JAPAN_TAGS,
 }
 
 export { JapanEdition as edition }
