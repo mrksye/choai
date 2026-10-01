@@ -12,10 +12,12 @@
  * the other one. Nothing is shared between them: a key is only ever read with
  * the provider it was saved under.
  *
- * **Two modules may read this, and no more:** the one that talks to the model
- * and the panel where a key is typed in. Nothing under `api/` imports it, which
- * is what keeps a key out of reach of anything the model itself can ask for.
- * There is no linter to hold that line, so it is written here instead.
+ * **Three modules may read this, and no more:** the one that talks to the model,
+ * the one that asks Jev (`jev/clients.ts`), and the panel where a key is typed
+ * in. Nothing under `api/` imports it, and no edition does, which is what keeps
+ * a key out of reach of anything the model itself can ask for and of anything a
+ * jurisdiction brings. There is no linter to hold that line, so it is written
+ * here instead.
  */
 
 import { createSignal } from "solid-js"
@@ -62,13 +64,19 @@ export const which = async (): Promise<Which | undefined> => (await row(CHOSEN))
 
 export const keepWhich = (value: Which): Promise<void> => put({ id: CHOSEN, which: value })
 
-/** The key for one provider, if one has been saved. */
-export const key = async (of: Which): Promise<string | undefined> => (await row(of))?.key
+/**
+ * Whose key a row holds: a provider that talks, or TypeSafe, which only serves
+ * Jev and has no conversation to offer.
+ */
+export type Keyed = Which | "typesafe"
 
-export const keepKey = (of: Which, value: string): Promise<void> => put({ id: of, key: value })
+/** The key for one provider, if one has been saved. */
+export const key = async (of: Keyed): Promise<string | undefined> => (await row(of))?.key
+
+export const keepKey = (of: Keyed, value: string): Promise<void> => put({ id: of, key: value })
 
 /** Forget one provider's key. Which model was chosen is not a secret and stays. */
-export const forgetKey = async (of: Which): Promise<void> => {
+export const forgetKey = async (of: Keyed): Promise<void> => {
   const was = await row(of)
   await within("readwrite", [KEYS], (transaction) => {
     transaction.objectStore(KEYS).put({ id: of, ...(was?.model === undefined ? {} : { model: was.model }) })
