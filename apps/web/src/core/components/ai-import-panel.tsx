@@ -30,10 +30,10 @@ export function AiImportPanel(): JSX.Element {
                 type="button"
                 role="tab"
                 aria-selected={showing() === kind}
-                class="rounded px-3 py-1 text-xs"
+                class="rounded border px-3 py-1 text-xs"
                 classList={{
-                  "bg-accent font-medium text-foreground": showing() === kind,
-                  "text-muted-foreground hover:text-foreground": showing() !== kind,
+                  "border-foreground/40 bg-accent font-medium text-foreground": showing() === kind,
+                  "border-transparent text-muted-foreground hover:text-foreground": showing() !== kind,
                 }}
                 onClick={() => setShowing(kind)}
               >
