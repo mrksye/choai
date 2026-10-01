@@ -9,11 +9,12 @@ import { propose, type Item } from "~/core/journal/proposals"
 import { journal } from "~/core/journal/store"
 import { createCamera, type Camera, type CameraRefusal, type StillTrouble } from "~/core/lib/camera"
 import { getOrUndefined } from "~/core/lib/monad"
+import { XIcon } from "~/core/lib/ui/icons"
 import { candidatesIn, type Picked } from "~/core/receipt/accounts"
 import { receiptItem, type Unproposed } from "~/core/receipt/entry"
 import type { Failed, Read } from "~/core/receipt/pipeline"
 import type { Interpretation } from "~/core/receipt/reading"
-import { readAll, receipts, type Card, type Status } from "~/core/receipt/store"
+import { forgetReceipt, readAll, receipts, type Card, type Status } from "~/core/receipt/store"
 import type { Doubt, Understood } from "~/core/receipt/understood"
 import { wording } from "./jev-key-panel"
 
@@ -255,8 +256,17 @@ function ReceiptCard(props: {
   const listOf = (side: "expense" | "paid"): string => `${props.card.id}-${side}`
 
   return (
-    <article class="flex flex-col gap-2 rounded-md border border-border p-3">
+    <article class="relative flex flex-col gap-2 rounded-md border border-border p-3">
       <img src={props.card.url} alt={props.card.name} class="h-32 w-full rounded bg-muted object-contain" />
+      <button
+        type="button"
+        onClick={() => forgetReceipt(props.card.id)}
+        aria-label={t("receipts.forget")}
+        title={t("receipts.forget")}
+        class="absolute right-4 top-4 inline-flex size-7 items-center justify-center rounded-md border border-border bg-background/90 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <XIcon class="h-4 w-4" />
+      </button>
       <Switch>
         <Match when={props.card.status().is === "waiting"}>
           <p class="text-xs text-muted-foreground">{t("receipts.stage.waiting")}</p>

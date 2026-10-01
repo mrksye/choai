@@ -136,6 +136,7 @@ export const en = {
     lead: "Photographs of receipts, read into entries. Nothing is written until you press, and each entry goes to the review panel first as the text it would be.",
     choose: "Choose photographs",
     shoot: "Take a photograph",
+    forget: "Remove this receipt",
     camera: {
       opening: "Opening the camera",
       shoot: "Shoot",

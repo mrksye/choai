@@ -67,8 +67,10 @@ export const receipts: Accessor<readonly Card[]> = kept
 const generation = { now: 0 }
 const queue: { last: Promise<void> } = { last: Promise.resolve() }
 
+const stillKept = (card: Kept): boolean => kept().includes(card)
+
 const work = async (card: Kept, candidates: () => Candidates, from: number): Promise<void> => {
-  if (generation.now !== from) return
+  if (generation.now !== from || !stillKept(card)) return
   const reading = edition.receipts ?? {}
   const read = await readReceipt(card.picture, reading, candidates(), (stage) => card.setStatus({ is: "working", stage }))
   if (!read.ok) return card.setStatus({ is: "failed", failed: read.error })
@@ -89,6 +91,17 @@ export const readAll = (pictures: readonly File[], candidates: () => Candidates)
   added.forEach((card) => {
     queue.last = queue.last.then(() => work(card, candidates, from))
   })
+}
+
+/**
+ * One receipt let go of, whatever it had come to. One still waiting is never
+ * read; one being read is finished by the reader and the answer lands nowhere.
+ */
+export const forgetReceipt = (id: string): void => {
+  kept()
+    .filter((card) => card.id === id)
+    .forEach((card) => URL.revokeObjectURL(card.url))
+  setKept((was) => was.filter((card) => card.id !== id))
 }
 
 /** Every receipt let go of, as a book is put down. */

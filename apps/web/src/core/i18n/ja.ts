@@ -127,6 +127,7 @@ export const ja: Dictionary = {
     lead: "領収書の写真を読み取って仕訳にします。押すまで何も書き込まれません。仕訳はまず確認パネルに、書き込まれる文字そのままで表示されます。",
     choose: "写真を選ぶ",
     shoot: "カメラで撮る",
+    forget: "この領収書を外す",
     camera: {
       opening: "カメラを起動中",
       shoot: "撮る",
