@@ -3,6 +3,7 @@ import type { View } from "~/edition/types"
 import { ChartPage } from "./chart/ChartPage"
 import { ClosingPage } from "./closing/ClosingPage"
 import { ConsumptionTaxPage } from "./consumption-tax/ConsumptionTaxPage"
+import { ReceiptsPage } from "./receipt/ReceiptsPage"
 import { FixedAssetsPage } from "./fixed-assets/FixedAssetsPage"
 import { StatementsPage } from "./statements/StatementsPage"
 import { ROUTE } from "./naming"
@@ -12,6 +13,7 @@ import {
   ClosingIcon,
   ConsumptionTaxIcon,
   FixedAssetsIcon,
+  ReceiptIcon,
   StatementsIcon,
 } from "./ui/icons"
 import { words } from "./words"
@@ -25,7 +27,10 @@ import { words } from "./words"
  * the consumption tax that is worked out from every entry, and the assets that
  * are written down over years. Closing the year last, because it is last.
  *
- * All five under one heading, so a rail that had four buttons does not silently
+ * Receipts come after the consumption tax they feed and before the assets,
+ * because reading the year's paper into entries is the daily part of it.
+ *
+ * All of them under one heading, so a rail that had four buttons does not silently
  * become one with nine of equal standing. The heading is a function like the
  * labels are, so it follows the language being switched.
  *
@@ -59,6 +64,15 @@ export const JAPAN_VIEWS: readonly View[] = [
     Icon: ConsumptionTaxIcon,
     Explorer: JapanExplorer,
     page: ConsumptionTaxPage,
+    writes: false,
+    reached: { from: "rail", group: under },
+  },
+  {
+    href: ROUTE.receipts,
+    label: () => words().nav.receipts,
+    Icon: ReceiptIcon,
+    Explorer: JapanExplorer,
+    page: ReceiptsPage,
     writes: false,
     reached: { from: "rail", group: under },
   },

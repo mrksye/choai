@@ -60,6 +60,7 @@ bun run test     # bun test over tests/ — the pure functions only
 bun run e2e      # playwright over e2e/ — drives window.choai, not the screen
 bun run e2e:jp   # the Japan edition's own, against a jp build
 bun scripts/vendor-ui.mjs <name>...    # re-fetch a solid-ui component
+bun scripts/sync-ocr.mjs               # re-fetch the OCR models, digests pinned
 ```
 
 `playwright.config.ts` starts its own dev server with `CHOAI_TEST=1`, which
@@ -244,7 +245,11 @@ three tsconfigs agree on where the seam resolves.
   provider's blocks to another. Gemini takes only a subset of JSON Schema and
   refuses `additionalProperties`, so `gemini.ts` trims it on the way out; that
   is why the schema is not written twice. `core/ai/kept.ts` holds the key and names its
-  only two permitted importers; nothing under `core/api/` may read it. A turn goes
+  only three permitted importers; nothing under `core/api/` or an edition may
+  read it. `core/ai/jev/` is the other kind of model: Jev answers typed
+  questions with probabilities and writes nothing, so it is a `JevClient`
+  (TypeSafe's own endpoint, which answers no browser, or OpenRouter's) rather
+  than a talker, and `jev/clients.ts` reads the key so its callers never do. A turn goes
   back to the model exactly as it arrived — thinking and tool blocks unedited —
   which is why `anthropic.ts` holds blocks opaque instead of parsing them into a
   union. Leave adaptive thinking on: with it off, a tool call is sometimes
@@ -269,6 +274,16 @@ three tsconfigs agree on where the seam resolves.
   charges by area. A statement is parsed by `core/lib/csv.ts` only to know it is a
   table and how long; **the file's own text is what goes over**, because rows
   read out and written back is a chance to change somebody's figures on the way.
+- **`core/lib/ocr/` reads text off a photograph in the browser**, and knows
+  nothing of Japan: PaddleOCR's orientation, detection and recognition models
+  under ONNX Runtime, in a worker of its own (`reader.ts`) so the screen does
+  not stop. Its runtime and the ~30 MB of models in `public/ocr/` are kept out
+  of the precache and fetched the first time a picture is read; a standard
+  install that never reads one downloads none of it. Everything between the
+  models is plain arithmetic `bun test` checks. `core/lib/prolog/` runs Tau
+  Prolog for reasoning better written as rules — the Japan edition's receipts
+  are the one user — and declares the names Tau assigns without declaring,
+  since a module runs strict; the version is pinned for that reason.
 - **`core/lib/text.ts` decides a file's encoding rather than assuming it**, and is
   what every file read off the filesystem goes through — an attachment and a
   journal alike. Japanese banks and much of the accounting software here write

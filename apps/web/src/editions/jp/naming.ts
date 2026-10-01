@@ -21,6 +21,7 @@ export const ROUTE = {
   consumptionTax: "/jp/consumption-tax",
   fixedAssets: "/jp/fixed-assets",
   closing: "/jp/closing",
+  receipts: "/jp/receipts",
 } as const
 
 /** Every capability this edition adds, by the name it answers to. */
