@@ -133,6 +133,13 @@ export default defineConfig({
       },
     }),
   ],
+  // The dev server finds what to pre-bundle by crawling from the page, and the
+  // crawl does not follow `new Worker(new URL(...))`. The reader's runtime was
+  // found only when the first picture was read, and finding a dependency late
+  // reloads the whole page — taking with it the receipt that was being read.
+  optimizeDeps: {
+    include: ["onnxruntime-web/wasm"],
+  },
   worker: {
     format: "es",
   },
