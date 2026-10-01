@@ -4,7 +4,7 @@
  * Written against what the code does, not against what a template says a policy
  * usually contains. Every claim here can be checked in the repository: the
  * journal never leaves the device except to GitHub, what is read off a receipt
- * goes to OpenRouter and nowhere else, the token and the key are kept in
+ * goes to OpenRouter and through it to TypeSafe, and nowhere else, the token and the key are kept in
  * IndexedDB, and the only thing this site reports is that a page was opened.
  *
  * English is the shape the other language is checked against, as everywhere
@@ -99,8 +99,8 @@ export const privacyEn: Document = {
     {
       heading: "OpenRouter, if you save a key to read receipts",
       body: [
-        "A receipt is read in your browser; the photograph does not leave the device. To sort what was read, your browser sends the rows of text off the receipt, and the names of your accounts to choose from, to openrouter.ai directly, which passes them to TypeSafe's Jev model. Nothing goes through anything of ours.",
-        "The key is kept in your browser's storage on that device, and is removed when you forget it. What OpenRouter and TypeSafe then do with what they receive is covered by their own privacy statements.",
+        "A receipt is read in your browser; the photograph does not leave the device. To sort what was read, your browser sends the rows of text off the receipt, and the names of your accounts to choose from, to openrouter.ai directly. They reach TypeSafe, whose Jev model does the sorting, by way of OpenRouter and whatever OpenRouter itself routes the request through. Nothing goes through anything of ours.",
+        "The key is kept in your browser's storage on that device, and is removed when you forget it. What OpenRouter, anything it routes through, and TypeSafe then do with what they receive is covered by their own privacy statements.",
       ],
     },
     {
@@ -217,8 +217,8 @@ export const privacyJa: Document = {
     {
       heading: "領収書を読むために OpenRouter の鍵を保存した場合",
       body: [
-        "領収書はブラウザの中で読み取り、写真は端末から出ません。読み取ったものを仕分けるために、ブラウザは領収書から読み取った文字の行と、選ぶための勘定科目の名前を openrouter.ai に直接送り、OpenRouter はそれを TypeSafe の Jev モデルに渡します。こちらを経由するものはありません。",
-        "鍵はその端末のブラウザ保存領域に置かれ、削除すると消えます。OpenRouter と TypeSafe が受け取ったものをどう扱うかは、それぞれのプライバシーに関する声明によります。",
+        "領収書はブラウザの中で読み取り、写真は端末から出ません。読み取ったものを仕分けるために、ブラウザは領収書から読み取った文字の行と、選ぶための勘定科目の名前を openrouter.ai に直接送ります。それらは OpenRouter と、OpenRouter 自身が経由させる中継などを通して、仕分けを行う Jev モデルの提供元である TypeSafe に渡ります。こちらを経由するものはありません。",
+        "鍵はその端末のブラウザ保存領域に置かれ、削除すると消えます。OpenRouter、その経由先、TypeSafe が受け取ったものをどう扱うかは、それぞれのプライバシーに関する声明によります。",
       ],
     },
     {
