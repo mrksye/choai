@@ -135,6 +135,23 @@ export const en = {
     keyLink: "{{ provider }} key",
     lead: "Photographs of receipts, read into entries. Nothing is written until you press, and each entry goes to the review panel first as the text it would be.",
     choose: "Choose photographs",
+    shoot: "Take a photograph",
+    camera: {
+      opening: "Opening the camera",
+      shoot: "Shoot",
+      close: "Close the camera",
+      trouble: {
+        "not-live": "The camera is not on.",
+        "no-frame": "The camera has not shown a picture yet. Try again in a moment.",
+      },
+      refused: {
+        unsupported: "This browser offers no camera here. It needs a secure connection.",
+        denied: "The camera was not allowed. It can be allowed in the browser's site settings.",
+        absent: "No camera was found.",
+        busy: "The camera is in use by something else.",
+        other: "The camera could not be opened.",
+      },
+    },
     first: "The first one fetches about 45 MB for reading pictures. It is kept after that.",
     noBook: "No book is open. Entries are proposed into the open book, and its accounts are the ones chosen from.",
     needKey: "Reading needs an {{ provider }} key saved, which is how Jev is reached.",

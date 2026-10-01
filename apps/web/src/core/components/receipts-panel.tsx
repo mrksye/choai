@@ -7,6 +7,7 @@ import { t } from "~/core/i18n"
 import { placingsNow } from "~/core/journal/chart"
 import { propose, type Item } from "~/core/journal/proposals"
 import { journal } from "~/core/journal/store"
+import { createCamera, type Camera, type CameraRefusal, type StillTrouble } from "~/core/lib/camera"
 import { getOrUndefined } from "~/core/lib/monad"
 import { candidatesIn, type Picked } from "~/core/receipt/accounts"
 import { receiptItem, type Unproposed } from "~/core/receipt/entry"
@@ -32,6 +33,7 @@ import { wording } from "./jev-key-panel"
 export function ReceiptsPanel(): JSX.Element {
   const saved = followedKey()
   const [offered, setOffered] = createSignal<"no" | "yes" | "refused">("no")
+  const camera = createCamera()
 
   const open = (): boolean => getOrUndefined(journal()) !== undefined
   const accounts = (): readonly string[] => getOrUndefined(journal())?.summary.accounts ?? []
@@ -60,27 +62,30 @@ export function ReceiptsPanel(): JSX.Element {
         <p class="text-xs text-amber-600 dark:text-amber-400">{t("receipts.noBook")}</p>
       </Show>
       <div class="flex flex-col gap-2">
-        <label
-          class="inline-flex h-8 items-center self-start rounded-md border border-input bg-background px-3 text-xs font-medium"
-          classList={{
-            "cursor-pointer hover:bg-accent": askable(),
-            "cursor-not-allowed opacity-50": !askable(),
-          }}
-          aria-disabled={!askable()}
-        >
-          {t("receipts.choose")}
-          <input
-            class="hidden"
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={!askable()}
-            onChange={(event) => {
-              readAll([...(event.currentTarget.files ?? [])], candidates)
-              event.currentTarget.value = ""
-            }}
+        <div class="flex flex-wrap gap-2">
+          <PicturePicker
+            label={t("receipts.choose")}
+            enabled={askable()}
+            onPicked={(files) => readAll(files, candidates)}
           />
-        </label>
+          <PicturePicker
+            label={t("receipts.shoot")}
+            enabled={askable()}
+            camera
+            onPicked={(files) => readAll(files, candidates)}
+          />
+          <Show when={camera.present() === true && camera.state().is === "closed"}>
+            <button
+              type="button"
+              class="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium enabled:hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:hidden"
+              disabled={!askable()}
+              onClick={camera.open}
+            >
+              {t("receipts.shoot")}
+            </button>
+          </Show>
+        </div>
+        <CameraView camera={camera} onShot={(file) => readAll([file], candidates)} />
         <span class="text-xs text-muted-foreground">{t("receipts.first")}</span>
         <Show when={keyMissing()}>
           <p class="text-xs text-amber-600 dark:text-amber-400">
@@ -107,6 +112,107 @@ export function ReceiptsPanel(): JSX.Element {
         </span>
       </Show>
     </div>
+  )
+}
+
+/**
+ * A button that hands over pictures. With `camera`, a phone opens its camera
+ * rather than its gallery; a desktop browser ignores `capture` and would offer
+ * the same file dialog twice, so that one is shown only where the main pointer
+ * is a finger.
+ */
+function PicturePicker(props: {
+  readonly label: string
+  readonly enabled: boolean
+  readonly camera?: boolean
+  readonly onPicked: (files: readonly File[]) => void
+}): JSX.Element {
+  return (
+    <label
+      class="h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium"
+      classList={{
+        "inline-flex": !props.camera,
+        "hidden pointer-coarse:inline-flex": props.camera === true,
+        "cursor-pointer hover:bg-accent": props.enabled,
+        "cursor-not-allowed opacity-50": !props.enabled,
+      }}
+      aria-disabled={!props.enabled}
+    >
+      {props.label}
+      <input
+        class="hidden"
+        type="file"
+        accept="image/*"
+        capture={props.camera ? "environment" : undefined}
+        multiple={!props.camera}
+        disabled={!props.enabled}
+        onChange={(event) => {
+          props.onPicked([...(event.currentTarget.files ?? [])])
+          event.currentTarget.value = ""
+        }}
+      />
+    </label>
+  )
+}
+
+/**
+ * The camera seen in the page, for a desktop whose browser ignores `capture`.
+ * It stays open after a shot, since receipts come in piles, until closed.
+ */
+function CameraView(props: { readonly camera: Camera; readonly onShot: (file: File) => void }): JSX.Element {
+  const [trouble, setTrouble] = createSignal<StillTrouble | undefined>(undefined)
+  const live = (): MediaStream | false => {
+    const state = props.camera.state()
+    return state.is === "live" ? state.stream : false
+  }
+  const refused = (): CameraRefusal | false => {
+    const state = props.camera.state()
+    return state.is === "refused" ? state.why : false
+  }
+  const shoot = async (video: HTMLVideoElement): Promise<void> => {
+    const shot = await props.camera.still(video)
+    setTrouble(shot.ok ? undefined : shot.error)
+    if (shot.ok) props.onShot(shot.value)
+  }
+
+  return (
+    <Switch>
+      <Match when={props.camera.state().is === "opening"}>
+        <p class="text-xs text-muted-foreground">{t("receipts.camera.opening")}…</p>
+      </Match>
+      <Match when={live()}>
+        {(stream) => {
+          const video = (<video class="w-full rounded bg-muted" autoplay playsinline muted />) as HTMLVideoElement
+          video.srcObject = stream()
+          return (
+            <div class="flex flex-col gap-2">
+              {video}
+              <div class="flex gap-2">
+                <Button size="sm" onClick={() => void shoot(video)}>
+                  {t("receipts.camera.shoot")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={props.camera.close}>
+                  {t("receipts.camera.close")}
+                </Button>
+              </div>
+              <Show when={trouble()}>
+                {(why) => <p class="text-xs text-destructive">{t(`receipts.camera.trouble.${why()}`)}</p>}
+              </Show>
+            </div>
+          )
+        }}
+      </Match>
+      <Match when={refused()}>
+        {(why) => (
+          <div class="flex flex-wrap items-center gap-3">
+            <p class="text-xs text-destructive">{t(`receipts.camera.refused.${why()}`)}</p>
+            <Button size="sm" variant="ghost" onClick={props.camera.close}>
+              {t("receipts.camera.close")}
+            </Button>
+          </div>
+        )}
+      </Match>
+    </Switch>
   )
 }
 
