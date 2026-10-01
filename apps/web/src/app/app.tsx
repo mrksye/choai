@@ -16,7 +16,7 @@ import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
 import { searchFor, useQuery } from "~/core/journal/query"
 import { JevKeyPanel } from "~/core/components/jev-key-panel"
-import { ReceiptsPanel } from "~/core/components/receipts-panel"
+import { AiImportPanel } from "~/core/components/ai-import-panel"
 import { ProposalReview } from "~/core/components/proposal-review"
 import { createRenewal } from "~/core/lib/renewal"
 import { Searching } from "~/core/lib/ui/searching"
@@ -548,7 +548,7 @@ export function Layout(props: ParentProps) {
               <ProposalReview />
             </Show>
             <Show when={dock.showing() === "importing"}>
-              <ReceiptsPanel />
+              <AiImportPanel />
             </Show>
             <Show when={dock.showing() === "connecting"}>
               <JevKeyPanel />

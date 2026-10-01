@@ -261,6 +261,17 @@ three tsconfigs agree on where the seam resolves.
   the script, how dates and amounts are printed, the words for each role, and
   `interpret` — which the Japan edition uses for the tax bands and the
   simplified-invoice requirements. The photograph is never sent anywhere.
+- **`core/statement/` reads a CSV into a proposal**, beside the receipts in
+  the same panel: a bank's or a card's statement, or entries another
+  bookkeeping app exported. Jev says what each column is and which of the
+  book's accounts each line goes to — after the book's own last entry for the
+  same description, which is asked first — and the result is an hledger CSV
+  rules file, written afresh for every file and never kept. hledger reads the
+  statement under those rules aside from the book (`readAside` in
+  `journal/store.ts`), so the figures are hledger's and plain `hledger -f`
+  with the same rules reads the same entries. An entry the book seems to have
+  already, the same day for the same amounts, is proposed unticked and said to
+  be a possible duplicate.
 - **`core/lib/text.ts` decides a file's encoding rather than assuming it**, and is
   what every file read off the filesystem goes through — an attachment and a
   journal alike. Japanese banks and much of the accounting software here write

@@ -54,18 +54,8 @@ export function ReceiptsPanel(): JSX.Element {
   }
 
   return (
-    <div class="flex h-full flex-col gap-3 overflow-y-auto p-3">
-      <div class="flex items-start justify-between gap-3">
-        <p class="text-xs text-muted-foreground">{t("receipts.lead")}</p>
-        {/* There whether or not a key is saved: the way to change it or forget it. */}
-        <button
-          type="button"
-          class="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          onClick={() => dock.show("connecting")}
-        >
-          {t("receipts.keyLink", { provider: JEV.label })}
-        </button>
-      </div>
+    <div class="flex flex-col gap-3">
+      <p class="text-xs text-muted-foreground">{t("receipts.lead")}</p>
       <Show when={!open()}>
         <p class="text-xs text-amber-600 dark:text-amber-400">{t("receipts.noBook")}</p>
       </Show>

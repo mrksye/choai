@@ -2,6 +2,7 @@ import type { Trouble } from "~/core/hledger/wire"
 import type { Result } from "~/core/lib/monad"
 import { clearDraft } from "~/core/compose/store"
 import { forgetReceipts } from "~/core/receipt/store"
+import { forgetStatement } from "~/core/statement/store"
 import { stopEditingEntry } from "~/core/compose/editing"
 import { dock } from "~/core/dock"
 import { forgetAll } from "./proposals"
@@ -36,5 +37,6 @@ export const putDown = (): void => {
   stopEditingEntry()
   clearDraft()
   forgetReceipts()
+  forgetStatement()
   forgetAll()
 }
