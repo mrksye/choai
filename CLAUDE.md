@@ -227,53 +227,22 @@ three tsconfigs agree on where the seam resolves.
   replaced by text composed before it. A removal is an item like an addition, so
   a correction is one shown, atomic write; removals are applied bottom-up
   because every line taken out shifts the ones below it.
-- **`core/ai/` sits on `core/api/` and nowhere else.** The tools are `describe()` filtered
-  to `offered`, which is a fact of its own and not derivable from `writes`:
-  `transaction.create` writes one entry nobody saw first and is withheld, while
-  `proposal.apply` writes many and is offered, because they were shown.
-- **`core/ai/talker.ts` is the seam between providers.** `loop.ts`, `prompt.ts` and
-  the panels are written against it and against nobody's API; `anthropic.ts`,
-  `gemini.ts` and `openai.ts` are each one provider's spelling of it,
-  `openai-compatible.ts` is one spelling shared by everyone who answers to
-  OpenAI's older chat-completions shape (DeepSeek, Qwen, OpenRouter — a
-  hostname and a default apart), and `talkers.ts` is the table the settings
-  picker and the per-provider key are read off. A turn's blocks stay opaque all the way through because all three
-  keep things in a turn that must come back byte for byte. The host a key is
-  sent to is a field on the talker, so a provider cannot be added without the
-  page saying where what is typed will go. **A conversation belongs to one
-  provider** — `core/ai/store.ts` starts again on a switch rather than handing one
-  provider's blocks to another. Gemini takes only a subset of JSON Schema and
-  refuses `additionalProperties`, so `gemini.ts` trims it on the way out; that
-  is why the schema is not written twice. `core/ai/kept.ts` holds the key and names its
-  only three permitted importers; nothing under `core/api/` or an edition may
-  read it. `core/ai/jev/` is the other kind of model: Jev answers typed
-  questions with probabilities and writes nothing, so it is a `JevClient`
-  (TypeSafe's own endpoint, which answers no browser, or OpenRouter's) rather
-  than a talker, and `jev/clients.ts` reads the key so its callers never do. A turn goes
-  back to the model exactly as it arrived — thinking and tool blocks unedited —
-  which is why `anthropic.ts` holds blocks opaque instead of parsing them into a
-  union. Leave adaptive thinking on: with it off, a tool call is sometimes
-  written out as ordinary text and silently runs nothing. OpenAI goes through
-  the Responses API, whose conversation is one flat list of items with no roles
-  at the top, and with `store: false` so nothing of the journal is kept at their
-  end — which is also what makes reasoning items come back carrying their own
-  encrypted contents, so they can be handed back.
-- **What a model takes decides what is sent to it.** Anthropic answers the
-  question in its listing, so `anthropic.ts` reads it per field — a model
-  missing adaptive thinking is sent a budget instead, and one missing effort is
-  sent none — and a field the listing does not answer is left unwritten rather
-  than recorded as a no. Google and OpenAI answer nothing, so `gemini.ts` and
-  `openai.ts` decide on the names and err towards leaving a model out — which is safe because the settings panel
-  offers what they find as suggestions in a box you type in
-  (`core/lib/ui/suggesting.tsx`), not as the whole of what can be said. A name missing
-  from the list is an inconvenience, never a wall, and each talker carries a
-  `modelsFrom` link to where its provider publishes the real answer. All three
-  listings say how much a model will write, and no turn asks for more than that.
-- **Attachments are read before they are sent.** A photograph is scaled to
-  1568px and re-encoded (`core/ai/photo.ts`) — a phone writes 4000px and every model
-  charges by area. A statement is parsed by `core/lib/csv.ts` only to know it is a
-  table and how long; **the file's own text is what goes over**, because rows
-  read out and written back is a chance to change somebody's figures on the way.
+- **This app holds no conversation.** Somebody who wants to talk about their
+  books brings an agent, and the agent drives `window.choai`: what it may call
+  is `describe()`, and how to use it with somebody's books is
+  `describe().instructions` (`core/api/instructions.ts`) — core's, with the
+  edition's `guidance` added after and never in place of it. `offered` still
+  says which capabilities a model is given: `transaction.create` writes one
+  entry nobody saw first and is withheld, while `proposal.apply` writes many
+  and is offered, because they were shown.
+- **`core/ai/` is Jev, and the one key it is reached with.** Jev answers typed
+  questions with probabilities and writes nothing, so it sorts what is already
+  known into kinds — the rows of a receipt, which account a purchase goes to.
+  It is reached through OpenRouter's System One endpoint (TypeSafe's own
+  answers no browser), `jev/clients.ts` reads the key so its callers never do,
+  and `core/ai/kept.ts` holds that key and names its only two permitted
+  importers; nothing under `core/api/` or an edition may read it. A key is
+  checked by asking Jev one small question before it is kept.
 - **`core/lib/ocr/` reads text off a photograph in the browser**, and knows
   nothing of Japan: PaddleOCR's orientation, detection and recognition models
   under ONNX Runtime, in a worker of its own (`reader.ts`) so the screen does
@@ -281,9 +250,17 @@ three tsconfigs agree on where the seam resolves.
   of the precache and fetched the first time a picture is read; a standard
   install that never reads one downloads none of it. Everything between the
   models is plain arithmetic `bun test` checks. `core/lib/prolog/` runs Tau
-  Prolog for reasoning better written as rules — the Japan edition's receipts
-  are the one user — and declares the names Tau assigns without declaring,
-  since a module runs strict; the version is pinned for that reason.
+  Prolog for reasoning better written as rules, declares the names Tau assigns
+  without declaring, since a module runs strict, and pins its version for that
+  reason; text handed to it is always a program, never fetched as a URL.
+- **`core/receipt/` reads a receipt into a proposal**, in the dock's import
+  panel: OCR, each row sorted by Jev, the total chosen in Prolog as the reading
+  the rest of the paper agrees with (`agreement.ts`), the accounts chosen by Jev
+  from the book's own. Arithmetic only, true of a receipt anywhere. What a
+  country makes of the paper comes through `receipts` in the edition contract —
+  the script, how dates and amounts are printed, the words for each role, and
+  `interpret` — which the Japan edition uses for the tax bands and the
+  simplified-invoice requirements. The photograph is never sent anywhere.
 - **`core/lib/text.ts` decides a file's encoding rather than assuming it**, and is
   what every file read off the filesystem goes through — an attachment and a
   journal alike. Japanese banks and much of the accounting software here write
@@ -343,7 +320,7 @@ three tsconfigs agree on where the seam resolves.
   `core/address/address.ts` names them. A page with nothing after its `#` is its
   list, and anything after it is its work: a page's own part (`#connection`,
   `#language`), or `work` for a page with none, like the journal. The shell lays
-  the dock after it (`#connection+chat`, `#work+edit`), and a page reads only its
+  the dock after it (`#connection+compose`, `#work+edit`), and a page reads only its
   own part through `pageOf`. Nothing is at `/`: it is the way in, rewritten in
   `app/index.tsx` before the router reads it to `/journal` with `/journal#work`
   pushed on top, so going back from the first screen finds the list before it
@@ -358,8 +335,8 @@ three tsconfigs agree on where the seam resolves.
   a rule about who wins: under that, opening the second does not close the first,
   it hides it, and pressing the loser does nothing. It answers to
   `core/lib/solid-workbench-ui`'s `Slot` and is kept in the address, where the
-  layout seats it; closing is never clearing, so a draft, a
-  conversation and a proposal all survive it.
+  layout seats it; closing is never clearing, so a draft, an entry
+  being corrected and a proposal all survive it.
 - **`app/app.tsx`** wires `core/lib/solid-workbench-ui` (MIT, kept app-agnostic); its
   `NAV`/`FOOT`/`INNER` tables pair each route with its explorer, and one query in
   the URL is shared by every view.
@@ -404,8 +381,8 @@ three tsconfigs agree on where the seam resolves.
   worker installs and stands by: the browser hands over when the last window on
   the old one closes, which makes shutting the app and opening it again an
   update. `core/lib/renewal.ts` is the only thing that reloads, and only when asked —
-  a reload takes a half-typed entry, a conversation and every undecided proposal
-  with it. It also does the asking, because a phone app is resumed rather than
+  a reload takes a half-typed entry, receipts being read and every undecided
+  proposal with it. It also does the asking, because a phone app is resumed rather than
   navigated to and a resume is not when a browser looks for a new worker.
 - **The module is ~7 MB** against a 25 MiB Cloudflare limit, which is why
   `maximumFileSizeToCacheInBytes` is raised in `vite.config.ts`.

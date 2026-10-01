@@ -1,6 +1,7 @@
 import type { Component } from "solid-js"
 
 import type { SomeCapability } from "~/core/api/capability"
+import type { ReceiptReading } from "~/core/receipt/reading"
 import type { EditionId } from "./roll"
 
 /**
@@ -130,6 +131,22 @@ export interface Edition {
    */
   readonly tags?: readonly OfferedTag[]
   /**
+   * How receipts are printed where these books are kept, and what the law
+   * there makes of one once it is read.
+   *
+   * Reading a receipt is core's, and the standard edition reads them as a
+   * total, a date, a shop and two accounts. What changes with a country is the
+   * script, the way a date and an amount are written, the words for "total",
+   * and — most of all — what the paper means for tax: the rate each figure was
+   * charged at, the tags that say so, whether it carries what an invoice must.
+   * Those are what this brings, and core shows what it says without knowing
+   * what any of it means. See `core/receipt/reading.ts`.
+   *
+   * Like `tags`, it offers and never writes: what it makes of a receipt goes
+   * into a proposal, and the proposal is a person's to keep.
+   */
+  readonly receipts?: ReceiptReading
+  /**
    * How these books are kept, said to a model.
    *
    * This app has three doors, not two. `views` is how a person arrives and
@@ -142,6 +159,10 @@ export interface Edition {
    *
    * That is not a hook and not a lifecycle. It is the contract catching up with
    * a door it already had half of.
+   *
+   * It reaches a model as `describe().instructions`. This app talks to no model
+   * itself: an agent driving `window.choai` reads the manifest, and finds there
+   * both what it may call and how these books are kept.
    *
    * **Added, never replacing.** This goes after core's instructions and cannot
    * remove or contradict them — the same rule `viewsWith` and `capabilitiesWith`

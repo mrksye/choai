@@ -1,113 +1,68 @@
 /**
- * What talking to a model needs: a key per provider, which one to use, and
- * which of its models.
+ * The one key this app keeps for a model: OpenRouter's, which Jev is reached
+ * through.
  *
- * A key is kept in this browser and sent to that provider's host and nowhere
- * else. It is here rather than in localStorage for the same one reason the
- * GitHub token is — everything else this app keeps is here — and in a store of
- * its own rather than beside that token, because disconnecting from GitHub
- * clears that store whole and these keys have nothing to do with GitHub.
+ * It is kept in this browser and sent to openrouter.ai and nowhere else. It is
+ * here rather than in localStorage for the same one reason the GitHub token is
+ * — everything else this app keeps is here — and in a store of its own rather
+ * than beside that token, because disconnecting from GitHub clears that store
+ * whole and this key has nothing to do with GitHub.
  *
- * One row per provider, so changing providers does not throw away the key for
- * the other one. Nothing is shared between them: a key is only ever read with
- * the provider it was saved under.
- *
- * **Three modules may read this, and no more:** the one that talks to the model,
- * the one that asks Jev (`jev/clients.ts`), and the panel where a key is typed
- * in. Nothing under `api/` imports it, and no edition does, which is what keeps
- * a key out of reach of anything the model itself can ask for and of anything a
+ * **Two modules may read this, and no more:** the one that asks Jev
+ * (`jev/clients.ts`) and the panel where the key is typed in. Nothing under
+ * `api/` imports it, and no edition does, which is what keeps the key out of
+ * reach of anything an agent driving the app can ask for and of anything a
  * jurisdiction brings. There is no linter to hold that line, so it is written
  * here instead.
  */
 
 import { createSignal } from "solid-js"
 import { STORE, within } from "~/core/lib/idb"
-import type { Model, Which } from "./talker"
 
 const KEYS = STORE.keys
-const CHOSEN = "chosen"
+
+/** The row it is kept under, which is also the name of where it is sent. */
+export const KEPT_FOR = "openrouter"
 
 interface Row {
   readonly id: string
   readonly key?: string
-  readonly model?: Model | string
-  readonly listed?: readonly Model[]
-  readonly which?: Which
 }
 
-const row = async (id: string): Promise<Row | undefined> => {
+const row = async (): Promise<Row | undefined> => {
   const found = await within("readonly", [KEYS], (transaction) =>
-    transaction.objectStore(KEYS).get(id) as IDBRequest<Row | undefined>,
+    transaction.objectStore(KEYS).get(KEPT_FOR) as IDBRequest<Row | undefined>,
   )
   return found.result
 }
 
 /**
- * How many times what is kept here has been changed while the app is open.
- *
- * Read as a source by whoever holds a key read earlier, since the conversation
- * can stay open beside the settings where a key is saved.
+ * How many times the key has been saved or forgotten while the app is open,
+ * read as a source by whatever shows whether there is one.
  */
 const [keptVersion, setKeptTimes] = createSignal(0)
 export { keptVersion }
 
-const put = async (next: Row): Promise<void> => {
-  const was = await row(next.id)
-  await within("readwrite", [KEYS], (transaction) => {
-    transaction.objectStore(KEYS).put({ ...was, ...next })
-  })
+const changed = (): void => {
   setKeptTimes((times) => times + 1)
 }
 
-/** Which provider is being used, if one has been chosen. */
-export const which = async (): Promise<Which | undefined> => (await row(CHOSEN))?.which
+/** The key, if one has been saved. */
+export const key = async (): Promise<string | undefined> => {
+  const saved = (await row())?.key?.trim()
+  return saved === undefined || saved === "" ? undefined : saved
+}
 
-export const keepWhich = (value: Which): Promise<void> => put({ id: CHOSEN, which: value })
-
-/**
- * Whose key a row holds: a provider that talks, or TypeSafe, which only serves
- * Jev and has no conversation to offer.
- */
-export type Keyed = Which | "typesafe"
-
-/** The key for one provider, if one has been saved. */
-export const key = async (of: Keyed): Promise<string | undefined> => (await row(of))?.key
-
-export const keepKey = (of: Keyed, value: string): Promise<void> => put({ id: of, key: value })
-
-/** Forget one provider's key. Which model was chosen is not a secret and stays. */
-export const forgetKey = async (of: Keyed): Promise<void> => {
-  const was = await row(of)
+export const keepKey = async (value: string): Promise<void> => {
   await within("readwrite", [KEYS], (transaction) => {
-    transaction.objectStore(KEYS).put({ id: of, ...(was?.model === undefined ? {} : { model: was.model }) })
+    transaction.objectStore(KEYS).put({ id: KEPT_FOR, key: value.trim() })
   })
-  setKeptTimes((times) => times + 1)
+  changed()
 }
 
-/**
- * Which model, and what it takes.
- *
- * A row written before this app asked what a model takes holds the bare id, so
- * that is read back as a model with nothing said about it — which is exactly
- * what it is, and what the provider then assumes for.
- */
-export const model = async (of: Which): Promise<Model | undefined> => {
-  const kept = (await row(of))?.model
-  return typeof kept === "string" ? { id: kept, label: kept } : kept
+export const forgetKey = async (): Promise<void> => {
+  await within("readwrite", [KEYS], (transaction) => {
+    transaction.objectStore(KEYS).delete(KEPT_FOR)
+  })
+  changed()
 }
-
-export const keepModel = (of: Which, value: Model): Promise<void> => put({ id: of, model: value })
-
-/**
- * The models this key was last found to reach.
- *
- * Kept because the picker is beside the key box and has to have something in it
- * on the way back to this screen. Listing costs a request, and a request every
- * time somebody opens the settings is a charge for looking. Checking refreshes
- * it; until then it is what was true last time, which is the honest thing for a
- * list of somebody else's models to be.
- */
-export const listed = async (of: Which): Promise<readonly Model[] | undefined> => (await row(of))?.listed
-
-export const keepListed = (of: Which, value: readonly Model[]): Promise<void> =>
-  put({ id: of, listed: value })

@@ -8,8 +8,8 @@
  *
  * The fragment carries two things. A page may keep its own part there — the
  * section of the settings, the change the source control screen is showing —
- * and the shell adds its layers after it: `#connection+chat` is the connection
- * with the conversation open beside it. A page reads only its own part through
+ * and the shell adds its layers after it: `#connection+compose` is the connection
+ * with an entry being written beside it. A page reads only its own part through
  * `pageOf`, so a layer coming or going is not a change to what it shows.
  *
  * A page with nothing after its `#` is its list, the way `/settings` is the
@@ -52,12 +52,12 @@ export const ENTRY = "/"
  * `work` is the page's work in place of its list, for a page with no part of
  * its own to name; the rest are the dock, which holds one at a time.
  */
-export type Layer = "work" | "compose" | "edit" | "chat" | "connect" | "review"
+export type Layer = "work" | "compose" | "edit" | "import" | "connect" | "review"
 
 /** In the order they are written, so the same screen is always the same address. */
-const LAYERS: readonly Layer[] = ["work", "compose", "edit", "chat", "connect", "review"]
+const LAYERS: readonly Layer[] = ["work", "compose", "edit", "import", "connect", "review"]
 
-const DOCKED: readonly Layer[] = ["compose", "edit", "chat", "connect", "review"]
+const DOCKED: readonly Layer[] = ["compose", "edit", "import", "connect", "review"]
 
 const JOIN = "+"
 

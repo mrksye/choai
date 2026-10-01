@@ -122,20 +122,21 @@ test("asking for one panel puts down whoever had it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await openTheDemo(page)
 
-  const chat = page.getByRole("button", { name: "Ask", exact: true }).first()
+  const reading = page.getByRole("button", { name: "Import", exact: true }).first()
   const write = page.getByRole("button", { name: "New entry" })
+  const choose = page.getByText("Choose photographs")
 
-  await chat.click()
-  await expect(page.getByPlaceholder("Ask about these books")).toBeVisible()
+  await reading.click()
+  await expect(choose).toBeVisible()
 
   await write.click()
-  await expect(page.getByPlaceholder("Ask about these books")).toBeHidden()
+  await expect(choose).toBeHidden()
   await expect(page.getByPlaceholder("who it was with")).toBeVisible()
 
   // And back the other way, which is the direction that used to work.
-  await chat.click()
+  await reading.click()
   await expect(page.getByPlaceholder("who it was with")).toBeHidden()
-  await expect(page.getByPlaceholder("Ask about these books")).toBeVisible()
+  await expect(choose).toBeVisible()
 })
 
 /** The licences are reached from the help at the end of the top bar, not from the settings. */

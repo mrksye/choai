@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 
 import { answersIn } from "~/core/ai/jev/client"
 import { OpenRouterClient } from "~/core/ai/jev/openrouter"
-import { TypeSafeJevClient } from "~/core/ai/jev/typesafe"
 
 describe("what Jev answered", () => {
   const answer = { type: "choice", choice: "total", confidence: 0.9, probabilities: { total: 0.95, other: 0.05 } }
@@ -25,14 +24,8 @@ describe("what Jev answered", () => {
   })
 })
 
-describe("the ways of reaching Jev", () => {
-  test("each say the one host a key is sent to", () => {
+describe("the way Jev is reached", () => {
+  test("says the one host a key is sent to", () => {
     expect(OpenRouterClient.host).toBe("openrouter.ai")
-    expect(TypeSafeJevClient.host).toBe("api.typesafe.ai")
-  })
-
-  test("say which a page can use, since TypeSafe's own answers only its console", () => {
-    expect(OpenRouterClient.fromBrowser).toBe(true)
-    expect(TypeSafeJevClient.fromBrowser).toBe(false)
   })
 })

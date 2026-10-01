@@ -1,9 +1,9 @@
 import { askedAt, type JevClient } from "./client"
 
 /**
- * Jev through OpenRouter, which serves it to a page as readily as to a script,
- * under the same request. The key is an OpenRouter key — the same one the
- * conversation keeps, where OpenRouter is the provider talked to.
+ * Jev through OpenRouter, which serves it to a page as readily as to a script.
+ * Its System One endpoint, not chat completions: Jev writes nothing and is
+ * refused by the endpoint that expects it to.
  */
 
 const HOST = "openrouter.ai"
@@ -13,6 +13,5 @@ export const OpenRouterClient: JevClient = {
   label: "OpenRouter",
   host: HOST,
   keysFrom: "https://openrouter.ai/settings/keys",
-  fromBrowser: true,
   decide: askedAt(`https://${HOST}/api/v1/systemone`, "~typesafe/jev-latest"),
 }

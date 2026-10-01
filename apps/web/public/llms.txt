@@ -24,6 +24,11 @@ written to be read by a model, its arguments as JSON Schema, and three facts:
 whether it writes, whether it sends anything off the device, and whether a model
 is given it at all.
 
+It also returns `instructions`: how to use those capabilities with somebody's
+books — answer from the journal, offer entries before keeping them, never keep
+them in the same turn. This app holds no conversation of its own; if you are an
+agent talking to the reader about their books, those instructions are for you.
+
 **Do not work from a copy of that list.** It is derived from a single table in
 the source, so it cannot disagree with what actually runs, and it carries a
 `version` that moves when the promise narrows. Any list written down elsewhere —
@@ -41,7 +46,7 @@ That is the other reason to read `describe()` rather than a list: a capability
 you have not seen before is not a version you are behind on, it is the build you
 are looking at. An edition may also say something about how its books are kept —
 which tags entries carry, and what they mean — and where it does, that arrives in
-the instructions a model is given rather than here.
+`describe().instructions`, after core's, rather than here.
 
 ## Two doors
 

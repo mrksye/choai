@@ -3,7 +3,7 @@
  *
  * Three subjects, each too long for a card and each one a reader actually gets
  * stuck on: how the accounting is really hledger's, how a repository is kept in
- * step, and what a model is and is not allowed to do here.
+ * step, and what reading a receipt does and what an agent of your own is for.
  *
  * English is written first and the Japanese is held to its bones by
  * `Translated` — the same count of sections and paragraphs, so a page cannot
@@ -129,50 +129,49 @@ export const syncEn = {
 /* ------------------------------------------------------------------- ai ---- */
 
 export const aiEn = {
-  title: "Asking in words",
+  title: "Receipts, and an agent of your own",
   intro:
-    "You can bring a key from an AI provider and ask about the books in a sentence, have a photographed receipt written up, or a bank statement turned into entries. It is off until you bring one, and it never writes anything without showing you first.",
+    "There is no chat inside choai. A photographed receipt can be read into an entry here, and anything you want to ask about your books, you ask an agent of your own — which works the app through the same table its screens use. Reading receipts does nothing until you bring a key, and nothing is written without being shown to you first.",
   sections: [
+    {
+      heading: "A receipt, read on the device",
+      body: [
+        "Choose one photograph or a dozen. The text is read off each one in the browser itself, by OCR models that are fetched the first time — about 45 MB — and kept after that. A phone held on its side, a receipt a fifth of the frame: it turns the picture and looks again, closer, where the text is.",
+        "The photograph never leaves the device. What goes anywhere is the text read off it, and it goes to one place.",
+      ],
+    },
+    {
+      heading: "Jev sorts; it does not write",
+      body: [
+        "Each row of text is sorted by Jev, a model from TypeSafe that answers a question by choosing among options and saying how likely each is. It cannot write a sentence, so nothing it says can end up quoted in your books. It says which row is the total, which is the change handed back, which of your accounts a purchase belongs to — and how sure it is.",
+        "Then the paper has to agree with itself. The total believed is the one the card was charged, the cash less the change, the amounts at each rate adding up to — not merely the row Jev thought likeliest. Where they disagree, the card says which check failed.",
+      ],
+    },
     {
       heading: "The key is yours, and it stays here",
       body: [
-        "There is no account and no allowance to buy. You bring a key from a provider you already have — Claude, ChatGPT, Gemini, DeepSeek, Qwen or OpenRouter — and it is kept in this browser beside the journal.",
-        "It is sent to that provider's own host and to nowhere else. There is no server of ours for it to pass through, which is the same reason there is nothing here that could read it.",
-      ],
-    },
-    {
-      heading: "What goes over, and to whom",
-      body: [
-        "What you type, the parts of the journal that answering needs, and whatever you attach. That goes to the provider whose key you saved, under their terms, and is subject to what they do with it — which differs between them and is worth reading before choosing.",
-        "One is worth naming here: a free tier is usually free because the provider may use what is sent to improve their products, and people may read it. The app says so beside the key box for the provider it is true of. These are somebody's books, so that is a decision rather than a detail.",
-      ],
-    },
-    {
-      heading: "Three things it is for",
-      body: [
-        "Asking about the books in a sentence — what a category came to over a year, whether something is up on last month — and getting the figures hledger gives, because the answer is read out of hledger rather than guessed at.",
-        "A photographed receipt, read into an entry: the date, the total and the shop. The photograph is scaled down before it is sent, because a phone writes far more picture than reading a receipt needs.",
-        "A bank statement, written up as entries. It looks up how you have written each payee before and uses the accounts your books already use for it, rather than inventing categories.",
+        "Jev is reached through OpenRouter, with a key of your own kept in this browser beside the journal. It is sent to openrouter.ai and nowhere else; there is no server of ours for it to pass through, which is also why there is nothing here that could read it.",
+        "What goes over is the rows of text read off a receipt and the names of your accounts, so an account can be chosen from them. Not the photograph, not the rest of the journal.",
       ],
     },
     {
       heading: "It proposes; you keep",
       body: [
-        "Nothing a model writes goes into the journal on its own. What it writes is shown as the text it would become, offered to hledger to be sure it reads, and kept only when you say so.",
-        "Where it was sure of an account it says so, and where it was guessing it says that too. A statement of two hundred rows comes back as one decision with the doubtful ones marked, so the settled ones go in with one press and the rest can wait — or go in tagged, to be found again later with a query.",
+        "A receipt becomes an entry shown as the text it would be, offered to hledger to be sure it reads, and kept only when you say so. Where the reading was sure it says so, and where something was guessed it says what, so the settled ones go in with one press and the rest can wait — or go in tagged, to be found again later with a query.",
+        "In the Japan edition the same reading also says what was charged at each consumption tax rate, tags each line with its band, and checks the paper against what a simplified qualified invoice must carry — naming whatever is missing rather than assuming it is there.",
       ],
     },
     {
-      heading: "What it is not",
+      heading: "Talking about your books",
       body: [
-        "It is not doing the accounting. Every figure it reports is hledger's, and every entry it writes is read by hledger before it is kept — the model chooses words and accounts, not arithmetic.",
-        "It is not checking your books, and it is not an accountant. It is a quicker way to write down what you already know happened.",
+        "Bring an agent that can use a browser. The app publishes window.choai — every report, every query, every way of offering an entry — and describe() tells the agent what it may call and how it is to be used with somebody's books: answer from the journal, offer before keeping, never keep in the same breath as offering.",
+        "So the conversation is with the agent you already trust, under its terms, and the books are only ever touched the way the screens touch them.",
       ],
     },
     {
       heading: "What it costs",
       body: [
-        "Whatever your provider charges for what was sent, billed to you by them. Nothing is added here and nothing is taken. What each exchange cost is shown as it happens, so it is not a surprise at the end of the month.",
+        "OpenRouter's charge for what Jev was sent, billed to you by them — for a receipt, a small fraction of a cent. Nothing is added here and nothing is taken.",
       ],
     },
   ],
@@ -283,50 +282,49 @@ export const syncJa: Translated<typeof syncEn> = {
 }
 
 export const aiJa: Translated<typeof aiEn> = {
-  title: "言葉で尋ねる",
+  title: "領収書と、自分のエージェント",
   intro:
-    "AI の鍵を持ち込むと、帳簿について一文で尋ねたり、撮ったレシートを仕訳にしたり、銀行の明細を仕訳に起こしたりできます。鍵を入れるまでは動きませんし、見せる前に書き込むことは決してありません。",
+    "choai の中にチャットはありません。撮った領収書はここで仕訳に読み取れます。帳簿について尋ねたいことは、自分のエージェントに尋ねてください ── エージェントは、画面と同じ表を通してこのアプリを動かします。領収書の読み取りは鍵を入れるまで動かず、見せる前に書き込むことは決してありません。",
   sections: [
+    {
+      heading: "領収書は端末の中で読みます",
+      body: [
+        "写真は1枚でも10枚でも選べます。文字は各写真からブラウザの中で読み取ります。使う OCR のモデルは初回だけ約 45MB を取得し、以降は保存されたものを使います。スマホを横にして撮った写真も、領収書が画面の端に小さく写った写真も、向きを直し、文字のあるところを寄って見直します。",
+        "写真そのものは端末から出ません。外に渡るのは写真から読み取った文字で、行き先は一か所だけです。",
+      ],
+    },
+    {
+      heading: "Jev は仕分けるだけで、書きません",
+      body: [
+        "読み取った各行は Jev が仕分けます。TypeSafe のモデルで、選択肢の中から選び、それぞれの確からしさを答えます。文章は書けないので、Jev の言葉が帳簿に引用されることはありません。どの行が合計か、どれがお釣りか、どの勘定科目に入るか ── そしてどれだけ確かか、を答えます。",
+        "そのうえで、紙の記載どうしが辻褄を合わせなければなりません。信じる合計は、カードで払った額、お預りからお釣りを引いた額、税率ごとの対象額の合計と合うもので、Jev がいちばん合計らしいと見た行とは限りません。合わないときは、どの照合が合わなかったかをカードに書きます。",
+      ],
+    },
     {
       heading: "鍵はあなたのもので、ここから出ません",
       body: [
-        "登録もなければ、買う残高もありません。すでにお持ちのところ ── Claude、ChatGPT、Gemini、DeepSeek、Qwen、OpenRouter ── の鍵を持ち込むと、帳簿と同じくこのブラウザの中に置かれます。",
-        "鍵はそのプロバイダ自身のホストにだけ送られ、他のどこにも行きません。通り道になるサーバーがこちらに無いからで、それは同時に、こちらに読めるものが何も無いという意味でもあります。",
-      ],
-    },
-    {
-      heading: "何が、誰に渡るか",
-      body: [
-        "あなたが打った文と、答えるのに要る帳簿の部分と、添付したものです。それは鍵を保存したプロバイダに、そのプロバイダの規約のもとで渡り、そこで何をされるかはプロバイダによって違います ── 選ぶ前に読む値打ちがあります。",
-        "ひとつだけ、ここで名指ししておきます。無料枠がたいてい無料なのは、送られたものを製品改善に使えるからで、人が読むこともあるからです。それが当てはまるプロバイダについては、鍵の入力欄の横にそう書いてあります。これは誰かの帳簿なので、細かい話ではなく判断です。",
-      ],
-    },
-    {
-      heading: "三つの用途",
-      body: [
-        "帳簿について一文で尋ねること ── ある費目が一年でいくらになったか、先月より増えているか ── そして返ってくるのは hledger が出した数字です。答えは推測ではなく、hledger から読み出しているからです。",
-        "撮ったレシートを仕訳にすること。日付と合計と店名を読みます。写真は送る前に小さくします。レシートを読むのに、スマホが撮る画素はどう考えても多すぎるからです。",
-        "銀行の明細を仕訳に起こすこと。その取引先をこれまでどう書いてきたかを調べて、あなたの帳簿がすでに使っている勘定科目を使います。勝手に費目を発明しません。",
+        "Jev は OpenRouter 経由で呼び出し、鍵はあなたのものを帳簿と同じくこのブラウザの中に置きます。鍵は openrouter.ai にだけ送られ、他のどこにも行きません。通り道になるサーバーがこちらに無いからで、それは同時に、こちらに読めるものが何も無いという意味でもあります。",
+        "渡るのは、領収書から読み取った文字の行と、勘定科目を選ぶための勘定科目の名前だけです。写真も、帳簿のほかの部分も渡りません。",
       ],
     },
     {
       heading: "提案するだけで、残すのはあなた",
       body: [
-        "モデルが書いたものが、そのまま帳簿に入ることはありません。書いたものは「こういうテキストになります」という形で示され、読めるかどうかを hledger に確かめさせたうえで、あなたが良いと言ったときにだけ残ります。",
-        "勘定科目に確信があるときはそう言いますし、当てずっぽうのときもそう言います。200行の明細も、返ってくるのは一つの判断です ── 怪しいものに印が付いた形で。確かなものは一押しで入り、残りは待たせても、印を付けたまま入れて後から検索で見つけても構いません。",
+        "領収書は「こういうテキストになります」という仕訳の形で示され、読めるかどうかを hledger に確かめさせたうえで、あなたが良いと言ったときにだけ残ります。確かな読み取りはそう言い、推測したところは何を推測したかを言うので、確かなものは一押しで入り、残りは待たせても、印を付けたまま入れて後から検索で見つけても構いません。",
+        "日本版では、同じ読み取りが消費税の税率ごとの金額も示し、各行に税区分のタグを付け、適格簡易請求書の記載事項を満たしているかを照らし合わせます。欠けているものは、あるものと見なさず名前を挙げて示します。",
       ],
     },
     {
-      heading: "これは何ではないか",
+      heading: "帳簿について話すなら",
       body: [
-        "会計をしているのではありません。報告する数字はすべて hledger のもので、書いた仕訳はすべて hledger が読んでから残ります ── モデルが選ぶのは言葉と勘定科目であって、計算ではありません。",
-        "帳簿を検算しているわけでもありませんし、会計士でもありません。あなたがすでに知っている出来事を、より速く書き留めるための道具です。",
+        "ブラウザを操作できるエージェントを持ち込んでください。このアプリは window.choai を公開しています ── すべての報告、すべての検索、仕訳を提案するすべての方法です。describe() は、エージェントが何を呼べて、誰かの帳簿でそれをどう使うべきかを伝えます。帳簿から答えること、残す前に提案すること、提案と同じ一手で残さないこと。",
+        "会話の相手は、あなたがすでに信頼しているエージェントで、その規約のもとで話します。帳簿に触れるのは、画面が触れるのと同じやり方だけです。",
       ],
     },
     {
       heading: "費用について",
       body: [
-        "送った分に対してプロバイダが請求する額で、請求するのもプロバイダです。こちらで上乗せするものも、受け取るものもありません。一回のやり取りにいくらかかったかはその場で表示されるので、月末に驚くことはありません。",
+        "Jev に送った分に対して OpenRouter が請求する額で、請求するのも OpenRouter です。領収書1枚あたりにすれば1円にもなりません。こちらで上乗せするものも、受け取るものもありません。",
       ],
     },
   ],

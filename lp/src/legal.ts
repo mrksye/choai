@@ -3,7 +3,8 @@
  *
  * Written against what the code does, not against what a template says a policy
  * usually contains. Every claim here can be checked in the repository: the
- * journal never leaves the device except to GitHub, the token is kept in
+ * journal never leaves the device except to GitHub, what is read off a receipt
+ * goes to OpenRouter and nowhere else, the token and the key are kept in
  * IndexedDB, and the only thing this site reports is that a page was opened.
  *
  * English is the shape the other language is checked against, as everywhere
@@ -93,6 +94,13 @@ export const privacyEn: Document = {
       body: [
         "Your browser talks to api.github.com directly. Your journals and your access token go to GitHub — not through anything of ours, because there is nothing of ours in between.",
         "The token is kept in your browser's storage on that device, and is cleared when you disconnect. What GitHub then does with what it receives is covered by GitHub's own privacy statement.",
+      ],
+    },
+    {
+      heading: "OpenRouter, if you save a key to read receipts",
+      body: [
+        "A receipt is read in your browser; the photograph does not leave the device. To sort what was read, your browser sends the rows of text off the receipt, and the names of your accounts to choose from, to openrouter.ai directly, which passes them to TypeSafe's Jev model. Nothing goes through anything of ours.",
+        "The key is kept in your browser's storage on that device, and is removed when you forget it. What OpenRouter and TypeSafe then do with what they receive is covered by their own privacy statements.",
       ],
     },
     {
@@ -204,6 +212,13 @@ export const privacyJa: Document = {
       body: [
         "ブラウザが api.github.com と直接やり取りします。帳簿とアクセストークンは GitHub に送られます。こちらを経由しません。あいだに何も無いからです。",
         "トークンはその端末のブラウザ保存領域に置かれ、接続を解除すると消えます。GitHub が受け取ったものをどう扱うかは、GitHub 自身のプライバシーに関する声明によります。",
+      ],
+    },
+    {
+      heading: "領収書を読むために OpenRouter の鍵を保存した場合",
+      body: [
+        "領収書はブラウザの中で読み取り、写真は端末から出ません。読み取ったものを仕分けるために、ブラウザは領収書から読み取った文字の行と、選ぶための勘定科目の名前を openrouter.ai に直接送り、OpenRouter はそれを TypeSafe の Jev モデルに渡します。こちらを経由するものはありません。",
+        "鍵はその端末のブラウザ保存領域に置かれ、削除すると消えます。OpenRouter と TypeSafe が受け取ったものをどう扱うかは、それぞれのプライバシーに関する声明によります。",
       ],
     },
     {

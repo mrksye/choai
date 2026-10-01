@@ -295,8 +295,7 @@ export const outcomeWords = (outcome: Outcome): string => {
   }
 }
 
-/** Exported for the conversation, which reports the same snags in its working. */
-export const snagWords = (snag: Snag): string => {
+const snagWords = (snag: Snag): string => {
   switch (snag.at) {
     case "not-connected":
       return t("github.notConnected")

@@ -1,5 +1,5 @@
 import { Err, Ok, type Result } from "~/core/lib/monad"
-import { reach, readJson, saidIn, type Failure } from "../talker"
+import { reach, readJson, saidIn, type Failure } from "../reach"
 
 /**
  * A model that does not write.
@@ -8,17 +8,17 @@ import { reach, readJson, saidIn, type Failure } from "../talker"
  * how likely each answer is — nothing else. It cannot be asked to do anything,
  * and what comes back cannot be text somebody's books end up quoting: it is a
  * probability against an option the asker wrote. That makes it the right thing
- * for sorting what is already known into kinds, and a different thing from a
- * talker, which is why it is a door of its own rather than a provider among
- * them.
+ * for sorting what is already known into kinds, and the only kind of model this
+ * app talks to itself: a conversation is somebody's own agent, driving
+ * `window.choai`.
  *
- * TypeSafe makes it and serves it, and OpenRouter serves it too, under the same
- * request and the same answer. What differs between them is where the request
- * goes, what the model is called there, and whose key opens it — and that is
- * all a `JevClient` is. The rest is written once, here.
+ * A `JevClient` is where the request goes, what the model is called there and
+ * where a key for it comes from; the request and the reading of the answer are
+ * written once, here. OpenRouter is the one there is: TypeSafe serves Jev too,
+ * but its own endpoint answers only its own console's origin, never a page.
  */
 
-export type JevId = "typesafe" | "openrouter"
+export type JevId = "openrouter"
 
 /**
  * One question, answered by choosing one of `criteria`'s keys. Each key is
@@ -52,11 +52,6 @@ export interface JevClient {
   readonly host: string
   /** Where the reader goes to get a key. */
   readonly keysFrom: string
-  /**
-   * Whether a page can call it from a browser at all. TypeSafe's own endpoint
-   * answers only its own console's origin; it works from a script, not from here.
-   */
-  readonly fromBrowser: boolean
   readonly decide: (
     key: string,
     state: State,
@@ -100,7 +95,7 @@ export const answersIn = (body: unknown, asked: readonly string[]): Result<Answe
     : Ok(Object.fromEntries(read) as Record<string, Chosen>)
 }
 
-/** The request both of them take: the model by the name `model`, at `endpoint`. */
+/** The request, for the model called `model` at `endpoint`. */
 export const askedAt =
   (endpoint: string, model: string): JevClient["decide"] =>
   async (key, state, questions) => {

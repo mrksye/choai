@@ -32,13 +32,8 @@ export function TroubleNote(props: { trouble: Trouble }): JSX.Element {
   )
 }
 
-/**
- * The heading alone, for a screen with no room for the box around it.
- *
- * The conversation shows a failed call in one line of its working, where the
- * bordered note below would be a wall rather than a note.
- */
-export const troubleHeadline = (trouble: Trouble): string => {
+/** The heading of the note: what went wrong, in one line. */
+const troubleHeadline = (trouble: Trouble): string => {
   switch (trouble.kind) {
     case "no-journal":
       return t("trouble.noJournal")

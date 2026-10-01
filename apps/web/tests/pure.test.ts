@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
 
+import { instructionsWith } from "~/core/api/instructions"
+import { describe as describeTheApp } from "~/core/api/manifest"
+
 import { amountExample } from "~/core/compose/hint"
 import { asWritten, ghostOf, isBare } from "~/core/compose/commodity"
 import { draftToJournal, emptyDraft, isWritable, whatIsMissing } from "~/core/compose/draft"
@@ -8,7 +11,7 @@ import { digits, fields, listOf, nothing, oneOf, spare, text } from "~/core/lib/
 import { looksTabular, rowsOf } from "~/core/lib/csv"
 import { textOf } from "~/core/lib/text"
 import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
-import { saidIn } from "~/core/ai/talker"
+import { saidIn } from "~/core/ai/reach"
 import { narrowed } from "~/core/reports/ask"
 import { ALL_TIME, SHORTCUTS, dayAfter, sameRange, termOf } from "~/core/reports/periods"
 import {
@@ -666,17 +669,20 @@ describe("what an edition joins on", () => {
   })
 
   test("what an edition says to a model is added to core's, never in place of it", () => {
-    // Held here rather than trusted to a reading of `prompt.ts`: an edition that
-    // could replace core's instructions could tell a model to write entries
-    // without showing them first, which is the one thing this app does not do.
-    const core = "core's instructions"
-    const together = (guidance: string | undefined): string =>
-      [core, ...(guidance === undefined || guidance.trim() === "" ? [] : ["", guidance])].join("\n")
+    // Held here rather than trusted to a reading of `instructions.ts`: an
+    // edition that could replace core's instructions could tell an agent to
+    // write entries without showing them first, which is the one thing this app
+    // does not do.
+    const core = instructionsWith(undefined)
 
-    expect(together(undefined)).toBe(core)
-    expect(together("   ")).toBe(core)
-    expect(together("what this build adds").startsWith(core)).toBe(true)
-    expect(together("what this build adds")).toBe(`${core}\n\nwhat this build adds`)
+    expect(instructionsWith("   ")).toBe(core)
+    expect(instructionsWith("what this build adds").startsWith(core)).toBe(true)
+    expect(instructionsWith("what this build adds")).toBe(`${core}\n\nwhat this build adds`)
+    expect(core).toContain("Offering is not keeping")
+  })
+
+  test("and reaches the agent driving the app, in the manifest beside the capabilities", () => {
+    expect(describeTheApp().instructions).toBe(instructionsWith(undefined))
   })
 })
 
@@ -872,10 +878,10 @@ describe("an account without its kind", () => {
 
 describe("where the app is, as the address says it", () => {
   test("a page's own part and the shell's layers share the fragment", () => {
-    expect(readFragment("#connection+chat")).toEqual({ page: "connection", layers: ["chat"] })
+    expect(readFragment("#connection+compose")).toEqual({ page: "connection", layers: ["compose"] })
     expect(readFragment("#work+edit")).toEqual({ page: "", layers: ["work", "edit"] })
     expect(readFragment("")).toEqual({ page: "", layers: [] })
-    expect(pageOf("#change=a%2Bb.journal+chat")).toBe("#change=a%2Bb.journal")
+    expect(pageOf("#change=a%2Bb.journal+compose")).toBe("#change=a%2Bb.journal")
     expect(pageOf("#work")).toBe("")
   })
 
@@ -886,11 +892,11 @@ describe("where the app is, as the address says it", () => {
 
   test("nothing after the # is the page's list; its own part or work is its work", () => {
     expect(showsTheWork(readFragment(""))).toBe(false)
-    expect(showsTheWork(readFragment("#chat"))).toBe(false)
+    expect(showsTheWork(readFragment("#compose"))).toBe(false)
     expect(showsTheWork(readFragment("#language"))).toBe(true)
     expect(showsTheWork(readFragment("#work"))).toBe(true)
     expect(writeFragment(atTheWork(readFragment("#language")))).toBe("#language")
-    expect(writeFragment(atTheList(readFragment("#language+chat")))).toBe("#chat")
+    expect(writeFragment(atTheList(readFragment("#language+compose")))).toBe("#compose")
   })
 
   test("the dock holds one layer at a time, and the work is not the dock", () => {
@@ -907,7 +913,7 @@ describe("where the app is, as the address says it", () => {
 
   test("/ is the journal's work with its list behind it, and any other address is kept", () => {
     expect(arrivalsAt(readAddress("/?q=food")).map(writeAddress)).toEqual(["/journal?q=food", "/journal?q=food#work"])
-    expect(arrivalsAt(readAddress("/#work+chat")).map(writeAddress)).toEqual(["/journal#work+chat"])
+    expect(arrivalsAt(readAddress("/#work+compose")).map(writeAddress)).toEqual(["/journal#work+compose"])
     expect(arrivalsAt(readAddress("/settings"))).toEqual([])
   })
 })

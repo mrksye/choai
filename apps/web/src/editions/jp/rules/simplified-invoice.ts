@@ -24,22 +24,21 @@
  * Each rule answers `met` or names what is missing. A requirement is never
  * taken as met because nothing was read that says otherwise.
  *
- * Read over the same facts as `receipt/agreement.ts`, and its `stated_band/4`,
- * with one more: `reduced_rate(Rate)`, the reduced rate in force, taken from
- * the rules rather than written here.
+ * Read over the facts core reads a receipt with (`core/receipt/facts.ts`) and
+ * this edition's own (`receipt/facts.ts`), and `receipt/bands.ts`'s
+ * `stated_band/4` and `jp_rate/2` — a rate the paper names that is one of the
+ * rates in force, since a receipt prints other percentages too.
  */
 export const SIMPLIFIED_INVOICE = String.raw`
-:- dynamic(reduced_rate/1).
-
 % Paper on which no consumption tax was charged — a medical bill, most often —
 % is not an invoice for tax that could be deducted, so nothing is asked of it.
 untaxed :-
-    \+ rate(_, _),
+    \+ jp_rate(_, _),
     findall(X, (likeliest(Row, tax), amount(Row, X)), Xs), Xs \== [],
     \+ (member(X, Xs), X > 0).
 
 % With one rate on the paper, the total is the total at that rate.
-single_rate :- rate(_, R), \+ (rate(_, Other), Other \== R).
+single_rate :- jp_rate(_, R), \+ (jp_rate(_, Other), Other \== R).
 
 % ① 氏名又は名称及び登録番号
 requirement(issuer, Status) :-
@@ -69,7 +68,7 @@ requirement(totals_by_rate, Status) :-
 % ⑤ 税率ごとに区分した消費税額等又は適用税率
 requirement(tax_or_rate, Status) :-
     ( likeliest(_, tax) -> Status = met
-    ; rate(_, _) -> Status = met
+    ; jp_rate(_, _) -> Status = met
     ; Status = missing(tax_or_rate) ).
 
 requirements(untaxed) :- untaxed, !.

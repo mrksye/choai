@@ -38,9 +38,9 @@ export const en = {
       at: "/sync/",
     },
     {
-      heading: "The AI only proposes",
-      body: "Bring your own key and you can ask about your books in a sentence, or turn a photographed receipt or a bank statement into entries. Nothing it writes goes in without being shown to you first.",
-      more: "Asking in words",
+      heading: "Receipts, read on your phone",
+      body: "Photograph a receipt and it is read into an entry on the device, with the figures checked against each other before a total is believed. Nothing goes in without being shown to you first, and talking about your books is for an agent of your own.",
+      more: "Receipts and agents",
       at: "/ai/",
     },
     {
@@ -95,9 +95,9 @@ export const ja: Words = {
       at: "/sync/",
     },
     {
-      heading: "AI は提案するだけ",
-      body: "自分の鍵を持ち込むと、帳簿について一文で尋ねたり、撮ったレシートや銀行の明細を仕訳に起こしたりできます。書いたものは、必ず見せてからでないと入りません。",
-      more: "言葉で尋ねる",
+      heading: "領収書はスマホで読み取り",
+      body: "撮った領収書を端末の中で仕訳に読み取ります。合計は、紙の記載どうしの辻褄を確かめてから信じます。見せる前に入ることはなく、帳簿について話すのは自分のエージェントの役目です。",
+      more: "領収書とエージェント",
       at: "/ai/",
     },
     {

@@ -13,7 +13,7 @@ const DB = "choai"
  * out below, because someone's books are already in the database by the time it
  * runs.
  */
-const VERSION = 4
+const VERSION = 5
 
 /** The stores, by the name they are opened with. */
 export const STORE = {
@@ -26,7 +26,7 @@ export const STORE = {
   /** What syncing knows: the token, and what each file was last agreed at. */
   remote: "remote",
   /**
-   * What talking to a model needs: the key, and which model.
+   * The key a model is reached with — OpenRouter's, for Jev.
    *
    * Apart from `remote` on purpose. Disconnecting from GitHub clears that store
    * whole, for a reason of its own, and a key for somewhere else should not go
@@ -82,6 +82,24 @@ const raise = (db: IDBDatabase, upgrade: IDBTransaction, from: number): void => 
   }
   if (from < 4) {
     db.createObjectStore(STORE.keys, { keyPath: "id" })
+  }
+  if (from >= 4 && from < 5) {
+    forgetEveryKeyButOpenRouters(upgrade)
+  }
+}
+
+/**
+ * Version 5 is when the app stopped holding a conversation. Until then a key
+ * was kept for each of six providers, and which of them was chosen; now only
+ * OpenRouter's is used, for Jev. The rest are somebody's secrets with no screen
+ * left that shows them or forgets them, so they are not left lying in the
+ * browser — everything in the store but that one row goes.
+ */
+const forgetEveryKeyButOpenRouters = (upgrade: IDBTransaction): void => {
+  const keys = upgrade.objectStore(STORE.keys)
+  const ids = keys.getAllKeys()
+  ids.onsuccess = () => {
+    ids.result.filter((id) => id !== "openrouter").forEach((id) => keys.delete(id))
   }
 }
 

@@ -7,7 +7,7 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
@@ -15,9 +15,9 @@ import type { View } from "~/edition/types"
 import { appName } from "~/edition"
 import { journal, reopenKept } from "~/core/journal/store"
 import { searchFor, useQuery } from "~/core/journal/query"
-import { AiChat, AiConnection } from "~/core/components/ai-chat"
+import { JevKeyPanel } from "~/core/components/jev-key-panel"
+import { ReceiptsPanel } from "~/core/components/receipts-panel"
 import { ProposalReview } from "~/core/components/proposal-review"
-import { sending } from "~/core/ai/store"
 import { createRenewal } from "~/core/lib/renewal"
 import { Searching } from "~/core/lib/ui/searching"
 import { underReview } from "~/core/journal/proposals"
@@ -41,8 +41,8 @@ const dockTitle = (showing: InTheDock | undefined): string => {
       return t("edit.title")
     case "reviewing":
       return t("propose.title")
-    case "chatting":
-      return t("ai.dock")
+    case "importing":
+      return t("receipts.title")
     case "connecting":
       return t("ai.connection")
     case "composing":
@@ -208,27 +208,16 @@ export function Layout(props: ParentProps) {
   const renewal = createRenewal(60 * 60 * 1000)
 
   /**
-   * A proposal takes the dock when whatever wrote it has stopped writing — and
-   * not when the conversation has the dock, because the conversation shows it
-   * already.
+   * A proposal takes the dock when it arrives — from an agent driving the app,
+   * a script, or a screen that read something into entries — since what was
+   * proposed has nowhere else to be seen.
    *
-   * Taking it there would put the reasoning behind the thing it produced, which
-   * is the one place a reader needs both: what was proposed, and what was said
-   * about it. Anything proposing without a conversation on screen — a script, a
-   * test, a statement read while the panel was lent elsewhere — has nowhere
-   * else to be seen, so it still asks for the dock.
-   *
-   * Something writing up a statement offers, reads back what it wrote, thinks
-   * better of it and offers again; opening on each of those would flap through a
-   * run of states nobody was asked to decide about. The one worth showing is the
-   * one it stopped on.
-   *
-   * Nothing here puts it back once it has been closed: this runs when a proposal
-   * arrives and when the writing stops, and closing is neither.
+   * Nothing here puts it back once it has been closed: this runs when a
+   * proposal arrives, and closing is not that.
    */
   createEffect(
-    on([underReview, sending], ([proposal, writing]) => {
-      if (proposal !== undefined && !writing && !dock.is("chatting") && !dock.is("reviewing")) dock.show("reviewing")
+    on(underReview, (proposal) => {
+      if (proposal !== undefined && !dock.is("reviewing")) dock.show("reviewing")
     }),
   )
 
@@ -297,8 +286,8 @@ export function Layout(props: ParentProps) {
     dock.show("composing")
   }
 
-  const chat = (): void => {
-    dock.show("chatting")
+  const importing = (): void => {
+    dock.show("importing")
   }
 
   /**
@@ -337,7 +326,7 @@ export function Layout(props: ParentProps) {
       if (action === undefined) return
       event.preventDefault()
       if (action === "compose") dock.is("composing") ? dock.close() : compose()
-      if (action === "chat") dock.is("chatting") ? dock.close() : chat()
+      if (action === "import") dock.is("importing") ? dock.close() : importing()
       if (action === "togglePanels") toggleChrome()
       if (action === "close") putDown()
     }
@@ -433,13 +422,13 @@ export function Layout(props: ParentProps) {
                 <Show when={getOrUndefined(journal()) !== undefined}>
                   <button
                     type="button"
-                    onClick={() => (dock.is("chatting") ? putDown() : chat())}
-                    aria-label={t("ai.dock")}
-                    title={t("ai.dock")}
+                    onClick={() => (dock.is("importing") ? putDown() : importing())}
+                    aria-label={t("receipts.title")}
+                    title={t("receipts.title")}
                     class="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    classList={{ "bg-accent text-foreground": dock.is("chatting") || dock.is("connecting") }}
+                    classList={{ "bg-accent text-foreground": dock.is("importing") || dock.is("connecting") }}
                   >
-                    <SparklesIcon class="h-4 w-4" />
+                    <ImportIcon class="h-4 w-4" />
                   </button>
                 </Show>
                 {/* Last, and there whether or not a journal is open: the keys
@@ -532,11 +521,11 @@ export function Layout(props: ParentProps) {
             <Show when={dock.showing() === "reviewing"}>
               <ProposalReview />
             </Show>
-            <Show when={dock.showing() === "chatting"}>
-              <AiChat />
+            <Show when={dock.showing() === "importing"}>
+              <ReceiptsPanel />
             </Show>
             <Show when={dock.showing() === "connecting"}>
-              <AiConnection />
+              <JevKeyPanel />
             </Show>
             <Show when={dock.showing() === "composing"}>
               <ComposePanel />

@@ -119,10 +119,10 @@ test("a proposal taking the panel keeps it, rather than being closed by the entr
 
 /**
  * Writing an entry is offered beside every view that writes, the journal's text
- * among them, and the filters beside every report. Asking is in the top bar, in the same place on every screen a
- * journal is open on.
+ * among them, and the filters beside every report. Reading receipts in is in the
+ * top bar, in the same place on every screen a journal is open on.
  */
-test("the header offers writing where the view writes, and asking everywhere", async ({ page }) => {
+test("the header offers writing where the view writes, and importing everywhere", async ({ page }) => {
   await openTheDemo(page)
   const icons = () =>
     page
@@ -130,7 +130,7 @@ test("the header offers writing where the view writes, and asking everywhere", a
       .first()
       .locator("button[aria-label]")
       .evaluateAll((all) => all.map((one) => one.getAttribute("aria-label")))
-  const ask = page.getByRole("button", { name: "Ask", exact: true })
+  const ask = page.getByRole("button", { name: "Import", exact: true })
 
   await expect.poll(icons).toEqual(["New entry"])
   await expect(ask).toBeVisible()
@@ -146,30 +146,3 @@ test("the header offers writing where the view writes, and asking everywhere", a
   await expect(ask).toBeVisible()
 })
 
-/**
- * The box for a question grows with the question, and stops.
- *
- * Measured rather than declared in CSS, so it is worth measuring back: what
- * would go unnoticed is a box that grew and never shrank, leaving an empty one
- * standing five lines tall after a long question was sent.
- */
-test("the question box grows to a few lines, stops, and comes back down", async ({ page }) => {
-  await openTheDemo(page)
-  await page.getByRole("button", { name: "Ask", exact: true }).first().click()
-
-  const box = page.locator("textarea")
-  const tall = async (): Promise<number> => (await box.boundingBox())!.height
-  const lines = (n: number): string => Array.from({ length: n }, (_, at) => `line ${at}`).join("\n")
-
-  const atRest = await tall()
-  await box.fill(lines(5))
-  const grown = await tall()
-  expect(grown).toBeGreaterThan(atRest)
-
-  // Past what it holds it scrolls rather than going on growing.
-  await box.fill(lines(40))
-  expect(await tall()).toBeLessThan(grown + 24)
-
-  await box.fill("")
-  expect(await tall()).toBe(atRest)
-})

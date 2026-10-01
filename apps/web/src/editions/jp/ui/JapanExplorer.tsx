@@ -27,7 +27,6 @@ export function JapanExplorer(props: { readonly onChosen?: () => void }): JSX.El
     { href: ROUTE.chart, name: words().nav.chart },
     { href: ROUTE.statements, name: words().nav.statements },
     { href: ROUTE.consumptionTax, name: words().nav.consumptionTax },
-    { href: ROUTE.receipts, name: words().nav.receipts },
     { href: ROUTE.fixedAssets, name: words().nav.fixedAssets },
     { href: ROUTE.closing, name: words().nav.closing },
   ]

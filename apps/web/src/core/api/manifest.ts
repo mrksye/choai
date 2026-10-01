@@ -1,6 +1,7 @@
 import { edition } from "~/edition"
 import type { EditionId } from "~/edition/roll"
 import type { JsonSchema } from "~/core/lib/monad"
+import { instructions } from "./instructions"
 import { CAPABILITIES } from "./table"
 
 /**
@@ -43,6 +44,12 @@ export interface Manifest {
    * not move the version.
    */
   readonly edition: EditionId
+  /**
+   * How the capabilities are to be used with somebody's books, written for
+   * the model reading this — core's, with the edition's added after. This app
+   * talks to no model itself; this is what it says to the one that came.
+   */
+  readonly instructions: string
   readonly capabilities: Readonly<Record<string, Told>>
 }
 
@@ -50,6 +57,7 @@ export const describe = (): Manifest => ({
   name: "choai",
   version: VERSION,
   edition: edition.id,
+  instructions: instructions(),
   capabilities: Object.fromEntries(
     Object.entries(CAPABILITIES).map(([name, capability]) => [
       name,

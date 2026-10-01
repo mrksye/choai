@@ -1,4 +1,4 @@
-import type { Choice, Chosen, State } from "~/core/ai/jev/client"
+import type { Choice, Chosen, State } from "~/core/ai/jev/clients"
 import type { AccountType } from "~/core/hledger/wire"
 import type { Understood } from "./understood"
 
@@ -59,7 +59,7 @@ export const accountQuestions = (receipt: Understood, candidates: Candidates): A
           [EXPENSE]: {
             type: "choice",
             instructions:
-              "This is a purchase read off a Japanese receipt. Which of these expense accounts should it be recorded under?",
+              "This is a purchase read off a shop receipt. Which of these expense accounts should it be recorded under?",
             criteria: criteriaOf(candidates.expense),
           } satisfies Choice,
         }),
@@ -69,7 +69,7 @@ export const accountQuestions = (receipt: Understood, candidates: Candidates): A
           [PAID_FROM]: {
             type: "choice",
             instructions:
-              "This is a purchase read off a Japanese receipt. `paid_with` is how the receipt says it was paid. " +
+              "This is a purchase read off a shop receipt. `paid_with` is how the receipt says it was paid. " +
               "Which of these accounts was the money paid out of?",
             criteria: criteriaOf(candidates.paidFrom),
           } satisfies Choice,

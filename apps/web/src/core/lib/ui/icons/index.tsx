@@ -11,10 +11,7 @@ import helpSvg from './help.svg?raw'
 import downloadSvg from './download.svg?raw'
 import fileCodeSvg from './file-code.svg?raw'
 import cloudSvg from './cloud.svg?raw'
-import sparklesSvg from './sparkles.svg?raw'
-import paperclipSvg from './paperclip.svg?raw'
-import sendSvg from './send.svg?raw'
-import circleStopSvg from './circle-stop.svg?raw'
+import importSvg from './import.svg?raw'
 import refreshCwSvg from './refresh-cw.svg?raw'
 import searchSvg from './search.svg?raw'
 import chevronLeftSvg from './chevron-left.svg?raw'
@@ -75,14 +72,8 @@ export const FileCodeIcon = icon(fileCodeSvg)
 /** Back the way you came. */
 /** Somewhere else the books are kept. */
 export const CloudIcon = icon(cloudSvg)
-/** Asking rather than looking: the same books, answered in words. */
-export const SparklesIcon = icon(sparklesSvg)
-/** Something brought along with what is being said — a receipt, a statement. */
-export const PaperclipIcon = icon(paperclipSvg)
-/** Send what has been written. */
-export const SendIcon = icon(sendSvg)
-/** Ending something that is under way, as against closing something that is not. */
-export const CircleStopIcon = icon(circleStopSvg)
+/** Bringing paper in from outside: a receipt photographed, a statement downloaded. */
+export const ImportIcon = icon(importSvg)
 
 export const RefreshIcon = icon(refreshCwSvg)
 

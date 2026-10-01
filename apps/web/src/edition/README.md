@@ -60,11 +60,13 @@ second is the order of a spread in `capabilitiesWith`. So no edition can
 quietly change what a balance sheet means, and reading core tells you the whole
 of what core does.
 
-**The contract stays small.** Two tables, a paragraph and a vocabulary, because
+**The contract stays small.** Two tables, a paragraph, a vocabulary and a way of
+reading receipts, because
 this app has three doors: `views` is how a person arrives, `capabilities` is how a script or
 a test arrives, and a model arrives through both of them at once — it is handed
 the capabilities as tools, and it is told what it is doing. `guidance` is the
-second half of that third door.
+second half of that third door, and reaches the agent driving `window.choai` as
+`describe().instructions`, after core's.
 
 It was added after the first half proved to be half. An edition could give a
 model a consumption tax report to call and could not tell it that entries in
@@ -82,6 +84,13 @@ suggestions in a box that can still be typed in. It offers and never writes:
 nothing goes into an entry that was not pressed, and which value applies stays
 the reader's.
 
+`receipts` came the same way. Reading a receipt is core's — the text off the
+picture, the arithmetic that picks the total — and the standard edition reads
+one as a total, a date, a shop and two accounts. But what a receipt means for
+tax is a country's, and a Japanese receipt printed a date and an amount in ways
+core should not have to know. It is four answers to four questions core asks,
+not a hook: core still decides when to ask and what to do with the answer.
+
 Do not grow it further into a plugin framework — no hooks, no lifecycle, no
 registry, no dependency injection. If something genuinely cannot be said as a
 view, a capability, a paragraph or a tag, that is worth a conversation, not
@@ -92,7 +101,7 @@ goes after core's instructions and cannot remove or contradict them: what a
 model is told about offering an entry before it is kept is core's, in every
 edition. This is the same rule `viewsWith` and `capabilitiesWith` keep, in the
 form a paragraph can keep it — and `tests/pure.test.ts` holds it, because
-appending is the only thing `prompt.ts` is allowed to do with it.
+appending is the only thing `core/api/instructions.ts` is allowed to do with it.
 
 **Names are `standard` and `jp`.** In TypeScript, `StandardEdition` and
 `JapanEdition`. Never `isJP`, never `useJapaneseMode`, never `specialMode`. A
@@ -126,8 +135,8 @@ editions/jp/
 
 It may reach into core the way any code here does — the journal, hledger, the
 reports, the components, the shape checkers. It reaches the app only through
-`JapanEdition`, and only as one of the two tables, the paragraph or the
-vocabulary:
+`JapanEdition`, and only as one of the two tables, the paragraph, the
+vocabulary or the reading of receipts:
 
 - A **view** is a screen with an address, a place on the rail and an explorer
   beside it. It carries its own `label` as a function, so it can bring words the
@@ -146,8 +155,15 @@ vocabulary:
   name, where it goes — the entry or a posting — and the values to suggest.
   Read it off the same constants as `guidance`, and offer only what a person
   would write; a tag a register or a schedule writes is not a button.
+- **`receipts`** is how receipts are printed here and what the law makes of one
+  once core has read it: the characters for OCR to choose from, a function that
+  rewrites a row's dates and amounts into the one form core reads, the words
+  receipts print for each role, and `interpret` — the rates, the tags and the
+  invoice requirements, handed back as lines, tags, facts to show and findings.
+  Core shows what it says without knowing what any of it means.
 
-All four are `readonly` data. None of them needs core to be edited.
+All five are `readonly` data or pure functions over what core read. None of them
+needs core to be edited.
 
 ## What holds these rules
 

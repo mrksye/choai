@@ -30,15 +30,15 @@ import { t } from "~/core/i18n"
  * for. Keeping everything and marking the guesses puts the doubt in the journal
  * rather than in a panel that will not outlive the afternoon.
  */
-export function ProposalReview(props: { inline?: boolean }): JSX.Element {
+export function ProposalReview(): JSX.Element {
   return (
     <Show when={underReview()}>
-      {(proposal) => <One proposal={proposal()} inline={props.inline} />}
+      {(proposal) => <One proposal={proposal()} />}
     </Show>
   )
 }
 
-function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
+function One(props: { proposal: Proposal }): JSX.Element {
   const [ticked, setTicked] = createSignal<ReadonlySet<number>>(new Set())
   const [anchor, setAnchor] = createSignal<number | undefined>(undefined)
   const [busy, setBusy] = createSignal(false)
@@ -85,15 +85,8 @@ function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
   }
 
   /**
-   * What is being offered, and the decision about it — the two parts of this
-   * panel, kept apart from the frame around them.
-   *
-   * The frame is the only thing that differs between having the panel to
-   * itself and standing at the end of a conversation: given the panel it
-   * scrolls its own list under a footer that stays put, and inside a
-   * conversation it is one block in a column that already scrolls. Written
-   * once, because a proposal read in one place and the same proposal read in
-   * the other must not be able to say different things.
+   * What is being offered, and the decision about it — the list scrolls under
+   * a footer that stays put.
    */
   const listed = (): JSX.Element => (
     <div class="flex flex-col gap-3">
@@ -234,12 +227,7 @@ function One(props: { proposal: Proposal; inline?: boolean }): JSX.Element {
     </div>
   )
 
-  return props.inline === true ? (
-    <div class="flex flex-col gap-3 rounded-md border border-border bg-card p-3">
-      {listed()}
-      {decided()}
-    </div>
-  ) : (
+  return (
     <div class="flex h-full flex-col">
       <div class="flex-1 overflow-y-auto p-3">{listed()}</div>
       <div class="border-t p-3">{decided()}</div>

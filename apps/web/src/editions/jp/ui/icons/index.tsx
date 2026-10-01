@@ -5,7 +5,6 @@ import fileTextSvg from "./file-text.svg?raw"
 import percentSvg from "./percent.svg?raw"
 import landmarkSvg from "./landmark.svg?raw"
 import calendarCheckSvg from "./calendar-check.svg?raw"
-import receiptSvg from "./receipt.svg?raw"
 
 /**
  * This edition's icons, drawn the way core draws its.
@@ -43,6 +42,3 @@ export const FixedAssetsIcon = icon(landmarkSvg)
 
 /** The year end, which is a date something has to be done by. */
 export const ClosingIcon = icon(calendarCheckSvg)
-
-/** Receipts, which are read here into entries. */
-export const ReceiptIcon = icon(receiptSvg)

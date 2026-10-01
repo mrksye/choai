@@ -58,8 +58,8 @@ editions/jp/
 ├── chart/             account directives: what an account is, and where it prints
 ├── consumption-tax/   the tax tag, normalising, and the band totals
 ├── invoice/           what is known about the paper behind an entry
-├── receipt/           photographs of receipts read into proposed entries: OCR,
-│                      Jev sorting the rows, Prolog checking the figures
+├── receipt/           how a Japanese receipt is printed, and what tax makes of one
+│                      once core has read it: the rates, the bands, the invoice
 ├── fixed-assets/      the register, the straight-line charge, the entries it becomes
 ├── closing/           the four accruals a year is closed with
 ├── check/             findings, split into errors and warnings
@@ -98,7 +98,8 @@ than typed out beside them, so a category added to `TAX_CATEGORIES` reaches the
 model without anybody remembering to come back — a text that has fallen behind
 the code is worse than no text, because the model follows it and what it writes
 is wrong in a way that looks deliberate. `tests/jp.test.ts` holds the two
-together and `e2e/jp.spec.ts` watches it actually reach a provider.
+together and `e2e/jp.spec.ts` watches it reach `describe().instructions`, where an
+agent driving the app reads it.
 
 ## Depreciation
 
@@ -199,9 +200,10 @@ system. The first several are other products. The last is a boundary that would
 stop meaning anything.
 
 **Reading a receipt is not on that list, and where it stands is drawn here.**
-Reading text off a photograph belongs to core, which knows nothing of Japan: it
-is a way of seeing an attachment, beside the model that is shown one now. What
-this edition brings is what the law makes of the paper once it has been read —
+Reading one belongs to core, which knows nothing of Japan: the text off the
+picture, which row is the total, the accounts. What this edition brings, through
+`receipts` in the contract, is how a Japanese receipt is printed and what the
+law makes of the paper once it has been read —
 which rate each figure was charged at, whether it carries what a simplified
 qualified invoice has to carry, and the tags that say so. All of it arrives as a
 proposal a person looks at and presses; a requirement the paper does not meet

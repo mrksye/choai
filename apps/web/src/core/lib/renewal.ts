@@ -17,8 +17,8 @@ import { registerSW } from "virtual:pwa-register"
  * window on the old one closes — so shutting the app and opening it again is an
  * update, which is what anybody would expect it to be. `take` is the other way,
  * for somebody who would rather have it now, and it is the only thing here that
- * reloads a page. A reload would take with it a draft half-typed, a
- * conversation, and every proposal not yet decided about, none of which is
+ * reloads a page. A reload would take with it a draft half-typed, receipts
+ * being read, and every proposal not yet decided about, none of which is
  * written down anywhere else.
  *
  * The effect is the subject here — a registration, a listener and a clock — so

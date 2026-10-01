@@ -682,86 +682,27 @@ test("the rail carries the five screens under one heading, and each of them draw
   }
 })
 
-/**
- * The provider, answered here rather than over the network.
- *
- * Only enough of one to see what was sent: a listing for the GET the settings
- * screen makes, and one plain answer for the exchange. What is being checked is
- * not the model — it is that this build told it how these books are kept.
- */
-const NOT_A_KEY = "not-a-real-key"
-
-const MODELS = {
-  data: [
-    {
-      id: "claude-opus-5",
-      display_name: "Claude Opus 5",
-      capabilities: {
-        thinking: { supported: true, types: { adaptive: { supported: true }, enabled: { supported: false } } },
-        effort: { supported: true, medium: { supported: true } },
-        structured_outputs: { supported: true },
-        image_input: { supported: true },
-      },
-    },
-  ],
-}
-
-const ANSWERS = {
-  model: "claude-opus-5",
-  stop_reason: "end_turn",
-  content: [{ type: "text", text: "Nine transactions." }],
-  usage: { input_tokens: 1, output_tokens: 1 },
-}
-
-const askAndCatchWhatWasSent = async (page: Page): Promise<string> => {
-  const sent: { system?: readonly { text?: string }[] }[] = []
-
-  await page.route("**/api.anthropic.com/**", async (route) => {
-    const asJson = (body: unknown): Promise<void> =>
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
-    if (route.request().method() === "GET") return asJson(MODELS)
-    sent.push(route.request().postDataJSON() as { system?: readonly { text?: string }[] })
-    return asJson(ANSWERS)
-  })
-
+test("an agent is told how these books are kept, not only what it may call", async ({ page }) => {
   await openTheDemo(page)
+  const told = await page.evaluate(() => window.choai.describe())
 
-  await page.goto("/journal#work+connect")
-  await page.getByRole("button", { name: "Claude", exact: true }).click()
-  await page.getByLabel("API key").fill(NOT_A_KEY)
-  await page.getByRole("button", { name: "Save", exact: true }).click()
-  await expect(page.getByRole("button", { name: "Disconnect and forget the key" })).toBeVisible()
+  // Core's own instructions are there and first.
+  expect(told.instructions).toContain("You are the reader's bookkeeper")
+  expect(told.instructions).toContain("transaction.propose")
 
-  await page.goto("/")
-  await page.getByRole("button", { name: "Ask", exact: true }).first().click()
-  await page.getByPlaceholder("Ask about these books").fill("how many transactions are there")
-  await page.getByRole("button", { name: "Ask", exact: true }).last().click()
-
-  await expect.poll(() => sent.length).toBeGreaterThan(0)
-  return sent[0]?.system?.[0]?.text ?? ""
-}
-
-test("the model is told how these books are kept, not only what it may call", async ({ page }) => {
-  const system = await askAndCatchWhatWasSent(page)
-
-  // Core's own instructions are still there and still first.
-  expect(system).toContain("You are the reader's bookkeeper")
-  expect(system).toContain("transaction.propose")
-
-  // And after them, what this edition says. Without it a model writes entries
+  // And after them, what this edition says. Without it an agent writes entries
   // with nothing for jp.consumptionTax to count, then is shown its own entries
   // in the list of ones nobody has classified.
-  expect(system).toContain("tax:")
-  expect(system).toContain("taxable-purchase-10")
-  expect(system).toContain("taxable-sale-8")
-  expect(system).toContain("on the posting, not on the entry")
+  expect(told.instructions).toContain("tax:")
+  expect(told.instructions).toContain("taxable-purchase-10")
+  expect(told.instructions).toContain("taxable-sale-8")
+  expect(told.instructions).toContain("on the posting, not on the entry")
 
   // The edition's paragraph comes after core's, never in place of it.
-  expect(system.indexOf("You are the reader's bookkeeper")).toBeLessThan(system.indexOf("tax:"))
+  expect(told.instructions.indexOf("You are the reader's bookkeeper")).toBeLessThan(told.instructions.indexOf("tax:"))
 
-  // And this build's own tools are on the same request.
-  const tools = await page.evaluate(() => Object.keys(window.choai.describe().capabilities))
-  expect(tools).toContain("jp.consumptionTax")
+  // And this build's own capabilities are in the same manifest.
+  expect(Object.keys(told.capabilities)).toContain("jp.consumptionTax")
 })
 
 test("a capability an edition adds is callable by its own name, not only through call", async ({ page }) => {

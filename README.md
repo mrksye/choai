@@ -43,13 +43,16 @@ screens ask. Nothing is uploaded anywhere by the app.
 - **Keep**: the files stay on the device, one record per path, and the journal
   left open comes back on the next visit.
 - **Take away**: the share sheet on a phone, a download elsewhere.
-- **Ask**: questions in a sentence, answered by hledger. Attach a photograph of
-  a receipt or a bank statement and get entries back, offered rather than
-  written: what is confident is ticked, what is not is set aside with a reason,
-  and nothing joins the journal until you press. The browser talks to the model
-  directly with a key of your own -- ChatGPT, Claude, Gemini, DeepSeek, Qwen or OpenRouter -- and what it may call is
-  the same table `window.choai` publishes, minus anything that could change the
-  books without showing you first, and minus anything that leaves the device.
+- **Import**: photographs of receipts, read into entries. The text is read off
+  the picture in the browser, each row is sorted by Jev — a model that answers
+  with probabilities and writes nothing — and the figures are checked against
+  each other before a total is believed. Entries are offered rather than
+  written: what is confident is ticked, what is not carries its reason, and
+  nothing joins the journal until you press. Jev is reached through OpenRouter
+  with a key of your own; the photograph itself never leaves the device.
+- **Talk**: there is no conversation in the app. Bring an agent: it reads
+  `window.choai.describe()` — what it may call, and how to use it with
+  somebody's books — and works through the same table the screens use.
 - **Sync**: a path in a GitHub repository, reached from the browser straight to
   api.github.com. Entries written in two places are laid one after the other;
   when the same part changed on both sides, nothing is merged and it says so.
