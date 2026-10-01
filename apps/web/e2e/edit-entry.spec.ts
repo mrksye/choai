@@ -130,7 +130,7 @@ test("the header offers writing where the view writes, and importing everywhere"
       .first()
       .locator("button[aria-label]")
       .evaluateAll((all) => all.map((one) => one.getAttribute("aria-label")))
-  const ask = page.getByRole("button", { name: "Import", exact: true })
+  const ask = page.getByRole("button", { name: "AI import", exact: true })
 
   await expect.poll(icons).toEqual(["New entry"])
   await expect(ask).toBeVisible()

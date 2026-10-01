@@ -99,7 +99,8 @@ export const ja: Dictionary = {
     moved: "書かれてから帳簿が変わりました。何も入れていません。",
   },
   ai: {
-    connection: "Jev",
+    connection: "OpenRouter のキー",
+    back: "戻る",
     lead: "Jev はレシートに印字された内容を読み分けます。答えは確率だけで、何も書き込みません。{{ provider }} 経由で呼び出し、キーはこのブラウザに保管されて {{ host }} へ直接送られます。こちらのサーバーを経由するものはありません。",
     key: "{{ provider }} の API キー",
     getKey: "キーの取得先",
@@ -117,7 +118,8 @@ export const ja: Dictionary = {
     unreadable: "応答を読み取れませんでした。",
   },
   receipts: {
-    title: "取り込み",
+    title: "AI取り込み",
+    keyLink: "{{ provider }} のキー",
     lead: "領収書の写真を読み取って仕訳にします。押すまで何も書き込まれません。仕訳はまず確認パネルに、書き込まれる文字そのままで表示されます。",
     choose: "写真を選ぶ",
     first: "最初の1枚では、写真を読むための約45MBを取得します。以降は保存されたものを使います。",
@@ -178,7 +180,7 @@ export const ja: Dictionary = {
   shortcuts: {
     title: "キーボード操作",
     compose: "仕訳を書く",
-    import: "領収書を読み取って仕訳にする",
+    import: "AIで領収書を読み取って仕訳にする",
     togglePanels: "サイドバーの表示切替",
     close: "パネルを閉じる",
     hide: "閉じる",

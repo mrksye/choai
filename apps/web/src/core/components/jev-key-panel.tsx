@@ -15,6 +15,9 @@ import { t } from "~/core/i18n"
  * here instead, where the reader is looking at it.
  */
 
+/** The name the key is kept under in a browser's saved passwords. */
+const KEPT_AS = `${JEV.label} API key`
+
 type Said =
   | { readonly is: "nothing" }
   | { readonly is: "checking" }
@@ -46,15 +49,26 @@ export function JevKeyPanel(): JSX.Element {
   const named = { provider: JEV.label, host: JEV.host }
 
   return (
-    <div class="flex flex-col gap-3 p-3">
+    <form
+      class="flex flex-col gap-3 p-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (typing().trim() !== "" && said().is !== "checking") void save()
+      }}
+    >
       <p class="text-xs text-muted-foreground">{t("ai.lead", named)}</p>
+      {/* A key has no name of its own, and a browser keeping it as a password
+          files it under the name before it — so it is given one, unseen, that
+          says what the password is. */}
+      <input type="text" name="username" autocomplete="username" value={KEPT_AS} readOnly hidden />
       <label class="flex flex-col gap-1">
         <span class="text-xs text-muted-foreground">{t("ai.key", named)}</span>
         <TextField>
           <TextFieldInput
             type="password"
+            name="password"
             class="h-8 text-sm"
-            autocomplete="off"
+            autocomplete="current-password"
             spellcheck={false}
             value={typing()}
             onInput={(event) => setTyped(event.currentTarget.value)}
@@ -65,17 +79,17 @@ export function JevKeyPanel(): JSX.Element {
         {t("ai.getKey")}
       </a>
       <div class="flex flex-wrap gap-2">
-        <Button size="sm" disabled={typing().trim() === "" || said().is === "checking"} onClick={() => void save()}>
+        <Button type="submit" size="sm" disabled={typing().trim() === "" || said().is === "checking"}>
           {t("ai.save")}
         </Button>
         <Show when={saved() === true}>
-          <Button size="sm" variant="ghost" disabled={said().is === "checking"} onClick={() => void forget()}>
+          <Button type="button" variant="ghost" size="sm" disabled={said().is === "checking"} onClick={() => void forget()}>
             {t("ai.forget")}
           </Button>
         </Show>
       </div>
       <SaidNote said={said()} />
-    </div>
+    </form>
   )
 }
 

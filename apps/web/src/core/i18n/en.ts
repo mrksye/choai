@@ -108,7 +108,8 @@ export const en = {
     moved: "The journal has changed since these were written. They were left alone.",
   },
   ai: {
-    connection: "Jev",
+    connection: "OpenRouter key",
+    back: "Back",
     lead: "Jev reads what is printed on a receipt and sorts it. It answers with probabilities and writes nothing. It is reached through {{ provider }}: the key is kept in this browser and sent to {{ host }} directly, through no server of ours.",
     key: "{{ provider }} API key",
     getKey: "Where to get one",
@@ -126,7 +127,8 @@ export const en = {
     unreadable: "The answer could not be read.",
   },
   receipts: {
-    title: "Import",
+    title: "AI import",
+    keyLink: "{{ provider }} key",
     lead: "Photographs of receipts, read into entries. Nothing is written until you press, and each entry goes to the review panel first as the text it would be.",
     choose: "Choose photographs",
     first: "The first one fetches about 45 MB for reading pictures. It is kept after that.",
@@ -187,7 +189,7 @@ export const en = {
   shortcuts: {
     title: "Keyboard shortcuts",
     compose: "Write an entry",
-    import: "Read receipts into entries",
+    import: "Read receipts into entries with AI",
     togglePanels: "Show or hide the sidebars",
     close: "Close the panel",
     hide: "Close",

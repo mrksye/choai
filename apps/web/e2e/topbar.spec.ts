@@ -122,7 +122,7 @@ test("asking for one panel puts down whoever had it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await openTheDemo(page)
 
-  const reading = page.getByRole("button", { name: "Import", exact: true }).first()
+  const reading = page.getByRole("button", { name: "AI import", exact: true }).first()
   const write = page.getByRole("button", { name: "New entry" })
   const choose = page.getByText("Choose photographs")
 

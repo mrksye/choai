@@ -7,7 +7,7 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
@@ -26,7 +26,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
+import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer, withoutLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -277,6 +277,23 @@ export function Layout(props: ParentProps) {
     }),
   )
 
+  /**
+   * The key's panel is reached only from AI import, so putting it down is a
+   * step back to AI import — the address already makes it one — and its button
+   * says so rather than showing a ✕ that does not close anything.
+   */
+  const steppingBack = (): boolean => dock.is("connecting")
+
+  /**
+   * The AI button puts the whole of AI away, the key's panel included. Putting
+   * that panel down is a step back to AI import, so here it is lifted forward
+   * instead, to the work with nothing beside it.
+   */
+  const putAI = (): void => {
+    if (dock.is("connecting")) moves.move((at) => ({ ...at, fragment: withoutLayer(at.fragment, LAYER_OF.connecting) }))
+    else putDown()
+  }
+
   /** Whoever has the dock gives it back. Not cleared — closed. */
   const putDown = (): void => {
     dock.close()
@@ -326,7 +343,7 @@ export function Layout(props: ParentProps) {
       if (action === undefined) return
       event.preventDefault()
       if (action === "compose") dock.is("composing") ? dock.close() : compose()
-      if (action === "import") dock.is("importing") ? dock.close() : importing()
+      if (action === "import") dock.is("importing") || dock.is("connecting") ? putAI() : importing()
       if (action === "togglePanels") toggleChrome()
       if (action === "close") putDown()
     }
@@ -422,13 +439,13 @@ export function Layout(props: ParentProps) {
                 <Show when={getOrUndefined(journal()) !== undefined}>
                   <button
                     type="button"
-                    onClick={() => (dock.is("importing") ? putDown() : importing())}
+                    onClick={() => (dock.is("importing") || dock.is("connecting") ? putAI() : importing())}
                     aria-label={t("receipts.title")}
                     title={t("receipts.title")}
                     class="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     classList={{ "bg-accent text-foreground": dock.is("importing") || dock.is("connecting") }}
                   >
-                    <ImportIcon class="h-4 w-4" />
+                    <SparklesIcon class="h-4 w-4" />
                   </button>
                 </Show>
                 {/* Last, and there whether or not a journal is open: the keys
@@ -511,7 +528,15 @@ export function Layout(props: ParentProps) {
             open={dock.showing() !== undefined}
             header={<span>{dockTitle(dock.showing())}</span>}
             onClose={putDown}
-            closeLabel={t("compose.close")}
+            closeLabel={steppingBack() ? t("ai.back") : t("compose.close")}
+            closeIcon={
+              steppingBack() ? (
+                <span class="inline-flex items-center gap-0.5 px-1 normal-case tracking-normal">
+                  <ChevronLeftIcon class="h-3.5 w-3.5" />
+                  {t("ai.back")}
+                </span>
+              ) : undefined
+            }
           >
             {/* One dock, three things beside the books: a new entry, the lines an
                 existing one is written on, or a question about the lot. */}

@@ -20,6 +20,9 @@ export function AuxPanel(props: {
   /** What the close button is called. The shell has no language of its own, so
    * an application with one passes its word for it. */
   closeLabel?: string
+  /** What the close button shows, where closing is not putting the panel away —
+   * a step back to whatever was in it before, say. A ✕ when left out. */
+  closeIcon?: JSX.Element
   children?: JSX.Element
   initialWidth?: number
   minWidth?: Bound
@@ -56,9 +59,9 @@ export function AuxPanel(props: {
                   onClick={() => props.onClose?.()}
                   aria-label={props.closeLabel ?? 'Close'}
                   title={props.closeLabel ?? 'Close'}
-                  class="inline-flex size-6 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  class="inline-flex h-6 min-w-6 shrink-0 items-center justify-center gap-1 rounded-md p-0 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <XIcon class="h-4 w-4" />
+                  {props.closeIcon ?? <XIcon class="h-4 w-4" />}
                 </button>
               </Show>
             </div>
