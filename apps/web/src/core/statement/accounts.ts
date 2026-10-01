@@ -3,7 +3,7 @@ import { ask } from "~/core/hledger/client"
 import type { AccountType } from "~/core/hledger/wire"
 import { Ok, type Result } from "~/core/lib/monad"
 import type { ColumnRole } from "./columns"
-import { kindOf } from "./rules"
+import { WHOLE_FILE, kindOf } from "./rules"
 import type { Table } from "./table"
 
 /**
@@ -13,20 +13,33 @@ import type { Table } from "./table"
  * already have an entry for goes where that entry went, which is what the
  * person keeping them decided the last time and is worth more than any guess.
  * Jev chooses for the rest, always from the accounts the books already have —
- * an import never starts an account.
+ * an import never starts an account — and only from the ones nothing is posted
+ * under: a parent offered beside its children is the answer that is never
+ * wrong, and so the one that says nothing.
  */
 
 export interface Picked {
   readonly account: string
-  /** How sure it is: 1 where the books said, or the reader did; Jev's probability otherwise. */
+  /** How sure it is: 1 where the books said; Jev's probability otherwise; `BY_READER` where the reader chose. */
   readonly likelihood: number
   readonly from: "books" | "jev" | "reader"
 }
 
+/**
+ * How sure an account the reader chose is. Not certain: it is chosen once for
+ * every line with the same payee, and one of those lines can still be the
+ * exception.
+ */
+export const BY_READER = 0.99
+
 export interface Accounts {
-  /** The statement's own account. Absent for a ledger, where every row names both. */
-  readonly statement?: Picked
-  /** By description for a statement; by the other app's account name for a ledger. */
+  /**
+   * The statement's own accounts, keyed by what its `source` column says, or
+   * by `WHOLE_FILE` where it has none. Empty for a ledger, where every row
+   * names both sides.
+   */
+  readonly own: Readonly<Record<string, Picked>>
+  /** By payee for a statement; by the other app's account name for a ledger. */
   readonly others: Readonly<Record<string, Picked>>
 }
 
@@ -42,16 +55,33 @@ const criteriaOf = (accounts: readonly string[]): Readonly<Record<string, string
 
 const columnOf = (roles: readonly ColumnRole[], role: ColumnRole): number => roles.indexOf(role)
 
+/** The accounts nothing else is posted under. */
+export const leavesOf = (accounts: readonly string[]): readonly string[] =>
+  accounts.filter((account) => !accounts.some((other) => other.startsWith(`${account}:`)))
+
+/** What a column says on each row, each value once. */
+const valuesIn = (table: Table, column: number): readonly string[] =>
+  column < 0 ? [] : distinct(table.rows.map((row) => row[column] ?? ""))
+
 const distinct = (values: readonly string[]): readonly string[] =>
   [...new Set(values.map((value) => value.trim()).filter((value) => value !== ""))]
 
-/** Which way money went for a description, read off which columns are empty, never off the figures. */
-const directionOf = (table: Table, roles: readonly ColumnRole[], description: string): "out" | "in" | "both" => {
-  const [d, out, into] = [columnOf(roles, "description"), columnOf(roles, "out"), columnOf(roles, "in")]
-  if (out < 0 || into < 0) return "both"
-  const rows = table.rows.filter((row) => (row[d] ?? "").trim() === description)
-  const outs = rows.some((row) => (row[out] ?? "").trim() !== "")
-  const ins = rows.some((row) => (row[into] ?? "").trim() !== "")
+const isNegative = (written: string): boolean => /^\s*[-(]|-\s*$/.test(written)
+
+/**
+ * Which way money went for a payee: read off which columns are empty where
+ * there are two, and off the sign where there is one. Never off the size.
+ */
+const directionOf = (table: Table, roles: readonly ColumnRole[], payee: string): "out" | "in" | "both" => {
+  const [d, out, into, amount] = [columnOf(roles, "description"), columnOf(roles, "out"), columnOf(roles, "in"), columnOf(roles, "amount")]
+  const rows = table.rows.filter((row) => (row[d] ?? "").trim() === payee)
+  const filled = (column: number) => (row: readonly string[]): boolean => (row[column] ?? "").trim() !== ""
+  const [outs, ins] =
+    out >= 0 && into >= 0
+      ? [rows.some(filled(out)), rows.some(filled(into))]
+      : amount >= 0
+        ? [rows.some((row) => isNegative(row[amount] ?? "")), rows.some((row) => filled(amount)(row) && !isNegative(row[amount] ?? ""))]
+        : [true, true]
   return outs && !ins ? "out" : ins && !outs ? "in" : "both"
 }
 
@@ -86,57 +116,85 @@ const chosenByJev = async (
   return Ok(Object.assign({}, ...asked.map((one) => (one.ok ? one.value : {}))))
 }
 
-/** The account these books put a description against last time, beside `statement`, if they have one. */
-const seenBefore = async (description: string, statement: string): Promise<Picked | undefined> => {
-  const similar = await ask({ kind: "similar", description, limit: 1 })
+/**
+ * The account these books put a payee against last time, beside one of `own`,
+ * if they have one and it is one of `leaves`. A parent written there before
+ * says only that nobody chose then, so Jev is asked instead.
+ */
+const seenBefore = async (payee: string, own: readonly string[], leaves: readonly string[]): Promise<Picked | undefined> => {
+  const similar = await ask({ kind: "similar", description: payee, limit: 1 })
   if (!similar.ok) return undefined
   const [entry] = similar.value
-  if (entry === undefined || entry.tdescription.trim() !== description) return undefined
-  const other = entry.tpostings.find((posting) => posting.paccount !== statement)
-  return other === undefined ? undefined : { account: other.paccount, likelihood: 1, from: "books" }
+  if (entry === undefined || entry.tdescription.split("|")[0]?.trim() !== payee) return undefined
+  const other = entry.tpostings.find((posting) => !own.includes(posting.paccount))
+  return other === undefined || !leaves.includes(other.paccount)
+    ? undefined
+    : { account: other.paccount, likelihood: 1, from: "books" }
 }
 
-const statementAccount = async (
+/**
+ * The statement's own account, or one for each account a `source` column
+ * names. Asked by name where there is one — "the card company" against the
+ * books' accounts — and of the whole file where there is not.
+ */
+const ownAccounts = async (
   table: Table,
   roles: readonly ColumnRole[],
   file: string,
   own: readonly string[],
-): Promise<Result<Picked | undefined, Unasked>> => {
-  if (own.length === 0) return Ok(undefined)
-  const descriptions = distinct(table.rows.map((row) => row[columnOf(roles, "description")] ?? "")).slice(0, 20)
+): Promise<Result<Readonly<Record<string, Picked>>, Unasked>> => {
+  if (own.length === 0) return Ok({})
+  const sources = valuesIn(table, columnOf(roles, "source"))
+  if (sources.length > 0) {
+    return chosenByJev(sources, (source, index) => {
+      const key = `source_${String(index + 1).padStart(3, "0")}`
+      return {
+        state: { [key]: source },
+        choice: {
+          type: "choice",
+          instructions:
+            `\`${key}\` names the bank account, card or wallet some rows of a CSV export are from. ` +
+            "Which of these accounts is it?",
+          criteria: criteriaOf(own),
+        },
+      }
+    })
+  }
+  const payees = valuesIn(table, columnOf(roles, "description")).slice(0, 20)
   const headers = table.columns.map((column) => column.header ?? "")
-  const chosen = await chosenByJev(["statement"], () => ({
-    state: { file, headers, descriptions },
+  const chosen = await chosenByJev([WHOLE_FILE], () => ({
+    state: { file, headers, payees },
     choice: {
       type: "choice",
       instructions:
-        "This is a statement exported as CSV — `file` is its name, `headers` its columns, `descriptions` some of its lines. " +
+        "This is a statement exported as CSV — `file` is its name, `headers` its columns, `payees` some of its lines. " +
         "Which of these accounts is the one the statement is of: the bank account, the card, the wallet?",
       criteria: criteriaOf(own),
     },
   }))
-  return chosen.ok ? Ok(chosen.value.statement) : chosen
+  return chosen
 }
 
 const otherSides = async (
   table: Table,
   roles: readonly ColumnRole[],
-  statement: string,
+  own: readonly string[],
   accounts: readonly string[],
 ): Promise<Result<Readonly<Record<string, Picked>>, Unasked>> => {
-  const descriptions = distinct(table.rows.map((row) => row[columnOf(roles, "description")] ?? ""))
-  const seen = await Promise.all(descriptions.map(async (description) => [description, await seenBefore(description, statement)] as const))
+  const payees = valuesIn(table, columnOf(roles, "description"))
+  const leaves = leavesOf(accounts)
+  const seen = await Promise.all(payees.map(async (payee) => [payee, await seenBefore(payee, own, leaves)] as const))
   const known = Object.fromEntries(seen.filter(([, picked]) => picked !== undefined)) as Record<string, Picked>
-  const unknown = descriptions.filter((description) => known[description] === undefined)
-  const candidates = accounts.filter((account) => account !== statement)
-  const guessed = await chosenByJev(unknown, (description, index) => {
+  const unknown = payees.filter((payee) => known[payee] === undefined)
+  const candidates = leaves.filter((account) => !own.includes(account))
+  const guessed = await chosenByJev(unknown, (payee, index) => {
     const key = `line_${String(index + 1).padStart(3, "0")}`
     return {
-      state: { [key]: { description, money: directionOf(table, roles, description) } },
+      state: { [key]: { payee, money: directionOf(table, roles, payee) } },
       choice: {
         type: "choice",
         instructions:
-          `\`${key}\` is a line on the statement of ${statement}; \`money\` says whether money went out of it or came in. ` +
+          `\`${key}\` is a line on a statement of ${own.join(", ")}; \`money\` says whether money went out or came in. ` +
           "Which of these accounts is the other side of it?",
         criteria: criteriaOf(candidates),
       },
@@ -154,8 +212,9 @@ const ledgerAccounts = async (
   accounts: readonly string[],
 ): Promise<Result<Readonly<Record<string, Picked>>, Unasked>> => {
   const names = distinct([columnOf(roles, "debit"), columnOf(roles, "credit")].flatMap((column) => table.rows.map((row) => row[column] ?? "")))
+  const leaves = leavesOf(accounts)
   const same = (name: string): string | undefined =>
-    accounts.find((account) => account === name) ?? accounts.find((account) => leafOf(account) === name)
+    leaves.find((account) => account === name) ?? leaves.find((account) => leafOf(account) === name)
   const known = Object.fromEntries(
     names.flatMap((name) => {
       const account = same(name)
@@ -170,7 +229,7 @@ const ledgerAccounts = async (
       choice: {
         type: "choice",
         instructions: `\`${key}\` is an account name used by another bookkeeping app. Which of these accounts is the same account?`,
-        criteria: criteriaOf(accounts),
+        criteria: criteriaOf(leaves),
       },
     }
   })
@@ -186,16 +245,30 @@ export const accountsFor = async (
 ): Promise<Result<Accounts, Unasked>> => {
   if (kindOf(roles) === "ledger") {
     const others = await ledgerAccounts(table, roles, accounts)
-    return others.ok ? Ok({ others: others.value }) : others
+    return others.ok ? Ok({ own: {}, others: others.value }) : others
   }
-  const own = accounts.filter((account) => {
+  const candidates = leavesOf(accounts).filter((account) => {
     const type = types[account]
     return type !== undefined && OWN.includes(type)
   })
-  const statement = await statementAccount(table, roles, file, own)
-  if (!statement.ok) return statement
-  // No account here could be the statement's own; the reader names it, and only then can the other sides be asked.
-  if (statement.value === undefined) return Ok({ others: {} })
-  const others = await otherSides(table, roles, statement.value.account, accounts)
-  return others.ok ? Ok({ statement: statement.value, others: others.value }) : others
+  const own = await ownAccounts(table, roles, file, candidates)
+  if (!own.ok) return own
+  return othersBeside(table, roles, own.value, accounts)
+}
+
+/**
+ * The other sides, asked again beside own accounts that have changed. Nothing
+ * is asked until there is one: what a line's other side is depends on whose
+ * statement it is.
+ */
+export const othersBeside = async (
+  table: Table,
+  roles: readonly ColumnRole[],
+  own: Readonly<Record<string, Picked>>,
+  accounts: readonly string[],
+): Promise<Result<Accounts, Unasked>> => {
+  const ownNames = [...new Set(Object.values(own).map((picked) => picked.account))]
+  if (ownNames.length === 0) return Ok({ own, others: {} })
+  const others = await otherSides(table, roles, ownNames, accounts)
+  return others.ok ? Ok({ own, others: others.value }) : others
 }

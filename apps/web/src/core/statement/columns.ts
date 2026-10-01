@@ -10,21 +10,25 @@ import type { Column, Table } from "./table"
  * withdrawal is blank where a deposit is not.
  *
  * Two kinds of file are told apart by what is found here. A bank's or a card's
- * statement is one account's money moving, out and in. A book kept in another
+ * statement is one account's money moving, out and in — or several accounts',
+ * where a column says which, as an aggregator's export does. A book kept in another
  * app has a debit and a credit account on every row. Rules are written for
  * either.
  */
 
 export const COLUMN_ROLES = {
   date: "The date of the transaction",
-  description: "What the transaction was: the payee, shop, or summary of it",
+  description: "Who the money went to or came from: the payee, the shop, the counterparty",
+  note: "A note beside the payee about what it was for: a memo, what was bought, a reference written by the person",
   amount: "One amount per row, positive or negative, or the amount of an accounting entry",
   out: "Money going out of the account: a withdrawal, a payment, a card charge",
   in: "Money coming into the account: a deposit, a transfer received, a refund",
   balance: "The running balance after the transaction",
   debit: "The debit account of an accounting entry, as another bookkeeping app names it",
   credit: "The credit account of an accounting entry, as another bookkeeping app names it",
-  other: "Anything else: memo, codes, categories, tax classes, numbers nobody needs here",
+  source:
+    "Which of the person's accounts the row is from, where one file holds several: the bank, the card, the wallet, the financial institution",
+  other: "Anything else: codes, IDs, categories, tax classes, flags, numbers nobody needs here",
 } as const
 
 export type ColumnRole = keyof typeof COLUMN_ROLES

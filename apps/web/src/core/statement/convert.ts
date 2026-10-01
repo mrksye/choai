@@ -21,7 +21,10 @@ export interface Converted {
   readonly draft: Draft
   /** The least sure of the accounts its sides went to. */
   readonly confidence: number
-  /** The books have an entry on the same day for the same amounts. */
+  /**
+   * The books have an entry on the same day for the same amounts that no
+   * earlier line of the statement has already been matched to.
+   */
   readonly duplicate: boolean
 }
 
@@ -48,31 +51,58 @@ const DAY = 24 * 60 * 60 * 1000
 
 const dayAfter = (date: string): string => new Date(Date.parse(`${date}T00:00:00Z`) + DAY).toISOString().slice(0, 10)
 
-/** The keys of the entries the books already have over the statement's days. */
-const alreadyIn = async (entries: readonly Transaction[]): Promise<ReadonlySet<string>> => {
+/** How many entries the books already have under each key, over the statement's days. */
+const alreadyIn = async (entries: readonly Transaction[]): Promise<ReadonlyMap<string, number>> => {
   const dates = entries.map((entry) => entry.tdate).sort()
   const [first, last] = [dates[0], dates[dates.length - 1]]
-  if (first === undefined || last === undefined) return new Set()
+  if (first === undefined || last === undefined) return new Map()
   const books = await ask({ kind: "entries", query: `date:${first}..${dayAfter(last)}`, limit: 100_000, offset: 0 })
-  return new Set(books.ok ? books.value.items.map(keyOf) : [])
+  return counted(books.ok ? books.value.items.map(keyOf) : [])
+}
+
+const counted = (keys: readonly string[]): ReadonlyMap<string, number> =>
+  keys.reduce((seen, key) => new Map(seen).set(key, (seen.get(key) ?? 0) + 1), new Map<string, number>())
+
+/**
+ * Which lines the books seem to have, one book entry to one line: two coffees
+ * of the same price on the same day against one already written leaves the
+ * second as new.
+ */
+export const matchedOnce = (keys: readonly string[], books: ReadonlyMap<string, number>): readonly boolean[] =>
+  keys.reduce<{ readonly left: ReadonlyMap<string, number>; readonly found: readonly boolean[] }>(
+    ({ left, found }, key) => {
+      const there = left.get(key) ?? 0
+      return there > 0
+        ? { left: new Map(left).set(key, there - 1), found: [...found, true] }
+        : { left, found: [...found, false] }
+    },
+    { left: books, found: [] },
+  ).found
+
+/** hledger's description read apart the way it reads it: the payee, and the note after the first bar. */
+const payeeAndNote = (description: string): { readonly payee: string; readonly note: string } => {
+  const bar = description.indexOf("|")
+  return bar < 0
+    ? { payee: description.trim(), note: "" }
+    : { payee: description.slice(0, bar).trim(), note: description.slice(bar + 1).trim() }
 }
 
 const draftOf = (entry: Transaction): Draft => ({
   date: entry.tdate,
-  payee: entry.tdescription,
-  note: "",
+  ...payeeAndNote(entry.tdescription),
   tags: [],
   postings: entry.tpostings.map((posting) => ({ account: posting.paccount, amount: formatMixed(posting.pamount), tags: [] })),
 })
+
+const pickedFor = (account: string | undefined, among: Readonly<Record<string, Picked>>): Picked | undefined =>
+  Object.values(among).find((picked) => picked.account === account)
 
 /** How sure the accounts an entry went to were, from whatever chose each of them. */
 const sureOf = (entry: Transaction, mapping: Mapping, accounts: Accounts): number => {
   const picks: readonly (Picked | undefined)[] =
     kindOf(mapping.roles) === "statement"
-      ? [accounts.statement, accounts.others[entry.tdescription.trim()]]
-      : entry.tpostings.map((posting) =>
-          Object.values(accounts.others).find((picked) => picked.account === posting.paccount),
-        )
+      ? [pickedFor(entry.tpostings[0]?.paccount, accounts.own), accounts.others[payeeAndNote(entry.tdescription).payee]]
+      : entry.tpostings.map((posting) => pickedFor(posting.paccount, accounts.others))
   return Math.min(1, ...picks.map((picked) => picked?.likelihood ?? 0))
 }
 
@@ -87,12 +117,12 @@ export const converted = async (
   )
   if (!read.ok) return read
   const entries = [...read.value].sort((a, b) => a.tdate.localeCompare(b.tdate) || a.tindex - b.tindex)
-  const seen = await alreadyIn(entries)
+  const duplicates = matchedOnce(entries.map(keyOf), await alreadyIn(entries))
   return Ok(
-    entries.map((entry) => ({
+    entries.map((entry, at) => ({
       draft: draftOf(entry),
       confidence: sureOf(entry, mapping, accounts),
-      duplicate: seen.has(keyOf(entry)),
+      duplicate: duplicates[at] ?? false,
     })),
   )
 }

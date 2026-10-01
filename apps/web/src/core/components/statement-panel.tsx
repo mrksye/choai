@@ -9,11 +9,12 @@ import { placingsNow } from "~/core/journal/chart"
 import { SURE, propose, type Item } from "~/core/journal/proposals"
 import { journal } from "~/core/journal/store"
 import { getOrUndefined } from "~/core/lib/monad"
-import type { Picked } from "~/core/statement/accounts"
+import { leavesOf, type Picked } from "~/core/statement/accounts"
 import { COLUMN_ROLES, isColumnRole, type ColumnRole } from "~/core/statement/columns"
 import type { Converted } from "~/core/statement/convert"
-import { kindOf } from "~/core/statement/rules"
+import { WHOLE_FILE, kindOf } from "~/core/statement/rules"
 import {
+  cancelStatement,
   convertStatement,
   readStatement,
   setOtherAccount,
@@ -22,10 +23,13 @@ import {
   setStatementDateFormat,
   statementAccounts,
   statementDateFormat,
+  statementOwnSettled,
   statementRead,
   statementRoles,
   statementRules,
+  statementSources,
   statementStatus,
+  statementWasProposed,
   type Books,
   type Failed,
   type Status,
@@ -57,8 +61,6 @@ export function StatementPanel(): JSX.Element {
   })
   const askable = (): boolean => saved() === true && open()
   const working = (): boolean => statementStatus().is === "working"
-  /** A statement read without its own account would land on hledger's `expenses:unknown`, so it waits for one. */
-  const lacksOwn = (): boolean => kindOf(statementRoles()) === "statement" && statementAccounts().statement === undefined
 
   const offer = async (): Promise<void> => {
     const entries = await convertStatement()
@@ -66,7 +68,9 @@ export function StatementPanel(): JSX.Element {
     if (entries.length === 0) return void setOffered("empty")
     const made = await propose(entries.map(itemOf))
     setOffered(made.ok ? "yes" : "refused")
-    if (made.ok) dock.show("reviewing")
+    if (!made.ok) return
+    statementWasProposed(made.value.id)
+    dock.show("reviewing")
   }
 
   return (
@@ -114,14 +118,16 @@ export function StatementPanel(): JSX.Element {
             <p class="text-xs">
               <span class="font-mono">{read().file}</span>
               {" · "}
-              {t(`statement.kind.${kindOf(statementRoles())}`)}
+              {statementSources().length > 1
+                ? t("statement.kind.several", { count: statementSources().length })
+                : t(`statement.kind.${kindOf(statementRoles())}`)}
               {" · "}
               {t("statement.rows", { count: read().table.rows.length })}
             </p>
             <ColumnsTable books={books()} disabled={working()} />
             <DateFormatField />
             <Show when={kindOf(statementRoles()) === "statement"}>
-              <OwnAccountField books={books()} disabled={working()} />
+              <OwnAccounts books={books()} disabled={working()} />
             </Show>
             <OtherAccounts accounts={books().accounts} />
             <Show when={statementRules()}>
@@ -132,13 +138,23 @@ export function StatementPanel(): JSX.Element {
                 </details>
               )}
             </Show>
-            <Button
-              class="self-start"
-              disabled={working() || statementRules() === undefined || lacksOwn() || !open()}
-              onClick={() => void offer()}
-            >
-              {t("statement.propose")}
-            </Button>
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                disabled={working() || statementRules() === undefined || !statementOwnSettled() || !open()}
+                onClick={() => void offer()}
+              >
+                {t("statement.propose")}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  cancelStatement()
+                  setOffered("no")
+                }}
+              >
+                {t("statement.cancel")}
+              </Button>
+            </div>
           </>
         )}
       </Show>
@@ -291,29 +307,44 @@ function SourceOf(props: { readonly picked?: Picked }): JSX.Element {
   )
 }
 
-function OwnAccountField(props: { readonly books: Books; readonly disabled: boolean }): JSX.Element {
-  const picked = () => statementAccounts().statement
+/** The statement's own account, or one for each account its `source` column names. */
+function OwnAccounts(props: { readonly books: Books; readonly disabled: boolean }): JSX.Element {
+  const sources = (): readonly string[] => {
+    const named = statementSources()
+    return named.length === 0 ? [WHOLE_FILE] : named
+  }
   return (
-    <label class="flex flex-col gap-1 text-xs">
-      <span class="flex items-center justify-between gap-2">
-        <span class="text-muted-foreground">{t("statement.ownAccount")}</span>
-        <SourceOf picked={picked()} />
-      </span>
-      <input
-        class="h-8 min-w-0 rounded-md border border-input bg-background px-2 font-mono text-xs"
-        value={picked()?.account ?? ""}
-        placeholder={t("statement.ownAccountMissing")}
-        list="statement-accounts"
-        disabled={props.disabled}
-        onChange={(event) => {
-          const account = event.currentTarget.value.trim()
-          if (account !== "") setStatementAccount(account, props.books)
+    <section class="flex flex-col gap-1 text-xs">
+      <h4 class="text-muted-foreground">{t("statement.ownAccount")}</h4>
+      <For each={sources()}>
+        {(source) => {
+          const picked = () => statementAccounts().own[source]
+          return (
+            <div class="flex flex-col gap-0.5 border-t border-border pt-1">
+              <span class="flex items-center justify-between gap-2">
+                <span class="truncate">{source === WHOLE_FILE ? t("statement.wholeFile") : source}</span>
+                <SourceOf picked={picked()} />
+              </span>
+              <input
+                class="h-7 min-w-0 rounded-md border border-input bg-background px-2 font-mono text-xs"
+                classList={{ "border-amber-500": picked() === undefined }}
+                value={picked()?.account ?? ""}
+                placeholder={t("statement.ownAccountMissing")}
+                list="statement-accounts"
+                disabled={props.disabled}
+                onChange={(event) => {
+                  const account = event.currentTarget.value.trim()
+                  if (account !== "") void setStatementAccount(source, account, props.books)
+                }}
+              />
+            </div>
+          )
         }}
-      />
+      </For>
       <datalist id="statement-accounts">
-        <For each={props.books.accounts}>{(one) => <option value={one} />}</For>
+        <For each={leavesOf(props.books.accounts)}>{(one) => <option value={one} />}</For>
       </datalist>
-    </label>
+    </section>
   )
 }
 
@@ -346,7 +377,7 @@ function OtherAccounts(props: { readonly accounts: readonly string[] }): JSX.Ele
           )}
         </For>
         <datalist id="statement-accounts-other">
-          <For each={props.accounts}>{(one) => <option value={one} />}</For>
+          <For each={leavesOf(props.accounts)}>{(one) => <option value={one} />}</For>
         </datalist>
       </section>
     </Show>

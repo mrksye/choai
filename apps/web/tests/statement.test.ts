@@ -3,7 +3,9 @@ import { describe, expect, test } from "bun:test"
 import type { Chosen } from "~/core/ai/jev/clients"
 import { rowsOf } from "~/core/lib/csv"
 import { COLUMN_ROLES, questionsFor, rolesIn, stateOf, type ColumnRole } from "~/core/statement/columns"
-import { csvOf, fieldsOf, kindOf, rulesOf } from "~/core/statement/rules"
+import { leavesOf } from "~/core/statement/accounts"
+import { matchedOnce } from "~/core/statement/convert"
+import { WHOLE_FILE, csvOf, fieldsOf, kindOf, rulesOf } from "~/core/statement/rules"
 import { dateFormatsOf, tableOf, type Table } from "~/core/statement/table"
 
 const BANK = [
@@ -108,10 +110,10 @@ describe("rules", () => {
     expect(kindOf(["date", "debit", "credit", "amount", "description"])).toBe("ledger")
   })
 
-  test("names only the first column of each role", () => {
+  test("names only the first column of each role, and the payee as a field of its own", () => {
     expect(fieldsOf(["date", "description", "other", "other", "amount", "description"])).toEqual([
       "date",
-      "description",
+      "payee",
       "",
       "",
       "amount",
@@ -119,29 +121,54 @@ describe("rules", () => {
     ])
   })
 
-  test("writes a statement's own account and each description's other side", () => {
+  test("writes a statement's own account and each payee's other side", () => {
     expect(
       rulesOf({
         roles: ["date", "description", "out", "in", "balance"],
         dateFormat: "%Y/%-m/%-d",
         decimalMark: ".",
-        account: "assets:bank",
+        own: { [WHOLE_FILE]: "assets:bank" },
         accounts: { Rent: "expenses:rent", "A.B (C)": "expenses:misc" },
       }),
     ).toBe(
       [
-        "fields date, description, amount-out, amount-in, ",
+        "fields date, payee, amount-out, amount-in, ",
         "date-format %Y/%-m/%-d",
         "decimal-mark .",
         "",
+        "description %payee",
         "account1 assets:bank",
-        "if %description ^Rent$",
+        "if %payee ^Rent$",
         "  account2 expenses:rent",
-        "if %description ^A\\.B \\(C\\)$",
+        "if %payee ^A\\.B \\(C\\)$",
         "  account2 expenses:misc",
         "",
       ].join("\n"),
     )
+  })
+
+  test("puts the note after the payee as hledger reads them apart, and leaves the bar out where there is none", () => {
+    const rules = rulesOf({
+      roles: ["date", "description", "note", "amount"],
+      dateFormat: "%Y/%-m/%-d",
+      decimalMark: ".",
+      own: { [WHOLE_FILE]: "assets:bank" },
+      accounts: {},
+    })
+    expect(rules).toContain("description %payee | %note\nif %note ^$\n  description %payee\n")
+  })
+
+  test("gives each account a file names its own rows", () => {
+    const rules = rulesOf({
+      roles: ["date", "description", "amount", "source"],
+      dateFormat: "%Y/%-m/%-d",
+      decimalMark: ".",
+      own: { "Card (Visa)": "liabilities:card", Bank: "assets:bank" },
+      accounts: {},
+    })
+    expect(rules).toContain("if %source ^Card \\(Visa\\)$\n  account1 liabilities:card\n")
+    expect(rules).toContain("if %source ^Bank$\n  account1 assets:bank\n")
+    expect(rules).not.toContain("\naccount1 ")
   })
 
   test("takes another app's accounts from its own columns, renamed where these books differ", () => {
@@ -149,6 +176,7 @@ describe("rules", () => {
       roles: ["date", "debit", "credit", "amount", "description"],
       dateFormat: "%Y-%-m-%-d",
       decimalMark: ".",
+      own: {},
       accounts: { 普通預金: "assets:bank" },
     })
     expect(rules).toContain("account1 %debit\naccount2 %credit\n")
@@ -160,5 +188,28 @@ describe("rules", () => {
     expect(csvOf([["2026/9/1", " Rent, office ", "1,000"], ["2026/9/2", 'say "hi"', "5"]])).toBe(
       '2026/9/1,"Rent, office","1,000"\n2026/9/2,"say ""hi""",5\n',
     )
+  })
+})
+
+describe("accounts offered", () => {
+  test("are the ones nothing is posted under", () => {
+    expect(leavesOf(["expenses", "expenses:food", "expenses:rent", "assets:bank", "assets:bank:checking", "income"])).toEqual([
+      "expenses:food",
+      "expenses:rent",
+      "assets:bank:checking",
+      "income",
+    ])
+  })
+})
+
+describe("possible duplicates", () => {
+  test("match one book entry to one line", () => {
+    const books = new Map([
+      ["2026-09-17|530,530", 1],
+      ["2026-09-18|1960,1960", 1],
+    ])
+    expect(
+      matchedOnce(["2026-09-17|530,530", "2026-09-17|530,530", "2026-09-18|1960,1960", "2026-09-19|100,100"], books),
+    ).toEqual([true, false, true, false])
   })
 })

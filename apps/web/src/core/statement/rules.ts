@@ -23,23 +23,36 @@ export interface Mapping {
   readonly roles: readonly ColumnRole[]
   readonly dateFormat: string
   readonly decimalMark: DecimalMark
-  /** The statement's own account: the bank account, the card. Unused for a ledger. */
-  readonly account?: string
   /**
-   * The account on the other side of each description, for a statement; or,
-   * for a ledger, the account these books use for each name the other app
-   * used. Keyed by the text as it stands in the file.
+   * The statement's own accounts: the bank account, the card. Keyed by what the
+   * `source` column says, or by `WHOLE_FILE` where there is no such column and
+   * every row is the one account's. Unused for a ledger.
+   */
+  readonly own: Readonly<Record<string, string>>
+  /**
+   * The account on the other side of each payee, for a statement; or, for a
+   * ledger, the account these books use for each name the other app used.
+   * Keyed by the text as it stands in the file.
    */
   readonly accounts: Readonly<Record<string, string>>
 }
 
+/** The key of a statement's own account where no column says which account a row is from. */
+export const WHOLE_FILE = ""
+
 export const kindOf = (roles: readonly ColumnRole[]): Kind =>
   roles.includes("debit") && roles.includes("credit") ? "ledger" : "statement"
 
-/** What hledger calls each role, where it has a name for it; the others go unnamed and unread. */
+/**
+ * What the rules call each role, where they read it; the others go unnamed and
+ * unread. The payee is not hledger's `description` but a field of its own, so
+ * the description can be put together from it and the note.
+ */
 const FIELD: Readonly<Partial<Record<ColumnRole, string>>> = {
   date: "date",
-  description: "description",
+  description: "payee",
+  note: "note",
+  source: "source",
   amount: "amount",
   out: "amount-out",
   in: "amount-in",
@@ -57,8 +70,19 @@ const exactly = (text: string): string => `^${text.replace(/[\\^$.|?*+()[\]{}]/g
 const assigning = (field: string, matched: string, account: 1 | 2, to: string): string =>
   `if %${field} ${exactly(matched)}\n  account${account} ${to}`
 
+/** `payee | note` as hledger reads a description apart, and the payee alone where the note is empty. */
+const describing = (roles: readonly ColumnRole[]): readonly string[] => {
+  if (!roles.includes("description")) return []
+  if (!roles.includes("note")) return ["description %payee"]
+  return ["description %payee | %note", "if %note ^$\n  description %payee"]
+}
+
+const ownAccounts = (own: Readonly<Record<string, string>>): readonly string[] =>
+  Object.entries(own).map(([source, account]) =>
+    source === WHOLE_FILE ? `account1 ${account}` : assigning("source", source, 1, account),
+  )
+
 export const rulesOf = (mapping: Mapping): string => {
-  const kind = kindOf(mapping.roles)
   const header = [
     `fields ${fieldsOf(mapping.roles).join(", ")}`,
     `date-format ${mapping.dateFormat}`,
@@ -66,10 +90,10 @@ export const rulesOf = (mapping: Mapping): string => {
   ]
   const entries = Object.entries(mapping.accounts)
   const body =
-    kind === "statement"
+    kindOf(mapping.roles) === "statement"
       ? [
-          ...(mapping.account === undefined ? [] : [`account1 ${mapping.account}`]),
-          ...entries.map(([description, account]) => assigning("description", description, 2, account)),
+          ...ownAccounts(mapping.own),
+          ...entries.map(([payee, account]) => assigning("payee", payee, 2, account)),
         ]
       : [
           "account1 %debit",
@@ -79,7 +103,7 @@ export const rulesOf = (mapping: Mapping): string => {
             assigning("credit", name, 2, account),
           ]),
         ]
-  return `${[...header, "", ...body].join("\n")}\n`
+  return `${[...header, "", ...describing(mapping.roles), ...body].join("\n")}\n`
 }
 
 const QUOTED = /[",\r\n]/

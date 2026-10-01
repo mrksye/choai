@@ -271,7 +271,11 @@ three tsconfigs agree on where the seam resolves.
   `journal/store.ts`), so the figures are hledger's and plain `hledger -f`
   with the same rules reads the same entries. An entry the book seems to have
   already, the same day for the same amounts, is proposed unticked and said to
-  be a possible duplicate.
+  be a possible duplicate — one book entry to one line, so two equal coffees
+  against one written are one duplicate and one new. A column saying which
+  account a row is from, as an aggregator's export has, gives each its own
+  account; the payee and a note are written as hledger's `payee | note`. The
+  statement is let go of once the proposal it made is settled either way.
 - **`core/lib/text.ts` decides a file's encoding rather than assuming it**, and is
   what every file read off the filesystem goes through — an attachment and a
   journal alike. Japanese banks and much of the accounting software here write
