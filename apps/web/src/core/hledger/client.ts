@@ -95,3 +95,12 @@ export const openJournal = (
 export const ask = <K extends Request["kind"]>(
   request: Extract<Request, { kind: K }>,
 ): Promise<Reply<Answer[K]>> => atTheJournal.through(() => send<Answer[K]>({ op: "query", request }))
+
+/**
+ * A report asked by something already holding its turn — between opening a
+ * candidate and putting the books back. `ask` would queue behind that very
+ * turn and wait for itself.
+ */
+export const askInTurn = <K extends Request["kind"]>(
+  request: Extract<Request, { kind: K }>,
+): Promise<Reply<Answer[K]>> => send<Answer[K]>({ op: "query", request })

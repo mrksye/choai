@@ -1,8 +1,8 @@
 import { createRoot, createSignal, type Accessor } from "solid-js"
 
-import { openJournal } from "~/core/hledger/client"
+import { askInTurn, openJournal } from "~/core/hledger/client"
 import { missingFile } from "~/core/hledger/diagnose"
-import type { DefaultCommodity, JournalSummary, Trouble } from "~/core/hledger/wire"
+import type { DefaultCommodity, JournalSummary, Transaction, Trouble } from "~/core/hledger/wire"
 import { deferred } from "~/core/lib/deferred"
 import { readText } from "~/core/lib/text"
 import { createGate } from "~/core/lib/gate"
@@ -315,6 +315,39 @@ export const tryOut = async (
       return read
     })
     .catch((cause: unknown) => Err<Trouble, JournalSummary>({ kind: "unreachable", detail: String(cause) }))
+}
+
+/** How many entries are asked for at a time while reading something aside. */
+const PAGE = 500
+
+const everyEntry = async (from: number, done: readonly Transaction[]): Promise<Result<readonly Transaction[], Trouble>> => {
+  const page = await askInTurn({ kind: "entries", query: "", limit: PAGE, offset: from })
+  if (!page.ok) return page
+  const all = [...done, ...page.value.items]
+  return all.length >= page.value.total || page.value.items.length === 0 ? Ok(all) : everyEntry(from + PAGE, all)
+}
+
+/**
+ * Every entry in a set of files other than the books — a statement under the
+ * rules written for it — read in the books' turn, with the books put back
+ * before anything else is asked. Nothing is kept: the books are as they were,
+ * and what comes back is only what hledger made of the files.
+ */
+export const readAside = async (
+  files: Source["files"],
+  entry: string,
+): Promise<Result<readonly Transaction[], Trouble>> => {
+  const current = getOrUndefined(opened())
+  if (current === undefined) return Err({ kind: "no-journal" })
+
+  return atTheJournal
+    .through(async () => {
+      const read = await openJournal(files, entry)
+      const entries = read.ok ? await everyEntry(0, []) : read
+      await openJournal(current.source.files, current.source.entry)
+      return entries
+    })
+    .catch((cause: unknown) => Err<Trouble, readonly Transaction[]>({ kind: "unreachable", detail: String(cause) }))
 }
 
 const change = (from: OpenJournal, files: Source["files"]): Promise<Result<OpenJournal, Trouble>> =>
