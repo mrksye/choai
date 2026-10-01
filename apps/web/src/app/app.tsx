@@ -26,7 +26,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer, withoutLayer } from "~/core/address/address"
+import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -286,11 +286,12 @@ export function Layout(props: ParentProps) {
 
   /**
    * The AI button puts the whole of AI away, the key's panel included. Putting
-   * that panel down is a step back to AI import, so here it is lifted forward
-   * instead, to the work with nothing beside it.
+   * that panel down is a step back to AI import, so from there it is two steps
+   * back instead — to where AI import was opened from, so that going back after
+   * it does not open anything again.
    */
   const putAI = (): void => {
-    if (dock.is("connecting")) moves.move((at) => ({ ...at, fragment: withoutLayer(at.fragment, LAYER_OF.connecting) }))
+    if (dock.is("connecting")) moves.liftThrough(LAYER_OF.connecting, LAYER_OF.importing)
     else putDown()
   }
 

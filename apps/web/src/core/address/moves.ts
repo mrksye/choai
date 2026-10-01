@@ -23,6 +23,8 @@ import {
  */
 export interface Came {
   readonly from: string
+  /** Where the entry it left had come from, so a step of two can be told apart from leaving the app. */
+  readonly before?: string
 }
 
 /**
@@ -51,6 +53,13 @@ export interface Moves {
   readonly goTo: (written: string) => void
   /** Take a dock layer off: a step back where laying it was the step before. */
   readonly lift: (layer: Layer) => void
+  /**
+   * Take off a dock layer that was laid in place of another, and put the dock
+   * away altogether: two steps back where the other was laid from where this
+   * is going, and the address put straight in place where it was not — never
+   * a step forward, which going back would undo by opening the panel again.
+   */
+  readonly liftThrough: (layer: Layer, under: Layer) => void
   /** From a page's list to its work. */
   readonly toTheWork: () => void
   /** From a page's work to its list: a step back where the list was the step before. */
@@ -80,7 +89,9 @@ export function useMoves(): Moves {
     navigate(writeAddress(after), {
       resolve: false,
       scroll: false,
-      ...(how?.replace === true ? { replace: true } : { state: { from: untrack(settled) } satisfies Came }),
+      ...(how?.replace === true
+        ? { replace: true }
+        : { state: { from: untrack(settled), before: untrack(() => location.state?.from) } satisfies Came }),
     })
   }
 
@@ -115,6 +126,22 @@ export function useMoves(): Moves {
     retreat((at) => ({ ...at, fragment: withoutLayer(at.fragment, layer) }), sameBesideTheDock)
   }
 
+  const liftThrough = (layer: Layer, under: Layer): void => {
+    if (untrack(leaving) !== undefined) return
+    const now = here()
+    if (!now.fragment.layers.includes(layer)) return
+    const going = { ...now, fragment: withoutLayer(now.fragment, layer) }
+    const came = untrack(() => location.state)
+    const laidInPlace = came?.from !== undefined && readAddress(came.from).fragment.layers.includes(under)
+    const openedFromHere = came?.before !== undefined && writeAddress(readAddress(came.before)) === writeAddress(going)
+    if (router?.pendingTarget === undefined && laidInPlace && openedFromHere) {
+      setLeaving(untrack(settled))
+      navigate(-2)
+      return
+    }
+    move(() => going, { replace: true })
+  }
+
   const toTheWork = (): void => changeFragment(atTheWork)
 
   const toTheList = (): void =>
@@ -131,6 +158,7 @@ export function useMoves(): Moves {
     move,
     goTo,
     lift,
+    liftThrough,
     toTheWork,
     toTheList,
     toTheJournal,
