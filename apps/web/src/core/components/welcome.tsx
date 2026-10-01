@@ -3,6 +3,7 @@ import { useMoves } from "~/core/address/moves"
 
 import { openDemo, openFiles, opening, openingTrouble, settling } from "~/core/journal/store"
 import { startFresh } from "~/core/journal/fresh"
+import { putDown } from "~/core/journal/switching"
 import { getOrUndefined } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
 import { t } from "~/core/i18n"
@@ -31,9 +32,13 @@ function Choices(props: { adding: boolean }): JSX.Element {
   let chooser!: HTMLInputElement
   const moves = useMoves()
 
-  /** A book that opened is a book to look at, so this screen steps aside. */
-  const then = async (opening: Promise<{ ok: boolean }>): Promise<void> => {
-    if ((await opening).ok) moves.toTheJournal()
+  /**
+   * Whatever was in hand belonged to the book open before, so it is put down;
+   * and a book that opened is a book to look at, so this screen steps aside.
+   */
+  const then = async (open: () => Promise<{ ok: boolean }>): Promise<void> => {
+    putDown()
+    if ((await open()).ok) moves.toTheJournal()
   }
 
   return (
@@ -53,7 +58,7 @@ function Choices(props: { adding: boolean }): JSX.Element {
         <Button onClick={() => chooser.click()} disabled={opening()}>
           {t("welcome.openFiles")}
         </Button>
-        <Button variant="outline" onClick={() => void then(startFresh())} disabled={opening()}>
+        <Button variant="outline" onClick={() => void then(() => startFresh())} disabled={opening()}>
           {t("welcome.startFresh")}
         </Button>
       </div>
@@ -66,7 +71,7 @@ function Choices(props: { adding: boolean }): JSX.Element {
         accept=".journal,.hledger,.ledger,.txt"
         onChange={(event) => {
           const chosen = event.currentTarget.files
-          if (chosen !== null && chosen.length > 0) void then(openFiles(chosen))
+          if (chosen !== null && chosen.length > 0) void then(() => openFiles(chosen))
         }}
       />
 
@@ -86,7 +91,7 @@ function Choices(props: { adding: boolean }): JSX.Element {
         {/* Outlined rather than ghosted: a ghost draws nothing until it is
             hovered, which is readable in a row of buttons and is just a line of
             text when it stands on its own down here. */}
-        <Button variant="outline" onClick={() => void then(openDemo())} disabled={opening()}>
+        <Button variant="outline" onClick={() => void then(openDemo)} disabled={opening()}>
           {t("welcome.tryDemo")}
         </Button>
         <p class="text-xs text-muted-foreground">{t("welcome.demoBody")}</p>

@@ -24,10 +24,21 @@ import { openBook, type OpenJournal } from "./store"
  * what was open first, and it does it before anything of the new book arrives.
  */
 export const switchTo = async (id: string): Promise<Result<OpenJournal, Trouble>> => {
+  putDown()
+  return openBook(id)
+}
+
+/**
+ * Let go of everything in hand that belongs to the book open now.
+ *
+ * Every way a book arrives — picked from the shelf, or added as a file, an
+ * empty journal, the demo or a copy from a repository — goes through this
+ * first, for the same reason a switch does.
+ */
+export const putDown = (): void => {
   dock.close()
   stopEditingEntry()
   clearDraft()
   forgetChat()
   forgetAll()
-  return openBook(id)
 }
