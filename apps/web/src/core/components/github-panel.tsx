@@ -128,16 +128,27 @@ export function GitHubPanel(props: { readonly bound: Bound }): JSX.Element {
     place().owner !== "" && place().repo !== "" && place().path !== "" && key() !== ""
 
   return (
-    <section class="flex flex-col gap-2">
+    <form
+      class="flex flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (ready() && !busy()) void save()
+      }}
+    >
       <h2 class="text-sm font-medium">{t("github.title")}</h2>
       <p class="text-xs text-muted-foreground">{t("github.lead")}</p>
       {/* The token comes first because nothing below it can be checked without
           one: the boxes name a place, and the token is what lets anyone go and
-          look. Each has the instructions for getting it kept beside it. */}
+          look. Each has the instructions for getting it kept beside it.
+
+          It is marked as a password and the owner below as the name it is for,
+          and the whole is a form that is submitted, so a browser offers to keep
+          the token under that name and fills both on the next visit. */}
       <Field
         label={t("github.token")}
         value={key()}
         secret
+        autocomplete="current-password"
         onChange={setTyped}
       />
       <p class="text-xs text-muted-foreground">{t("github.tokenHint")}</p>
@@ -151,7 +162,12 @@ export function GitHubPanel(props: { readonly bound: Bound }): JSX.Element {
       />
 
       <div class="grid grid-cols-2 gap-2">
-        <Field label={t("github.owner")} value={place().owner} onChange={(owner) => change({ owner })} />
+        <Field
+          label={t("github.owner")}
+          value={place().owner}
+          autocomplete="username"
+          onChange={(owner) => change({ owner })}
+        />
         <Field label={t("github.repo")} value={place().repo} onChange={(repo) => change({ repo })} />
       </div>
       <Field
@@ -168,20 +184,20 @@ export function GitHubPanel(props: { readonly bound: Bound }): JSX.Element {
       />
 
       <div class="flex flex-wrap gap-2">
-        <Button size="sm" disabled={!ready() || busy()} onClick={() => void save()}>
+        <Button type="submit" size="sm" disabled={!ready() || busy()}>
           {t("github.connect")}
         </Button>
-        <Button variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void take()}>
+        <Button type="button" variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void take()}>
           {forNewBook() ? t("github.pullAsNew") : t("github.pull")}
         </Button>
         {/* A book not made yet has nothing to send. */}
         <Show when={!forNewBook()}>
-          <Button variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void send()}>
+          <Button type="button" variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void send()}>
             {t("github.push")}
           </Button>
         </Show>
         <Show when={saved() !== undefined}>
-          <Button variant="ghost" size="sm" disabled={busy()} onClick={() => void drop()}>
+          <Button type="button" variant="ghost" size="sm" disabled={busy()} onClick={() => void drop()}>
             {t("github.disconnect")}
           </Button>
         </Show>
@@ -192,7 +208,7 @@ export function GitHubPanel(props: { readonly bound: Bound }): JSX.Element {
       </Show>
       <Show when={said()}>{(words) => <p class="text-xs text-muted-foreground">{words()}</p>}</Show>
       <Show when={snag()}>{(cause) => <SnagNote snag={cause()} />}</Show>
-    </section>
+    </form>
   )
 }
 
@@ -249,6 +265,8 @@ function Field(props: {
   value: string
   placeholder?: string
   secret?: boolean
+  /** What a browser may fill it with; nothing, unless it is the name and the token. */
+  autocomplete?: "username" | "current-password"
   onChange: (value: string) => void
 }): JSX.Element {
   return (
@@ -262,7 +280,7 @@ function Field(props: {
       <TextFieldInput
         type={props.secret === true ? "password" : "text"}
         class="h-8 text-sm"
-        autocomplete="off"
+        autocomplete={props.autocomplete ?? "off"}
         spellcheck={false}
         placeholder={props.placeholder}
         value={props.value}
