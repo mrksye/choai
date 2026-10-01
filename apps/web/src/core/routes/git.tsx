@@ -68,7 +68,7 @@ function Connection(): JSX.Element {
           {t("git.back")}
         </A>
       </Show>
-      <GitHubPanel />
+      <GitHubPanel bound={getOrUndefined(journal()) === undefined ? { into: "new-book" } : { into: "this-book" }} />
     </div>
   )
 }

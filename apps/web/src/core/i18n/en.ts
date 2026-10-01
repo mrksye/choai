@@ -214,6 +214,7 @@ export const en = {
     addTitle: "Add a book",
     addBody: "Another set of books, kept apart from the ones already here. Nothing is mixed: each is its own files.",
     fromGitHub: "Take from a repository",
+    backToAdd: "Back to the ways of adding a book",
   },
   library: {
     title: "The current journal",

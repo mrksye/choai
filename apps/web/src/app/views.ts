@@ -1,6 +1,6 @@
 import { edition } from "~/edition"
 import { viewsWith, type View } from "~/edition/types"
-import { JOURNAL, SOURCE } from "~/core/address/address"
+import { ADD, JOURNAL, SOURCE } from "~/core/address/address"
 import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
 import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
 import { GitExplorer } from "~/core/explorer/GitExplorer"
@@ -44,9 +44,7 @@ import TrialBalance from "~/core/routes/trial-balance"
  * look at. Last among them is the text all of it is read from, for what no
  * screen writes — a correction, a directive, a comment.
  */
-export { SOURCE }
-
-export const ADD = "/add"
+export { ADD, SOURCE }
 
 const CORE: readonly View[] = [
   {

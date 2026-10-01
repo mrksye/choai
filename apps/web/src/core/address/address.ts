@@ -34,6 +34,16 @@ export const fileOfSource = (hash: string): string | undefined => {
 
 export const addressOfSourceFile = (path: string): string => `${SOURCE}#${encodeURIComponent(path)}`
 
+/** Another book, added beside the ones already here. */
+export const ADD = "/add"
+
+/**
+ * Adding one from a repository, as a part of adding rather than of the
+ * connection: the connection is the open book's, and the page someone is on
+ * is the only thing that can say which book the place they type is for.
+ */
+export const ADD_FROM_GITHUB = `${ADD}#github`
+
 export const ENTRY = "/"
 
 /**

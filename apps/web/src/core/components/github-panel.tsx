@@ -7,11 +7,24 @@ import { forgetToken, keepToken, token } from "~/core/github/kept"
 import { whoami, type Failure } from "~/core/github/api"
 import { pull, pullAsNewBook, push, type Outcome, type Snag } from "~/core/github/sync"
 import { journal, setRemote } from "~/core/journal/store"
+import { putDown } from "~/core/journal/switching"
 import type { Remote } from "~/core/journal/kept"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 
 const NOWHERE: Remote = { owner: "", repo: "", branch: "", path: "" }
+
+/**
+ * Which book the place in the boxes is for.
+ *
+ * Said by whoever shows the panel rather than worked out from whether a book is
+ * open: someone adding a book has one open, and a panel that guessed from that
+ * filled the boxes with the open book's place, moved that book to whatever was
+ * typed, and took the copy into it.
+ */
+export type Bound =
+  | { readonly into: "this-book" }
+  | { readonly into: "new-book"; readonly taken?: () => void }
 
 /**
  * The repository the books live in.
@@ -20,7 +33,7 @@ const NOWHERE: Remote = { owner: "", repo: "", branch: "", path: "" }
  * api.github.com, nowhere else — which is said on the page, since a box asking
  * for a token deserves to say where it goes.
  */
-export function GitHubPanel(): JSX.Element {
+export function GitHubPanel(props: { readonly bound: Bound }): JSX.Element {
   const [saved, { refetch }] = createResource(token)
   const [typed, setTyped] = createSignal<string | undefined>(undefined)
   const [edited, setEdited] = createSignal<Remote | undefined>(undefined)
@@ -28,8 +41,9 @@ export function GitHubPanel(): JSX.Element {
   const [said, setSaid] = createSignal<string | undefined>(undefined)
   const [snag, setSnag] = createSignal<Snag | undefined>(undefined)
 
+  const forNewBook = (): boolean => props.bound.into === "new-book"
   /** What is in the boxes: what is being typed, or what the book already says. */
-  const place = (): Remote => edited() ?? getOrUndefined(journal())?.remote ?? NOWHERE
+  const place = (): Remote => edited() ?? (forNewBook() ? undefined : getOrUndefined(journal())?.remote) ?? NOWHERE
   /**
    * The token as it will be sent: what is being typed, or what was saved.
    *
@@ -59,19 +73,22 @@ export function GitHubPanel(): JSX.Element {
         return
       }
       await keepToken(key())
-      await setRemote(place())
       setTyped(undefined)
-      // What was typed is let go of only once a book has taken it. With none
-      // open there is nowhere else for it to live, and dropping it empties the
-      // boxes somebody has just filled in — which is what left the take button
-      // unpressable at exactly the moment it was the only thing to press.
-      if (getOrUndefined(journal()) !== undefined) setEdited(undefined)
+      // What was typed is let go of only once a book has taken it. For a book
+      // not made yet there is nowhere else for it to live, and dropping it
+      // empties the boxes somebody has just filled in — which is what left the
+      // take button unpressable at exactly the moment it was the only thing to
+      // press.
+      if (!forNewBook()) {
+        await setRemote(place())
+        setEdited(undefined)
+      }
       await refetch()
       setSaid(t("github.connectedAs", { login: who.value }))
     })
 
   /**
-   * With a book open this is a sync; with none it is how one begins.
+   * For the open book this is a sync; for a new one it is how one begins.
    *
    * There is no such thing as taking a copy from halfway, so nothing has to
    * exist here first — a book is made out of what arrives, and a copy that does
@@ -79,10 +96,17 @@ export function GitHubPanel(): JSX.Element {
    * the step that had to be explained, which is a sign it should not have been
    * there.
    */
-  const take = (): Promise<void> =>
-    run(async () =>
-      report(getOrUndefined(journal()) === undefined ? await pullAsNewBook(place()) : await pull()),
-    )
+  const take = (): Promise<void> => {
+    const bound = props.bound
+    return run(async () => (bound.into === "new-book" ? takeAsNewBook(bound.taken) : report(await pull())))
+  }
+
+  const takeAsNewBook = async (then: (() => void) | undefined): Promise<void> => {
+    putDown()
+    const taken = await pullAsNewBook(place())
+    report(taken)
+    if (taken.ok) then?.()
+  }
   const send = (): Promise<void> => run(async () => report(await push()))
 
   const report = (result: { ok: true; value: Outcome } | { ok: false; error: Snag }): void => {
@@ -148,10 +172,10 @@ export function GitHubPanel(): JSX.Element {
           {t("github.connect")}
         </Button>
         <Button variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void take()}>
-          {getOrUndefined(journal()) === undefined ? t("github.pullAsNew") : t("github.pull")}
+          {forNewBook() ? t("github.pullAsNew") : t("github.pull")}
         </Button>
-        {/* With nothing open there is nothing to send. */}
-        <Show when={getOrUndefined(journal()) !== undefined}>
+        {/* A book not made yet has nothing to send. */}
+        <Show when={!forNewBook()}>
           <Button variant="outline" size="sm" disabled={!ready() || busy()} onClick={() => void send()}>
             {t("github.push")}
           </Button>

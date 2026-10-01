@@ -204,6 +204,7 @@ export const ja: Dictionary = {
     addTitle: "帳簿を追加",
     addBody: "もう一組の帳簿を、いまある帳簿とは別に持ちます。混ざりません。それぞれが別のファイルです。",
     fromGitHub: "リポジトリから取り込む",
+    backToAdd: "追加のしかたに戻る",
   },
   library: {
     title: "現在の帳簿",

@@ -189,3 +189,73 @@ test("a file the journal says belongs beside it comes back with the journal", as
   const open = await page.evaluate(() => window.choai.journal.summary({}))
   expect(open.ok && open.value.transactions).toBe(2)
 })
+
+/** Every book kept on this device, read straight from where it is kept. */
+const keptRemotes = (page: Page): Promise<readonly (string | undefined)[]> =>
+  page.evaluate(
+    () =>
+      new Promise<(string | undefined)[]>((resolve, reject) => {
+        const opening = indexedDB.open("choai")
+        opening.onerror = () => reject(opening.error)
+        opening.onsuccess = () => {
+          const read = opening.result.transaction("books").objectStore("books").getAll()
+          read.onerror = () => reject(read.error)
+          read.onsuccess = () => {
+            const books = read.result as { remote?: { repo: string } }[]
+            resolve(books.map((book) => book.remote?.repo))
+          }
+        }
+      }),
+  )
+
+/**
+ * Adding a book from a repository while one, already connected, is open.
+ *
+ * The connection is the open book's, so this used to show that book's place in
+ * the boxes, move it to whatever was typed over them, and take the copy into
+ * it. Adding is its own page, and the book that was open stays where it was.
+ */
+test("taking a repository as an added book leaves the open one where it was", async ({ page }) => {
+  await answerGitHub(page)
+
+  await page.goto("/")
+  await page.evaluate(() => window.choai.ready)
+  await page.getByRole("button", { name: "Start an empty journal" }).click()
+  await expect.poll(async () => (await page.evaluate(() => window.choai.journal.summary({}))).ok).toBe(true)
+
+  await page.goto("/git#connection")
+  await expect.poll(async () => (await page.evaluate(() => window.choai.journal.summary({}))).ok).toBe(true)
+  await fill(page, "Personal access token", NOT_A_TOKEN)
+  await fill(page, "Owner", "mrksye")
+  await fill(page, "Repository", "household")
+  await fill(page, "Path to the journal", "books/main.journal")
+  await page.getByRole("button", { name: "Save and check", exact: true }).click()
+  await expect(page.getByText("Connected as mrksye")).toBeVisible()
+  await expect.poll(() => keptRemotes(page)).toEqual(["household"])
+
+  await page.goto("/add#work")
+  await page.getByRole("button", { name: "Take from a repository" }).click()
+  await expect(page).toHaveURL(/\/add#github\b/)
+
+  // Nothing of the open book's place is offered as this one's.
+  await expect(page.getByLabel("Repository", { exact: true })).toHaveValue("")
+  await expect(page.getByRole("button", { name: "Send to GitHub" })).toBeHidden()
+
+  await fill(page, "Owner", "mrksye")
+  await fill(page, "Repository", "books")
+  await fill(page, "Path to the journal", "books/main.journal")
+  await page.getByRole("button", { name: "Save and check", exact: true }).click()
+  await expect(page.getByText("Connected as mrksye")).toBeVisible()
+  expect(await keptRemotes(page)).toEqual(["household"])
+
+  await page.getByRole("button", { name: "Take from GitHub as a new journal" }).click()
+  await expect(page).toHaveURL(/\/journal#work$/)
+
+  await expect
+    .poll(async () => {
+      const open = await page.evaluate(() => window.choai.journal.summary({}))
+      return open.ok ? open.value.transactions : 0
+    })
+    .toBe(2)
+  await expect.poll(async () => [...(await keptRemotes(page))].sort()).toEqual(["books", "household"])
+})
