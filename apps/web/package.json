@@ -23,8 +23,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
+    "onnxruntime-web": "^1.30.0",
     "solid-js": "^1.9.14",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "tau-prolog": "0.3.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

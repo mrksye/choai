@@ -27,3 +27,7 @@ apps/web/src/core/generated/
 .env
 .env.*
 !.env.example
+
+# Photographs of real receipts, for trying OCR against. They are somebody's
+# spending and never leave this machine.
+apps/web/tests/receipts/

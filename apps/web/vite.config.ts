@@ -116,6 +116,20 @@ export default defineConfig({
         // offline with no error to explain why.
         maximumFileSizeToCacheInBytes: 24 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,svg,png,wasm}"],
+        // Reading a picture brings 45 MB with it — ONNX Runtime and three
+        // models — that most people keeping books will never use. None of it
+        // is precached: the reader's worker, its runtime and the models are
+        // fetched the first time a picture is read, and kept from then on.
+        // Every one of them carries a digest in its name, so what is kept is
+        // never mistaken for what replaced it.
+        globIgnores: ["**/reader-*.js", "**/ort-wasm-*", "ocr/**"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /\/ocr\/|\/reader-[^/]*\.js$|\/ort-wasm-[^/]*$/.test(url.pathname),
+            handler: "CacheFirst",
+            options: { cacheName: "reading" },
+          },
+        ],
       },
     }),
   ],

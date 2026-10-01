@@ -1,0 +1,6 @@
+{
+  "orient": "orient.f5516822af92.onnx",
+  "detect": "detect.f42c0fbd294d.onnx",
+  "recognise": "recognise.6f327246b503.onnx",
+  "characters": "characters.b5f2bfe2bdd9.txt"
+}
