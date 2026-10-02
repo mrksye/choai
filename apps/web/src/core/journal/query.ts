@@ -26,4 +26,4 @@ export function useQuery(): [() => string, (next: string) => void] {
  */
 export const searchFor = (query: string): string => (query === "" ? "" : `?q=${encodeURIComponent(query)}`)
 
-export { accountChosenIn, accountQuery } from "./account-query"
+export { accountQuery } from "./account-query"

@@ -29,7 +29,7 @@ import { companionsAcross, companionsIn, declaringCompanion } from "~/core/journ
 import { withTag, withTags } from "~/core/journal/tagging"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { byTop } from "~/core/explorer/tree"
-import { accountChosenIn, accountQuery } from "~/core/journal/account-query"
+import { accountQuery } from "~/core/journal/account-query"
 import { ACCOUNTS, MAIN, TRANSACTIONS, adjustmentsOn, includedBy, including, laidOut, writtenInto } from "~/core/journal/layout"
 import { byMonth, counterpartsOf, dayOf, hasMovement, ledgerOf, namedIn, within } from "~/core/reports/ledger"
 import type { BalanceReport, RegisterRow, Transaction } from "~/core/hledger/wire"
@@ -37,6 +37,7 @@ import { withoutKind } from "~/core/journal/declarations"
 import { aroundChanges, changes, fromPatch, lineDiff } from "~/core/lib/diff"
 import { laid, ordered, strokes, widthOf } from "~/core/github/graph"
 import {
+  addressOfStatement,
   arrivalsAt,
   atTheList,
   atTheWork,
@@ -45,6 +46,7 @@ import {
   readFragment,
   sameBesideTheDock,
   showsTheWork,
+  statementPartOf,
   withLayer,
   withoutLayer,
   writeAddress,
@@ -916,15 +918,24 @@ describe("where the app is, as the address says it", () => {
     expect(arrivalsAt(readAddress("/#work+compose")).map(writeAddress)).toEqual(["/journal#work+compose"])
     expect(arrivalsAt(readAddress("/settings"))).toEqual([])
   })
+
+  test("a statement's address carries the account whose ledger was opened from it", () => {
+    const written = addressOfStatement({ statement: "balance-sheet", account: "assets:my bank/cash+card" })
+    expect(written).toBe("/reports#balance-sheet/assets%3Amy%20bank%2Fcash%2Bcard")
+    expect(statementPartOf("#balance-sheet/assets%3Amy%20bank%2Fcash%2Bcard+ledger")).toEqual({
+      statement: "balance-sheet",
+      account: "assets:my bank/cash+card",
+    })
+    expect(statementPartOf("#income-statement")).toEqual({ statement: "income-statement" })
+    expect(statementPartOf("#work")).toEqual({ statement: "" })
+    expect(addressOfStatement({ statement: "trial-balance" })).toBe("/reports#trial-balance")
+  })
 })
 
 describe("an account's ledger", () => {
-  test("a query is one account's only where it is exactly what choosing one writes", () => {
-    expect(accountChosenIn(accountQuery("assets:bank"))).toBe("assets:bank")
-    expect(accountChosenIn(accountQuery("assets:my bank"))).toBe("assets:my bank")
-    expect(accountChosenIn("acct:assets date:2026")).toBeUndefined()
-    expect(accountChosenIn("food")).toBeUndefined()
-    expect(accountChosenIn("")).toBeUndefined()
+  test("an account's query is one term, quoted where the name has a space in it", () => {
+    expect(accountQuery("assets:bank")).toBe("acct:assets:bank")
+    expect(accountQuery("assets:my bank")).toBe('acct:"assets:my bank"')
   })
 
   test("a sub-account is within its parent, and a sibling sharing its start is not", () => {

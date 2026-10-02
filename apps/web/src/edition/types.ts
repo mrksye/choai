@@ -72,8 +72,6 @@ export interface View {
   readonly page: Component
   /** Whether an entry can be written from this view, which is what puts the composer's button on it. */
   readonly writes: boolean
-  /** Whether what it shows is narrowed to a period, which is what puts the filter beside it. */
-  readonly periodic?: boolean
   /** Whether something there wants doing now, which puts a dot on its rail button. */
   readonly attention?: () => boolean
   readonly reached: Reached

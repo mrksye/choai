@@ -89,7 +89,7 @@ test("a question asked through the API and the same question on screen agree", a
   expect(answer.ok).toBe(true)
   if (!answer.ok) return
 
-  await page.goto("/income-statement")
+  await page.goto("/reports#income-statement")
   await page.evaluate(() => window.choai.idle())
 
   await expect(page.getByText(answer.value.total.rendered).first()).toBeVisible()

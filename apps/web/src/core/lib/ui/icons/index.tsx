@@ -1,8 +1,6 @@
 import type { JSX } from 'solid-js'
 import receiptSvg from './receipt.svg?raw'
 import scaleSvg from './scale.svg?raw'
-import trendingUpSvg from './trending-up.svg?raw'
-import bookOpenSvg from './book-open.svg?raw'
 import settingsSvg from './settings.svg?raw'
 import panelLeftSvg from './panel-left.svg?raw'
 import plusSvg from './plus.svg?raw'
@@ -16,7 +14,6 @@ import refreshCwSvg from './refresh-cw.svg?raw'
 import searchSvg from './search.svg?raw'
 import chevronLeftSvg from './chevron-left.svg?raw'
 import gitBranchSvg from './git-branch.svg?raw'
-import funnelSvg from './funnel.svg?raw'
 
 /**
  * Icons. The SVG bodies live beside this file as .svg files, drawn with
@@ -36,25 +33,15 @@ const icon =
     (<span class={`inline-flex shrink-0 ${props.class ?? ''}`} aria-hidden="true" innerHTML={svg} />)
 
 /**
- * The four books, each drawn as what it is rather than as what it looks like.
- *
- * A slip, the book those slips are gathered into, the scales that book has to
- * come to, and the line it traces over a period. One drawn structurally instead
- * — two columns, a table — reads as a different sort of claim beside the other
- * three, and two columns is the balance sheet's shape as much as anything's.
+ * The books, each drawn as what it is rather than as what it looks like: the
+ * slips as they come in, and the scales everything written has to come to.
  */
 /** The daily journal — the slips as they come in. */
 export const ReceiptIcon = icon(receiptSvg)
-/** The trial balance — every account gathered into the one book. */
-export const BookOpenIcon = icon(bookOpenSvg)
-/** The balance sheet: a pair of scales, which is what it must balance to. */
+/** The statements: a pair of scales, which is what the books must balance to. */
 export const ScaleIcon = icon(scaleSvg)
-/** The income statement — change over a period. */
-export const TrendingUpIcon = icon(trendingUpSvg)
 /** Settings. */
 export const SettingsIcon = icon(settingsSvg)
-/** Narrowing what a report covers. */
-export const FunnelIcon = icon(funnelSvg)
 /** The repository the books are kept in, and the history of what was sent to it. */
 export const GitBranchIcon = icon(gitBranchSvg)
 /** Fold or unfold the side panel. */

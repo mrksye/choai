@@ -90,9 +90,9 @@ test("the rail changes which list is shown rather than leaving it", async ({ pag
   await openTheDemo(page)
   await back(page).click()
 
-  await page.getByRole("button", { name: "Balance sheet" }).first().click()
+  await page.getByRole("button", { name: "Financial statements" }).first().click()
 
-  await expect(explorer(page)).toBeVisible()
+  await expect(page.getByRole("button", { name: "Balance sheet", exact: true })).toBeVisible()
   await expect(back(page)).toBeHidden()
 })
 

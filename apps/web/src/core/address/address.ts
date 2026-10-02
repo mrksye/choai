@@ -34,6 +34,38 @@ export const fileOfSource = (hash: string): string | undefined => {
 
 export const addressOfSourceFile = (path: string): string => `${SOURCE}#${encodeURIComponent(path)}`
 
+/**
+ * The statements the books come to. The page's own part of the address is the
+ * statement on screen and, after a `/`, the account whose ledger was opened
+ * from it — `#balance-sheet/assets%3Abank` — so a ledger is somewhere that can
+ * be gone back to, reloaded and sent like any other screen. The account is
+ * encoded, so neither the `/` nor the joining mark can be read out of a name.
+ *
+ * Whether the ledger is on screen is the dock's layer, not this: closing the
+ * dock is not forgetting which account it held, as with everything else there.
+ */
+export const REPORTS = "/reports"
+
+export interface StatementPart {
+  /** The statement's id; empty where the address names none. */
+  readonly statement: string
+  readonly account?: string
+}
+
+const ACCOUNT_AFTER = "/"
+
+export const statementPartOf = (hash: string): StatementPart => {
+  const [statement = "", account] = readFragment(hash).page.split(ACCOUNT_AFTER)
+  return account === undefined || account === ""
+    ? { statement }
+    : { statement, account: decodeURIComponent(account) }
+}
+
+export const addressOfStatement = (part: StatementPart): string =>
+  part.account === undefined
+    ? `${REPORTS}#${part.statement}`
+    : `${REPORTS}#${part.statement}${ACCOUNT_AFTER}${encodeURIComponent(part.account)}`
+
 /** Another book, added beside the ones already here. */
 export const ADD = "/add"
 
@@ -52,12 +84,12 @@ export const ENTRY = "/"
  * `work` is the page's work in place of its list, for a page with no part of
  * its own to name; the rest are the dock, which holds one at a time.
  */
-export type Layer = "work" | "compose" | "edit" | "import" | "connect" | "review"
+export type Layer = "work" | "compose" | "edit" | "import" | "connect" | "review" | "ledger"
 
 /** In the order they are written, so the same screen is always the same address. */
-const LAYERS: readonly Layer[] = ["work", "compose", "edit", "import", "connect", "review"]
+const LAYERS: readonly Layer[] = ["work", "compose", "edit", "import", "connect", "review", "ledger"]
 
-const DOCKED: readonly Layer[] = ["compose", "edit", "import", "connect", "review"]
+const DOCKED: readonly Layer[] = ["compose", "edit", "import", "connect", "review", "ledger"]
 
 const JOIN = "+"
 

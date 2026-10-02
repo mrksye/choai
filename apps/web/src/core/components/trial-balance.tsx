@@ -8,7 +8,7 @@ import { askTrialBalance, narrowed } from "~/core/reports/ask"
 import { creditsOf, debitsOf } from "~/core/reports/columns"
 import { accountOf } from "~/core/reports/tree"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
-import { NeedsAJournal, Waiting } from "./balance-report"
+import { AccountName, NeedsAJournal, Waiting, type Choosing } from "./balance-report"
 import { TroubleNote } from "./trouble-note"
 import { t } from "~/core/i18n"
 
@@ -25,7 +25,7 @@ export function TrialBalanceView(props: {
   nothingToShow: string
   /** Query terms of the screen's own, such as a period, added to the shared query. */
   narrowing?: string
-}): JSX.Element {
+} & Choosing): JSX.Element {
   const [query] = useQuery()
 
   // The journal is part of what is asked, not only the query: the same question
@@ -43,13 +43,15 @@ export function TrialBalanceView(props: {
       {matchResource(report(), {
         Loading: () => <Waiting />,
         Err: (trouble) => <TroubleNote trouble={trouble} />,
-        Ok: (data) => <Sheet trial={data} nothingToShow={props.nothingToShow} />,
+        Ok: (data) => (
+          <Sheet trial={data} nothingToShow={props.nothingToShow} chosen={props.chosen} onChosen={props.onChosen} />
+        ),
       })}
     </Show>
   )
 }
 
-function Sheet(props: { trial: TrialBalance; nothingToShow: string }): JSX.Element {
+function Sheet(props: { trial: TrialBalance; nothingToShow: string } & Choosing): JSX.Element {
   return (
     <Show
       when={props.trial.report.prRows.length > 0}
@@ -65,7 +67,9 @@ function Sheet(props: { trial: TrialBalance; nothingToShow: string }): JSX.Eleme
             </tr>
           </thead>
           <tbody>
-            <For each={props.trial.report.prRows}>{(row) => <AccountRow row={row} />}</For>
+            <For each={props.trial.report.prRows}>
+              {(row) => <AccountRow row={row} chosen={props.chosen} onChosen={props.onChosen} />}
+            </For>
           </tbody>
           {/* hledger's own totals, not a sum of the column above: the two
               agreeing is what the report is for, and a screen that added up the
@@ -83,15 +87,17 @@ function Sheet(props: { trial: TrialBalance; nothingToShow: string }): JSX.Eleme
   )
 }
 
-function AccountRow(props: { row: ReportRow }): JSX.Element {
+function AccountRow(props: { row: ReportRow } & Choosing): JSX.Element {
   const account = (): string => accountOf(props.row)
   return (
-    <tr class="border-b border-border/50 last:border-0">
+    <tr class="border-b border-border/50 last:border-0" classList={{ "bg-accent": props.chosen === account() }}>
       {/* The whole name on every line. A trial balance is read down the column
           for the account that is wrong, and a leaf on its own does not say
           which branch it came off. */}
-      <td class="py-1" title={account()}>
-        {account()}
+      <td class="py-1">
+        <AccountName account={account()} onChosen={props.onChosen}>
+          {account()}
+        </AccountName>
       </td>
       <Column value={debitsOf(props.row.prrTotal)} class="py-1" />
       <Column value={creditsOf(props.row.prrTotal)} class="py-1" />

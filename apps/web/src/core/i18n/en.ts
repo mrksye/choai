@@ -19,6 +19,7 @@ export const en = {
     balanceSheet: "Balance sheet",
     incomeStatement: "Income statement",
     trialBalance: "Trial balance",
+    reports: "Financial statements",
     git: "Source control",
     settings: "Settings",
     showPanels: "Show sidebars",
@@ -71,6 +72,7 @@ export const en = {
     credit: "Credit",
   },
   ledger: {
+    title: "Ledger",
     lead: "Every movement in this account and the ones under it, oldest first, with the balance after each — hledger's register.",
     day: "Day",
     description: "Payee",
@@ -86,8 +88,6 @@ export const en = {
     period: "Period",
     from: "From (included)",
     to: "To (included)",
-    filters: "Filters",
-    filtered: "Filters — narrowing this report",
   },
   propose: {
     title: "Written, not yet kept",

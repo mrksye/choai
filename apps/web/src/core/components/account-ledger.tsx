@@ -4,7 +4,8 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount } from "~/core/hledger/wire"
 import { withoutKindNow } from "~/core/journal/chart"
 import { journal } from "~/core/journal/store"
-import { accountChosenIn, useQuery } from "~/core/journal/query"
+import { accountQuery } from "~/core/journal/query"
+import { periodNow } from "~/core/reports/filters"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
 import { byMonth, dayOf, type LedgerLine } from "~/core/reports/ledger"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
@@ -13,45 +14,29 @@ import { TroubleNote } from "./trouble-note"
 import { t } from "~/core/i18n"
 
 /**
- * A report, or — where one account has been chosen — that account's ledger.
+ * The ledger behind a line of a statement, in the dock.
  *
- * A report narrowed to one account comes to a single line, which says what the
- * account comes to and nothing of how it got there. Its ledger says both.
+ * A line of a statement says what an account comes to and nothing of how it got
+ * there. Its ledger says both, beside the statement rather than in place of it,
+ * so the figure being questioned stays in view while it is.
+ *
+ * Narrowed by the account and the period, and by nothing in the title bar: hledger
+ * ORs two `acct:` terms rather than ANDing them, so a query naming an account
+ * would widen the ledger instead of narrowing it.
  */
-export function ReportOrLedger(props: {
-  /** Query terms of the screen's own, such as a period, narrowing the ledger too. */
-  narrowing?: string
-  /**
-   * Whether the balance column is the account's balance, counted from the
-   * beginning of the books whatever the period — a balance sheet's — rather
-   * than what has moved since the period began.
-   */
-  historical?: boolean
-  children: JSX.Element
-}): JSX.Element {
-  const [query] = useQuery()
-  return (
-    <Show when={accountChosenIn(query())} fallback={props.children} keyed>
-      {(account) => <AccountLedger account={account} narrowing={props.narrowing} historical={props.historical} />}
-    </Show>
-  )
-}
-
-function AccountLedger(props: { account: string; narrowing?: string; historical?: boolean }): JSX.Element {
-  const [query] = useQuery()
-
+export function AccountLedger(props: { account: string; historical: boolean }): JSX.Element {
   const [ledger] = createResource(
     () => {
       const open = getOrUndefined(journal())
       return open === undefined
         ? undefined
-        : { open, terms: narrowed(query(), props.narrowing), historical: props.historical === true }
+        : { open, terms: narrowed(accountQuery(props.account), periodNow()), historical: props.historical }
     },
     (asked) => askLedger(props.account, asked.terms, asked.historical),
   )
 
   return (
-    <section class="flex flex-col gap-2">
+    <section class="flex flex-col gap-2 p-3">
       <h2 class="text-base font-semibold" title={props.account}>
         {props.account}
       </h2>
@@ -68,9 +53,9 @@ function AccountLedger(props: { account: string; narrowing?: string; historical?
 }
 
 /**
- * The header and the month under it stay pinned while the movements scroll,
- * below whatever the shell has already pinned above the work (`--stuck-above`),
- * so a phone never loses which column or which month it is reading. Four
+ * The header and the month under it stay pinned to the top of the dock while
+ * the movements scroll, so a phone never loses which column or which month it
+ * is reading. Four
  * columns rather than a debit and a credit: the amount keeps hledger's sign,
  * which is what the running balance is the sum of.
  */
@@ -85,7 +70,7 @@ function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
           {t("ledger.latest", { shown: props.ledger.lines.length, total: props.ledger.total })}
         </p>
       </Show>
-      <table class="w-full max-w-3xl border-separate border-spacing-0 text-sm">
+      <table class="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr class="text-xs text-muted-foreground">
             <HeaderCell class="w-8 pr-2 text-left">{t("ledger.day")}</HeaderCell>
@@ -101,7 +86,7 @@ function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
                 <th
                   scope="rowgroup"
                   colSpan={4}
-                  class="sticky top-[calc(var(--stuck-above,0px)+1.75rem)] z-[4] h-6 border-b bg-muted py-0.5 pl-1 text-left font-mono text-xs font-medium text-muted-foreground"
+                  class="sticky top-7 z-[4] h-6 border-b bg-muted py-0.5 pl-1 text-left font-mono text-xs font-medium text-muted-foreground"
                 >
                   {month.month}
                 </th>
@@ -119,7 +104,7 @@ function Lines(props: { ledger: Ledger; account: string }): JSX.Element {
 function HeaderCell(props: { class: string; children: JSX.Element }): JSX.Element {
   return (
     <th
-      class={`sticky top-[var(--stuck-above,0px)] z-[5] h-7 border-b bg-background font-medium whitespace-nowrap ${props.class}`}
+      class={`sticky top-0 z-[5] h-7 border-b bg-card font-medium whitespace-nowrap ${props.class}`}
     >
       {props.children}
     </th>

@@ -1,33 +1,21 @@
 import { edition } from "~/edition"
 import { viewsWith, type View } from "~/edition/types"
-import { ADD, JOURNAL, SOURCE } from "~/core/address/address"
-import { BalanceSheetExplorer } from "~/core/explorer/BalanceSheetExplorer"
-import { IncomeStatementExplorer } from "~/core/explorer/IncomeStatementExplorer"
+import { ADD, JOURNAL, REPORTS, SOURCE } from "~/core/address/address"
 import { GitExplorer } from "~/core/explorer/GitExplorer"
 import { behindNow } from "~/core/components/git/kept-in-view"
 import { JournalExplorer } from "~/core/explorer/JournalExplorer"
 import { SourceExplorer } from "~/core/explorer/SourceExplorer"
 import { SettingsExplorer } from "~/core/explorer/SettingsExplorer"
-import { TrialBalanceExplorer } from "~/core/explorer/TrialBalanceExplorer"
+import { ReportsExplorer } from "~/core/explorer/ReportsExplorer"
 import { t } from "~/core/i18n"
-import {
-  BookOpenIcon,
-  FileCodeIcon,
-  GitBranchIcon,
-  ReceiptIcon,
-  ScaleIcon,
-  SettingsIcon,
-  TrendingUpIcon,
-} from "~/core/lib/ui/icons"
+import { FileCodeIcon, GitBranchIcon, ReceiptIcon, ScaleIcon, SettingsIcon } from "~/core/lib/ui/icons"
 import Add from "~/core/routes/add"
-import BalanceSheet from "~/core/routes/balance-sheet"
 import Git from "~/core/routes/git"
-import IncomeStatement from "~/core/routes/income-statement"
 import Journal from "~/core/routes/journal"
 import Licenses from "~/core/routes/licenses"
+import Reports from "~/core/routes/reports"
 import Settings from "~/core/routes/settings"
 import Source from "~/core/routes/source"
-import TrialBalance from "~/core/routes/trial-balance"
 
 /**
  * Every screen this app has, in one table.
@@ -37,11 +25,11 @@ import TrialBalance from "~/core/routes/trial-balance"
  * reachable from the rail without being routed, or routed with nothing leading
  * to it, and neither mistake shows up until somebody presses the thing.
  *
- * The order is the order the work is done in: entries are written, they are
- * gathered and checked, and the two statements are what the check makes it safe
- * to read. The daily journal is first on both counts — it is where the books
- * are kept and it is what the app is opened for; the rest are things you go and
- * look at. Last among them is the text all of it is read from, for what no
+ * The order is the order the work is done in: entries are written, and then
+ * the statements they come to are read, all of them on one screen rather than
+ * a button each. The daily journal is first on both counts — it is where the
+ * books are kept and it is what the app is opened for; the rest are things you
+ * go and look at. Last among them is the text all of it is read from, for what no
  * screen writes — a correction, a directive, a comment.
  */
 export { ADD, SOURCE }
@@ -57,33 +45,12 @@ const CORE: readonly View[] = [
     reached: { from: "rail" },
   },
   {
-    href: "/trial-balance",
-    label: () => t("nav.trialBalance"),
-    Icon: BookOpenIcon,
-    Explorer: TrialBalanceExplorer,
-    page: TrialBalance,
-    writes: false,
-    periodic: true,
-    reached: { from: "rail" },
-  },
-  {
-    href: "/balance-sheet",
-    label: () => t("nav.balanceSheet"),
+    href: REPORTS,
+    label: () => t("nav.reports"),
     Icon: ScaleIcon,
-    Explorer: BalanceSheetExplorer,
-    page: BalanceSheet,
+    Explorer: ReportsExplorer,
+    page: Reports,
     writes: false,
-    periodic: true,
-    reached: { from: "rail" },
-  },
-  {
-    href: "/income-statement",
-    label: () => t("nav.incomeStatement"),
-    Icon: TrendingUpIcon,
-    Explorer: IncomeStatementExplorer,
-    page: IncomeStatement,
-    writes: false,
-    periodic: true,
     reached: { from: "rail" },
   },
   {

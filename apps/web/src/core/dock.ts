@@ -6,10 +6,11 @@ import type { Layer } from "~/core/address/address"
 /**
  * The panel beside the journal, and who has it.
  *
- * Five things want that space and none of them wants it at the same time as
+ * Six things want that space and none of them wants it at the same time as
  * another: writing an entry, correcting one, reading receipts into entries,
- * keeping the key Jev is reached with, and deciding about entries something
- * else wrote. It is one space, so it is one
+ * keeping the key Jev is reached with, deciding about entries something else
+ * wrote, and reading the ledger behind a line of a statement. It is one space,
+ * so it is one
  * piece of state — the name of whoever it is lent to — rather than a flag on
  * each of them and a rule deciding which flag wins.
  *
@@ -20,7 +21,7 @@ import type { Layer } from "~/core/address/address"
  * being corrected: each is kept by whoever owns it, and putting the panel down costs
  * none of them.
  */
-export type InTheDock = "composing" | "editing" | "importing" | "connecting" | "reviewing"
+export type InTheDock = "composing" | "editing" | "importing" | "connecting" | "reviewing" | "ledger"
 
 /** What each is called in the address. */
 export const LAYER_OF: Readonly<Record<InTheDock, Layer>> = {
@@ -29,6 +30,7 @@ export const LAYER_OF: Readonly<Record<InTheDock, Layer>> = {
   importing: "import",
   connecting: "connect",
   reviewing: "review",
+  ledger: "ledger",
 }
 
 export const dockedAs = (layer: Layer | undefined): InTheDock | undefined =>

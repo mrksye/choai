@@ -172,12 +172,18 @@ test("nothing else on the manifest moved when the trial balance joined it", asyn
   ])
 })
 
-test("the trial balance is what the fourth view is, in name and on screen", async ({ page }) => {
+/**
+ * The statements are one button on the rail, and the trial balance is what it
+ * opens on: the check comes before the statements it makes safe to read. The
+ * others are chosen beside it, each at an address of its own.
+ */
+test("the trial balance is the first of the financial statements, in name and on screen", async ({ page }) => {
   await openTheDemo(page)
 
-  await page.getByRole("button", { name: "Trial balance" }).first().click()
-  await expect(page).toHaveURL(/\/trial-balance/)
+  await page.getByRole("button", { name: "Financial statements" }).first().click()
+  await expect(page).toHaveURL(/\/reports/)
 
+  await expect(page.getByRole("heading", { name: "Trial balance" })).toBeVisible()
   await expect(page.getByRole("columnheader", { name: "Debit" })).toBeVisible()
   await expect(page.getByRole("columnheader", { name: "Credit" })).toBeVisible()
 
@@ -190,41 +196,73 @@ test("the trial balance is what the fourth view is, in name and on screen", asyn
   const total = page.getByRole("row").filter({ hasText: "Total" })
   await expect(total.getByRole("cell").nth(1)).toHaveText("$10,769.15")
   await expect(total.getByRole("cell").nth(2)).toHaveText("$10,769.15")
+
+  await page.getByRole("button", { name: "Balance sheet", exact: true }).click()
+  await expect(page).toHaveURL(/\/reports#balance-sheet/)
+  await expect(page.getByRole("heading", { name: "Balance sheet" })).toBeVisible()
 })
 
+/** The panel beside the statements, which is where a ledger is read. */
+const dock = (page: Page) => page.locator("aside").last()
+
 /**
- * A report narrowed to one account is one line, which says what the account
- * comes to and nothing of how. Choosing an account beside any of the three
- * reports shows its ledger instead: hledger's register, oldest first, each
- * movement with the balance after it and where its other side went.
+ * A line of a statement says what an account comes to and nothing of how.
+ * Pressing it opens the account's ledger beside the statement rather than in
+ * place of it: hledger's register, oldest first, each movement with the
+ * balance after it and where its other side went.
  */
 for (const report of [
-  { path: "/trial-balance", leaf: "food", account: "expenses:food", heading: "Account" },
-  { path: "/balance-sheet", leaf: "card", account: "liabilities:card", heading: undefined },
-  { path: "/income-statement", leaf: "food", account: "expenses:food", heading: undefined },
+  { id: "trial-balance", account: "expenses:food", heading: "Debit" },
+  { id: "balance-sheet", account: "liabilities:card", heading: undefined },
+  { id: "income-statement", account: "expenses:food", heading: undefined },
 ]) {
-  test(`choosing an account beside ${report.path} shows its ledger`, async ({ page }) => {
+  test(`pressing a line of ${report.id} shows its ledger beside it`, async ({ page }) => {
     await openTheDemo(page)
-    await page.goto(`${report.path}#work`)
+    await page.goto(`/reports#${report.id}`)
 
-    await page.getByRole("button", { name: report.leaf, exact: true }).click()
-    await expect(page.getByRole("heading", { name: report.account })).toBeVisible()
-    await expect(page.getByRole("columnheader", { name: "Balance" })).toBeVisible()
-    await expect(page.locator("tbody tr").nth(1)).toBeVisible()
-
-    await page.getByRole("button", { name: "All accounts" }).last().click()
-    await expect(page.getByRole("heading", { name: report.account })).toBeHidden()
+    await page.locator("main").getByTitle(report.account, { exact: true }).click()
+    await expect(dock(page).getByRole("heading", { name: report.account })).toBeVisible()
+    await expect(dock(page).getByRole("columnheader", { name: "Balance" })).toBeVisible()
+    await expect(dock(page).locator("tbody tr").nth(1)).toBeVisible()
     if (report.heading !== undefined) await expect(page.getByRole("columnheader", { name: report.heading })).toBeVisible()
+
+    await dock(page).getByRole("button", { name: "Close", exact: true }).click()
+    await expect(page.getByRole("heading", { name: report.account })).toBeHidden()
   })
 }
 
+/**
+ * A ledger is a place like any other: its account is in the address, so a
+ * reload finds it again, back closes it, and the statement chosen beside it
+ * keeps it open.
+ */
+test("a ledger's account is in the address, and survives a reload and a change of statement", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/reports#trial-balance")
+  await page.locator("main").getByTitle("expenses:food", { exact: true }).click()
+  await expect(page).toHaveURL(/\/reports#trial-balance\/expenses%3Afood\+ledger$/)
+
+  await page.reload()
+  await expect(dock(page).getByRole("heading", { name: "expenses:food" })).toBeVisible()
+
+  await page.getByRole("button", { name: "Income statement", exact: true }).click()
+  await expect(page).toHaveURL(/\/reports#income-statement\/expenses%3Afood\+ledger$/)
+  await expect(dock(page).getByRole("heading", { name: "expenses:food" })).toBeVisible()
+
+  await page.goBack()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/reports#trial-balance$/)
+  await expect(page.getByRole("heading", { name: "expenses:food" })).toBeHidden()
+})
+
 test("a ledger's balances are hledger's running totals, and its other side is named without its kind", async ({ page }) => {
   await openTheDemo(page)
-  await page.goto("/trial-balance?q=acct%3Aexpenses%3Afood#work")
+  await page.goto("/reports#trial-balance")
+  await page.locator("main").getByTitle("expenses:food", { exact: true }).click()
 
-  const rows = page.locator("tbody tr:has(td)")
+  const rows = dock(page).locator("tbody tr:has(td)")
   await expect(rows).toHaveCount(3)
-  await expect(page.locator("tbody th").first()).toHaveText("2026-01")
+  await expect(dock(page).locator("tbody th").first()).toHaveText("2026-01")
   await expect(rows.nth(0).locator("td").first()).toHaveText("07")
   await expect(rows.nth(0)).toContainText("↔ card")
   await expect(rows.nth(0).getByTitle("liabilities:card")).toBeVisible()
@@ -234,80 +272,35 @@ test("a ledger's balances are hledger's running totals, and its other side is na
 })
 
 /**
- * An account nothing was posted to has no ledger, so the list beside a report
- * sets it back rather than offering it as though choosing it would show
- * something. A parent is set back only while everything beneath it is empty.
+ * The period sits beside the statements rather than inside one of them, and
+ * is there without being asked for.
  */
-test("an account nothing was posted to is set back in the list beside a report", async ({ page }) => {
-  await page.goto("/")
-  await page.evaluate(() => window.choai.ready)
-  await page.getByRole("button", { name: "Start an empty journal" }).click()
-  await expect.poll(async () => (await page.evaluate(() => window.choai.journal.summary({}))).ok).toBe(true)
-  await page.goto("/balance-sheet#work")
-
-  const assets = page.getByRole("button", { name: "assets", exact: true })
-  const liabilities = page.getByRole("button", { name: "liabilities", exact: true })
-  await expect(assets).toHaveClass(/text-muted-foreground\/60/)
-  await expect(liabilities).toHaveClass(/text-muted-foreground\/60/)
-
-  const done = await page.evaluate(() =>
-    window.choai.transaction.create({
-      date: "2026-07-03",
-      payee: "First",
-      postings: [{ account: "assets:cash", amount: "10.00" }, { account: "equity:opening" }],
-    }),
-  )
-  expect(done.ok).toBe(true)
-
-  await expect(assets).not.toHaveClass(/text-muted-foreground\/60/)
-  await expect(page.getByRole("button", { name: "cash", exact: true })).not.toHaveClass(/text-muted-foreground\/60/)
-  await expect(liabilities).toHaveClass(/text-muted-foreground\/60/)
-})
-
-/**
- * A period is a filter, opened from the button beside the list and put away
- * again; what it narrows stays narrowed when it is put away, and the button
- * says so rather than looking as it does over all of the books.
- */
-test("the income statement's period is a filter that says it is on while put away", async ({ page }) => {
+test("the period beside the statements narrows the one on screen", async ({ page }) => {
   await openTheDemo(page)
-  await page.goto("/income-statement#work")
+  await page.goto("/reports#income-statement")
 
   const period = page.getByRole("group", { name: "Period" })
-  await expect(period).toBeHidden()
-
-  await page.getByRole("button", { name: "Filters", exact: true }).click()
   await period.getByRole("button", { name: "Last year" }).click()
   await expect(page.getByText("Nothing in this period.")).toBeVisible()
 
-  const on = page.getByRole("button", { name: "Filters — narrowing this report" })
-  await on.click()
-  await expect(period).toBeHidden()
-  await expect(on).toBeVisible()
-  await expect(page.getByText("Nothing in this period.")).toBeVisible()
-
-  await on.click()
   await period.getByRole("button", { name: "All time" }).click()
-  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
   await expect(page.getByText("Nothing in this period.")).toBeHidden()
 })
 
 /**
- * The period is one filter over all three reports, not one per screen: chosen
- * on one, it narrows the others, and each of them says it is on.
+ * The period is one filter over all of the statements, not one per statement:
+ * chosen while reading one, it narrows the next.
  */
-test("a period chosen on one report narrows the other two, and each says so", async ({ page }) => {
+test("a period chosen on one statement narrows the other two", async ({ page }) => {
   await openTheDemo(page)
-  await page.goto("/income-statement#work")
-  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await page.goto("/reports#income-statement")
   await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "Last year" }).click()
 
   for (const [view, empty] of [
     ["Balance sheet", "No asset, liability or equity accounts."],
     ["Trial balance", "No accounts yet."],
   ] as const) {
-    await page.getByRole("button", { name: view, exact: true }).first().click()
-    await expect(page.getByRole("button", { name: "Filters — narrowing this report" })).toBeVisible()
+    await page.getByRole("button", { name: view, exact: true }).click()
     await expect(page.getByText(empty)).toBeVisible()
   }
 })
@@ -335,12 +328,11 @@ test("the balance sheet's ledger under a period still shows the account's balanc
   )
   expect(added.ok).toBe(true)
 
-  await page.goto("/balance-sheet#work")
-  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await page.goto("/reports#balance-sheet")
   await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "This month" }).click()
-  await page.getByRole("button", { name: "checking", exact: true }).click()
+  await page.locator("main").getByTitle("assets:bank:checking", { exact: true }).click()
 
-  const rows = page.locator("tbody tr:has(td)")
+  const rows = dock(page).locator("tbody tr:has(td)")
   await expect(rows).toHaveCount(1)
   await expect(rows.first().locator("td").nth(2)).toHaveText("$-10.00")
   await expect(rows.first().locator("td").last()).toHaveText("$7,932.00")
@@ -352,8 +344,7 @@ test("the balance sheet's ledger under a period still shows the account's balanc
  */
 test("a period is two days, which a shortcut fills in and which can be typed", async ({ page }) => {
   await openTheDemo(page)
-  await page.goto("/income-statement#work")
-  await page.getByRole("button", { name: "Filters", exact: true }).click()
+  await page.goto("/reports#income-statement")
   const period = page.getByRole("group", { name: "Period" })
   const from = period.getByLabel("From (included)")
   const to = period.getByLabel("To (included)")

@@ -10,6 +10,7 @@ export const ja: Dictionary = {
     balanceSheet: "貸借対照表",
     incomeStatement: "損益計算書",
     trialBalance: "試算表",
+    reports: "財務諸表",
     git: "ソース管理",
     settings: "設定",
     showPanels: "サイドバーを表示",
@@ -62,6 +63,7 @@ export const ja: Dictionary = {
     credit: "貸方",
   },
   ledger: {
+    title: "元帳",
     lead: "この勘定科目と、その下の科目の動きを古い順に並べ、その時点の残高を添えたものです。hledger の register がそのまま元になっています。",
     day: "日",
     description: "摘要",
@@ -77,8 +79,6 @@ export const ja: Dictionary = {
     period: "期間",
     from: "開始日（この日を含む）",
     to: "終了日（この日を含む）",
-    filters: "フィルター",
-    filtered: "フィルター — 絞り込み中",
   },
   propose: {
     title: "書かれた、まだ入れていない仕訳",

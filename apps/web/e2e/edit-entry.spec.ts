@@ -119,7 +119,7 @@ test("a proposal taking the panel keeps it, rather than being closed by the entr
 
 /**
  * Writing an entry is offered beside every view that writes, the journal's text
- * among them, and the filters beside every report. Reading receipts in is in the
+ * among them, and nowhere beside the statements. Reading receipts in is in the
  * top bar, in the same place on every screen a journal is open on.
  */
 test("the header offers writing where the view writes, and importing everywhere", async ({ page }) => {
@@ -140,9 +140,9 @@ test("the header offers writing where the view writes, and importing everywhere"
   await expect.poll(icons).toEqual(["New entry"])
   await expect(ask).toBeVisible()
 
-  // A report writes nothing, and is narrowed by the filters instead.
-  await page.getByRole("button", { name: "Trial balance", exact: true }).first().click()
-  await expect.poll(icons).toEqual(["Filters"])
+  // The statements write nothing.
+  await page.getByRole("button", { name: "Financial statements", exact: true }).first().click()
+  await expect.poll(icons).toEqual([])
   await expect(ask).toBeVisible()
 })
 

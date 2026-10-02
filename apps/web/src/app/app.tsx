@@ -1,4 +1,4 @@
-import type { JSX, ParentProps } from "solid-js"
+import type { ParentProps } from "solid-js"
 import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
 import { useLocation } from "@solidjs/router"
 import { Dynamic } from "solid-js/web"
@@ -7,9 +7,9 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
-import { ReportFilters } from "~/core/components/report-filters"
-import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
+import { ChevronLeftIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { AccountLedger } from "~/core/components/account-ledger"
+import { ledgerAt } from "~/core/routes/reports"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
@@ -45,6 +45,8 @@ const dockTitle = (showing: InTheDock | undefined): string => {
       return t("receipts.title")
     case "connecting":
       return t("ai.connection")
+    case "ledger":
+      return t("ledger.title")
     case "composing":
     case undefined:
       return t("compose.title")
@@ -259,7 +261,9 @@ export function Layout(props: ParentProps) {
   createEffect(() => {
     const showing = dock.showing()
     const empty =
-      (showing === "editing" && editing() === undefined) || (showing === "reviewing" && underReview() === undefined)
+      (showing === "editing" && editing() === undefined) ||
+      (showing === "reviewing" && underReview() === undefined) ||
+      (showing === "ledger" && ledgerAt(location.pathname, location.hash) === undefined)
     if (empty) dock.close()
   })
 
@@ -490,33 +494,23 @@ export function Layout(props: ParentProps) {
             header={
               <>
                 <span>{current().label()}</span>
-                {/* One group at the far end, so the two ways of writing sit
-                    together rather than being spread across the heading. */}
-                <div class="flex items-center gap-1">
-                  <Show when={current().periodic === true && getOrUndefined(journal()) !== undefined}>
-                    <FilterButton />
-                  </Show>
-                  <Show when={current().writes && getOrUndefined(journal()) !== undefined}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={compose}
-                      aria-label={t("compose.open")}
-                      title={t("compose.open")}
-                      class="size-6 text-muted-foreground"
-                    >
-                      {/* Left unsized: Button sets any icon inside it to 16px, and a
-                          smaller box here would be overflowed rather than obeyed. */}
-                      <PlusIcon />
-                    </Button>
-                  </Show>
-                </div>
+                <Show when={current().writes && getOrUndefined(journal()) !== undefined}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={compose}
+                    aria-label={t("compose.open")}
+                    title={t("compose.open")}
+                    class="size-6 text-muted-foreground"
+                  >
+                    {/* Left unsized: Button sets any icon inside it to 16px, and a
+                        smaller box here would be overflowed rather than obeyed. */}
+                    <PlusIcon />
+                  </Button>
+                </Show>
               </>
             }
           >
-            <Show when={filtersShown() && current().periodic === true && getOrUndefined(journal()) !== undefined}>
-              <ReportFilters />
-            </Show>
             <Dynamic component={current().Explorer} onChosen={chose} />
           </SidePanel>
         }
@@ -539,8 +533,7 @@ export function Layout(props: ParentProps) {
               ) : undefined
             }
           >
-            {/* One dock, three things beside the books: a new entry, the lines an
-                existing one is written on, or a question about the lot. */}
+            {/* One dock, one thing at a time beside the books. */}
             <Show when={dock.showing() === "editing"}>
               <EntryEditor />
             </Show>
@@ -555,6 +548,9 @@ export function Layout(props: ParentProps) {
             </Show>
             <Show when={dock.showing() === "composing"}>
               <ComposePanel />
+            </Show>
+            <Show when={dock.showing() === "ledger" && ledgerAt(location.pathname, location.hash)} keyed>
+              {(shown) => <AccountLedger account={shown.account} historical={shown.historical} />}
             </Show>
           </AuxPanel>
         }
@@ -590,38 +586,5 @@ export function Layout(props: ParentProps) {
         </div>
       </Shell>
     </>
-  )
-}
-
-/**
- * Opens the filters above the list, and puts them away again.
- *
- * Two states it shows apart: pressed while the filters are open, and filled in
- * with a mark beside it while anything is narrowing the report — which matters
- * most once they are put away, since a report that is not all of the books
- * looks like one that is.
- */
-function FilterButton(): JSX.Element {
-  return (
-    <Button
-      variant="outline"
-      size="icon"
-      aria-pressed={filtersShown()}
-      aria-label={filtering() ? t("report.filtered") : t("report.filters")}
-      title={filtering() ? t("report.filtered") : t("report.filters")}
-      onClick={toggleFilters}
-      class="relative size-6"
-      classList={{
-        "bg-accent": filtersShown(),
-        "text-primary": filtering(),
-        "text-muted-foreground": !filtering(),
-      }}
-    >
-      {/* Left unsized, as the buttons beside it are: Button sizes any icon inside it. */}
-      <FunnelIcon class={filtering() ? "[&_svg]:fill-current" : ""} />
-      <Show when={filtering()}>
-        <span class="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-card" />
-      </Show>
-    </Button>
   )
 }
