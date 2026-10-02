@@ -33,6 +33,12 @@ const growthFactor = (side: ResizeSide): number => (side === 'left' || side === 
  * been dragged. An initial larger than the room available would otherwise stay
  * that way, and a region wider than the window puts its own far edge — and
  * whatever sits on it, such as the button that closes it — beyond reach.
+ *
+ * A drag the browser cancels is undone rather than kept. A handle on the edge
+ * of the screen is where a phone's back gesture starts, so the system takes the
+ * pointer partway through and sends `pointercancel` instead of `pointerup`: the
+ * size moved by a gesture that was never a drag, and listeners left waiting for
+ * a release that never comes would go on resizing with every later touch.
  */
 export function createResizable(opts: {
   initial: number
@@ -59,20 +65,28 @@ export function createResizable(opts: {
     setDragging(true)
     const start = positionOf(e)
     const startSize = size()
+    const wantedBefore = wanted()
     const onMove = (ev: PointerEvent): void => {
       setWanted(clamp(startSize + (positionOf(ev) - start) * factor))
     }
-    const onUp = (): void => {
+    const release = (): void => {
       setDragging(false)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+    }
+    const onUp = (): void => release()
+    const onCancel = (): void => {
+      setWanted(wantedBefore)
+      release()
     }
     document.body.style.cursor = vertical ? 'row-resize' : 'col-resize'
     document.body.style.userSelect = 'none'
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
   }
 
   return { size, dragging, onHandlePointerDown }
