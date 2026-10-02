@@ -9,7 +9,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/to
 import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
-import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
+import { filtersShown, toggleFilters } from "~/core/reports/filters"
+import { narrowsByDate } from "~/core/reports/periods"
 import { AccountLedger } from "~/core/components/account-ledger"
 import { ledgerAt } from "~/core/routes/reports"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
@@ -605,11 +606,14 @@ export function Layout(props: ParentProps) {
  * Opens the filters above the list, and puts them away again.
  *
  * Two states it shows apart: pressed while the filters are open, and filled in
- * with a mark beside it while anything is narrowing the report — which matters
+ * with a mark beside it while the query narrows what they set — which matters
  * most once they are put away, since a report that is not all of the books
- * looks like one that is.
+ * looks like one that is. Read off the query, so a date typed into the title
+ * bar marks it as well.
  */
 function FilterButton(): JSX.Element {
+  const [query] = useQuery()
+  const filtering = (): boolean => narrowsByDate(query())
   return (
     <Button
       variant="outline"

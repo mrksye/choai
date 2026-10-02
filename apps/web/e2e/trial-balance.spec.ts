@@ -288,6 +288,8 @@ test("the period is a filter that says it is on while put away", async ({ page }
   await page.getByRole("button", { name: "Filters", exact: true }).click()
   await period.getByRole("button", { name: "Last year" }).click()
   await expect(page.getByText("Nothing in this period.")).toBeVisible()
+  const year = await page.evaluate(() => new Date().getFullYear())
+  await expect(page.getByRole("searchbox")).toHaveValue(`date:${year - 1}-01-01..${year}-01-01`)
 
   const on = page.getByRole("button", { name: "Filters — narrowing this report" })
   await on.click()
@@ -299,6 +301,28 @@ test("the period is a filter that says it is on while put away", async ({ page }
   await period.getByRole("button", { name: "All time" }).click()
   await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
   await expect(page.getByText("Nothing in this period.")).toBeHidden()
+})
+
+/**
+ * The query in the title bar is what narrows the statements, and the filters
+ * are read off it: a date typed there fills the boxes and marks the button, and
+ * clearing the boxes takes it out of the query again, leaving the rest.
+ */
+test("the period is the query's date term, typed or chosen", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/reports#income-statement")
+  const search = page.getByRole("searchbox")
+
+  await search.fill("desc:restaurant date:2026-02-14..2026-02-15")
+  await expect(page.getByRole("button", { name: "Filters — narrowing this report" })).toBeVisible()
+  await page.getByRole("button", { name: "Filters — narrowing this report" }).click()
+  const period = page.getByRole("group", { name: "Period" })
+  await expect(period.getByLabel("From (included)")).toHaveValue("2026-02-14")
+  await expect(period.getByLabel("To (included)")).toHaveValue("2026-02-14")
+
+  await period.getByRole("button", { name: "All time" }).click()
+  await expect(search).toHaveValue("desc:restaurant")
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
 })
 
 /**

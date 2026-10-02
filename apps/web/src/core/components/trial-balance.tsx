@@ -4,7 +4,7 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount, ReportRow, TrialBalance } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { useQuery } from "~/core/journal/query"
-import { askTrialBalance, narrowed } from "~/core/reports/ask"
+import { askTrialBalance } from "~/core/reports/ask"
 import { creditsOf, debitsOf } from "~/core/reports/columns"
 import { accountOf } from "~/core/reports/tree"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
@@ -23,8 +23,6 @@ import { t } from "~/core/i18n"
  */
 export function TrialBalanceView(props: {
   nothingToShow: string
-  /** Query terms of the screen's own, such as a period, added to the shared query. */
-  narrowing?: string
 } & Choosing): JSX.Element {
   const [query] = useQuery()
 
@@ -33,7 +31,7 @@ export function TrialBalanceView(props: {
   const [report] = createResource(
     () => {
       const open = getOrUndefined(journal())
-      return open === undefined ? undefined : { open, terms: narrowed(query(), props.narrowing) }
+      return open === undefined ? undefined : { open, terms: query() }
     },
     (asked) => askTrialBalance(asked.terms),
   )

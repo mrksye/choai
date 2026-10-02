@@ -4,7 +4,7 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { BalanceReport, MixedAmount } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { useQuery } from "~/core/journal/query"
-import { askBalance, narrowed, type BalanceKind } from "~/core/reports/ask"
+import { askBalance, type BalanceKind } from "~/core/reports/ask"
 import { linesOf, type Line } from "~/core/reports/tree"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
 import { TroubleNote } from "./trouble-note"
@@ -12,8 +12,6 @@ import { t } from "~/core/i18n"
 
 export function BalanceReportView(props: {
   kind: BalanceKind
-  /** Query terms of the screen's own, added to the one in the title bar. */
-  narrowing?: string
   nothingToShow: string
 } & Choosing): JSX.Element {
   const [query] = useQuery()
@@ -25,7 +23,7 @@ export function BalanceReportView(props: {
   const [report] = createResource(
     () => {
       const open = getOrUndefined(journal())
-      return open === undefined ? undefined : { open, terms: narrowed(query(), props.narrowing) }
+      return open === undefined ? undefined : { open, terms: query() }
     },
     (asked) => askBalance(props.kind, asked.terms),
   )

@@ -4,8 +4,8 @@ import { formatMixed } from "~/core/hledger/amount"
 import type { MixedAmount } from "~/core/hledger/wire"
 import { withoutKindNow } from "~/core/journal/chart"
 import { journal } from "~/core/journal/store"
-import { accountQuery } from "~/core/journal/query"
-import { periodNow } from "~/core/reports/filters"
+import { accountQuery, useQuery } from "~/core/journal/query"
+import { joinedTerms, namesAccounts, termsOf } from "~/core/journal/terms"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
 import { byMonth, dayOf, type LedgerLine } from "~/core/reports/ledger"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
@@ -20,17 +20,21 @@ import { t } from "~/core/i18n"
  * there. Its ledger says both, beside the statement rather than in place of it,
  * so the figure being questioned stays in view while it is.
  *
- * Narrowed by the account and the period, and by nothing in the title bar: hledger
- * ORs two `acct:` terms rather than ANDing them, so a query naming an account
- * would widen the ledger instead of narrowing it.
+ * Narrowed by the query in the title bar, as the statement beside it is, with
+ * its account patterns swapped for the one account: hledger ORs account
+ * patterns rather than ANDing them, so one more beside those already there
+ * would widen the ledger instead of narrowing it. The account was on the
+ * statement, so it already matched them.
  */
 export function AccountLedger(props: { account: string; historical: boolean }): JSX.Element {
+  const [query] = useQuery()
   const [ledger] = createResource(
     () => {
       const open = getOrUndefined(journal())
+      const besides = joinedTerms(termsOf(query()).filter((term) => !namesAccounts(term)))
       return open === undefined
         ? undefined
-        : { open, terms: narrowed(accountQuery(props.account), periodNow()), historical: props.historical }
+        : { open, terms: narrowed(accountQuery(props.account), besides), historical: props.historical }
     },
     (asked) => askLedger(props.account, asked.terms, asked.historical),
   )

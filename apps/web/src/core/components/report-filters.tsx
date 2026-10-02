@@ -1,8 +1,9 @@
 import { For, type JSX } from "solid-js"
 
 import { Button } from "~/core/components/ui/button"
-import { SHORTCUTS, sameRange } from "~/core/reports/periods"
-import { chooseRange, rangeNow, todayHere } from "~/core/reports/filters"
+import { ALL_TIME, SHORTCUTS, rangeIn, sameRange, withRange, type Range } from "~/core/reports/periods"
+import { todayHere } from "~/core/reports/filters"
+import { useQuery } from "~/core/journal/query"
 import { t } from "~/core/i18n"
 
 /**
@@ -26,23 +27,33 @@ export function ReportFilters(): JSX.Element {
  * fill them in with one press. The days are what narrows the report; a
  * shortcut is only a quicker way to write them, which is why it is lit only
  * while the days are still what it wrote.
+ *
+ * Both are read off the query's date term and written back into it, so the
+ * title bar says exactly what the boxes do, and a date typed there fills them.
+ * A date term written some other way leaves the boxes empty and no shortcut lit
+ * rather than claiming to be all of the books.
  */
 function Period(): JSX.Element {
+  const [query, setQuery] = useQuery()
+  const range = (): Range | undefined => rangeIn(query())
+  const shown = (): Range => range() ?? ALL_TIME
+  const choose = (next: Range): void => setQuery(withRange(query(), next))
+
   return (
     <div class="flex flex-col gap-2">
       <div class="flex items-center gap-1">
         <DateBox
           label={t("report.from")}
-          value={rangeNow().from}
-          onChange={(from) => chooseRange({ ...rangeNow(), from })}
+          value={shown().from}
+          onChange={(from) => choose({ ...shown(), from })}
         />
         <span class="text-xs text-muted-foreground" aria-hidden="true">
           –
         </span>
         <DateBox
           label={t("report.to")}
-          value={rangeNow().to}
-          onChange={(to) => chooseRange({ ...rangeNow(), to })}
+          value={shown().to}
+          onChange={(to) => choose({ ...shown(), to })}
         />
       </div>
       <div class="flex flex-wrap gap-1">
@@ -50,9 +61,9 @@ function Period(): JSX.Element {
           {(shortcut) => (
             <Button
               size="sm"
-              variant={sameRange(rangeNow(), shortcut.of(todayHere())) ? "default" : "outline"}
+              variant={range() !== undefined && sameRange(shown(), shortcut.of(todayHere())) ? "default" : "outline"}
               class="h-7 px-2 text-xs"
-              onClick={() => chooseRange(shortcut.of(todayHere()))}
+              onClick={() => choose(shortcut.of(todayHere()))}
             >
               {t(shortcut.key)}
             </Button>

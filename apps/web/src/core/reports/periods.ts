@@ -1,3 +1,5 @@
+import { joinedTerms, termsOf } from "~/core/journal/terms"
+
 /**
  * The stretch of time a report is narrowed to, as two days.
  *
@@ -21,6 +23,9 @@ const A_DAY = 24 * 60 * 60 * 1000
 /** Worked out in UTC so that the answer does not move with the browser's time zone. */
 export const dayAfter = (date: string): string =>
   new Date(Date.parse(`${date}T00:00:00Z`) + A_DAY).toISOString().slice(0, 10)
+
+export const dayBefore = (date: string): string =>
+  new Date(Date.parse(`${date}T00:00:00Z`) - A_DAY).toISOString().slice(0, 10)
 
 const lastOfMonth = (year: number, month: number): string =>
   new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
@@ -62,3 +67,32 @@ export const SHORTCUTS = [
 ] as const
 
 export const sameRange = (a: Range, b: Range): boolean => a.from === b.from && a.to === b.to
+
+const isDateTerm = (term: string): boolean => term.startsWith("date:")
+
+/** Whether a query narrows by date at all, however the date is written. */
+export const narrowsByDate = (query: string): boolean => termsOf(query).some(isDateTerm)
+
+const WRITTEN_AS_DAYS = /^date:(\d{4}-\d{2}-\d{2})?\.\.(\d{4}-\d{2}-\d{2})?$/
+
+/**
+ * The range a query's date term comes to, read back out of the query.
+ *
+ * The query is what narrows the report, so the period shown beside it is
+ * read off the query rather than kept beside it. All of the books where it has
+ * no date term; `undefined` where it has one written some other way —
+ * `date:2026`, `date:thismonth` — which narrows the report just the same but is
+ * not two days that could be put in the boxes.
+ */
+export const rangeIn = (query: string): Range | undefined => {
+  const dated = termsOf(query).filter(isDateTerm)
+  if (dated.length === 0) return ALL_TIME
+  const days = dated.length === 1 ? WRITTEN_AS_DAYS.exec(dated[0] ?? "") : null
+  if (days === null) return undefined
+  const [, from = "", until] = days
+  return { from, to: until === undefined ? "" : dayBefore(until) }
+}
+
+/** The query with its date terms replaced by the range, its other terms left as they were. */
+export const withRange = (query: string, range: Range): string =>
+  joinedTerms([...termsOf(query).filter((term) => !isDateTerm(term)), termOf(range)])

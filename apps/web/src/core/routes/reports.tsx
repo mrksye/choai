@@ -7,7 +7,6 @@ import { TrialBalanceView } from "~/core/components/trial-balance"
 import { REPORTS, addressOfStatement, statementPartOf } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { dock } from "~/core/dock"
-import { periodNow } from "~/core/reports/filters"
 import { t } from "~/core/i18n"
 
 /**
@@ -50,7 +49,6 @@ export const STATEMENTS: readonly Statement[] = [
         <p class="text-sm text-muted-foreground">{t("trialBalance.lead")}</p>
         <TrialBalanceView
           nothingToShow={t("trialBalance.empty")}
-          narrowing={periodNow()}
           chosen={props.chosen}
           onChosen={props.onChosen}
         />
@@ -67,7 +65,6 @@ export const STATEMENTS: readonly Statement[] = [
         <DeclareTypes />
         <BalanceReportView
           kind="balancesheet"
-          narrowing={periodNow()}
           nothingToShow={t("balanceSheet.empty")}
           chosen={props.chosen}
           onChosen={props.onChosen}
@@ -85,7 +82,6 @@ export const STATEMENTS: readonly Statement[] = [
         <DeclareTypes />
         <BalanceReportView
           kind="incomestatement"
-          narrowing={periodNow()}
           nothingToShow={t("incomeStatement.empty")}
           chosen={props.chosen}
           onChosen={props.onChosen}
