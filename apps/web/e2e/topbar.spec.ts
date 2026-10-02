@@ -150,3 +150,25 @@ test("the licences are a link in the help, and not a section of the settings", a
   await expect(page.getByText("choai is free software")).toBeVisible()
   await expect(page.getByRole("link", { name: "Licences" })).toBeHidden()
 })
+
+/**
+ * Ctrl+P puts the cursor in the query from anywhere — out of another box as
+ * well, since it is held with the command key — and the browser's print does
+ * not open. The help lists it, out of the same table the keys are read from.
+ */
+test("Ctrl+P goes to the query, and the help says so", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/reports#trial-balance")
+  const search = page.getByRole("searchbox")
+  await search.fill("desc:coffee")
+  await page.locator("main").click()
+
+  await page.keyboard.press("Control+p")
+  await expect(search).toBeFocused()
+  await page.keyboard.type("acct:food")
+  await expect(search).toHaveValue("acct:food")
+
+  await page.getByRole("button", { name: "Keyboard shortcuts" }).click()
+  await expect(page.getByText("Type an hledger query")).toBeVisible()
+  await expect(page.getByText("Ctrl+P")).toBeVisible()
+})

@@ -256,6 +256,7 @@ export const ja: Dictionary = {
   },
   shortcuts: {
     title: "キーボード操作",
+    search: "hledger クエリを入力",
     compose: "仕訳を書く",
     import: "AIで領収書を読み取って仕訳にする",
     togglePanels: "サイドバーの表示切替",

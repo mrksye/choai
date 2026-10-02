@@ -265,6 +265,7 @@ export const en = {
   },
   shortcuts: {
     title: "Keyboard shortcuts",
+    search: "Type an hledger query",
     compose: "Write an entry",
     import: "Read receipts into entries with AI",
     togglePanels: "Show or hide the sidebars",

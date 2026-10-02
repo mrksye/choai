@@ -99,6 +99,16 @@ export function Layout(props: ParentProps) {
   const [railExpanded, setRailExpanded] = createSignal(false)
   const [railVisible, setRailVisible] = createSignal(true)
   const [panelOpen, setPanelOpen] = createSignal(true)
+  const [searchBox, setSearchBox] = createSignal<HTMLInputElement>()
+
+  /**
+   * The cursor into the query, with what is there already selected, so the
+   * next keys either replace it or, after an arrow, add to it.
+   */
+  const toTheQuery = (): void => {
+    searchBox()?.focus()
+    searchBox()?.select()
+  }
 
   /**
    * Whether the left of the window is a screen of its own.
@@ -351,6 +361,7 @@ export function Layout(props: ParentProps) {
       const action = actionFor(event)
       if (action === undefined) return
       event.preventDefault()
+      if (action === "search") toTheQuery()
       if (action === "compose") dock.is("composing") ? dock.close() : compose()
       if (action === "import") dock.is("importing") || dock.is("connecting") ? putAI() : importing()
       if (action === "togglePanels") toggleChrome()
@@ -427,6 +438,7 @@ export function Layout(props: ParentProps) {
                   onInput={setQuery}
                   placeholder={t("journal.queryPlaceholder")}
                   label={t("journal.search")}
+                  box={setSearchBox}
                 />
               </Show>
             }
