@@ -220,6 +220,8 @@ report journal request = case reqKind request of
   "accountTypes" -> pure (Right (A.toJSON (jaccounttypes journal)))
   "renderTransaction" -> pure (renderTransaction request)
   "similar" -> pure (Right (similar journal request))
+  "queryTerms" -> Right <$> queryTerms (reqQuery request)
+  "completions" -> pure (Right (completions journal))
   other -> pure (Left (UnknownReport other))
   where
     withSpec extra accumulation listing render =
@@ -264,6 +266,59 @@ similar journal request =
         similarityThreshold
         (maybe 1 id (reqLimit request))
 
+-- | A query as hledger reads it: each term with the prefix it was written
+-- under, whether it is negated, and whether hledger can read it — and the dates
+-- the whole query comes to.
+--
+-- So a screen showing what a query says, or rewriting one term of it, asks
+-- hledger what the terms are rather than keeping a second parser of its own.
+-- The split is the one hledger applies to a query string, which keeps a quoted
+-- pattern whole; the dates are hledger's reading of every date term together,
+-- @date:thismonth@ and @date:2026@ included, with the end exclusive as hledger
+-- keeps it. Absent where the query does not read or names no dates.
+queryTerms :: Text -> IO A.Value
+queryTerms query = do
+  today <- getCurrentDay
+  let terms = words'' queryprefixes query
+  pure $
+    A.object
+      ( ("terms" .= map (termJson today) terms)
+          : either (const []) (datesOf . queryDateSpan False . fst) (parseQueryList today terms)
+      )
+  where
+    termJson today term =
+      let (negated, asserted) = maybe (False, term) (\rest -> (True, rest)) (T.stripPrefix "not:" term)
+          prefix = maybe "" id (lookupPrefix asserted)
+       in A.object
+            [ "text" .= term
+            , "negated" .= negated
+            , "prefix" .= prefix
+            , "value" .= T.drop (T.length prefix) asserted
+            , "readable" .= either (const False) (const True) (parseQueryTerm today term)
+            ]
+    lookupPrefix asserted = case filter (`T.isPrefixOf` asserted) queryprefixes of
+      found : _ -> Just found
+      [] -> Nothing
+    datesOf found = case (spanStart found, spanEnd found) of
+      (Nothing, Nothing) -> []
+      (from, to) -> ["dates" .= A.object (maybe [] (\day -> ["from" .= day]) from <> maybe [] (\day -> ["to" .= day]) to)]
+
+-- | What can be written in a query, for a box that offers to finish a term.
+--
+-- The prefixes are hledger's own list, and the rest is what the journal already
+-- holds under each: the same lists hledger-web's add form completes from, so
+-- nothing is offered that the books do not have.
+completions :: Journal -> A.Value
+completions journal =
+  A.object
+    [ "prefixes" .= queryprefixes
+    , "accounts" .= journalAccountNamesDeclaredOrImplied journal
+    , "descriptions" .= journalDescriptions journal
+    , "payees" .= journalPayeesDeclaredOrUsed journal
+    , "tags" .= journalTagsDeclaredOrUsed journal
+    , "commodities" .= journalCommodities journal
+    ]
+
 -- | How alike two descriptions must be to count, from 0 to 1.
 --
 -- Zero, which is what hledger passes from @Cli/Utils.hs@ when its own commands
@@ -300,7 +355,7 @@ specFor request extra accumulation listing = do
     (mode, keepingEmpty) = case listing of
       AsTree -> (ALTree, False)
       AsFlatWithEmpty -> (ALFlat, True)
-    terms = map T.pack (words' (T.unpack (reqQuery request)))
+    terms = words'' queryprefixes (reqQuery request)
 
 -- | Render a transaction back to journal syntax.
 --

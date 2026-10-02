@@ -182,6 +182,8 @@ export type Request =
   | { readonly kind: "accountTypes" }
   | { readonly kind: "similar"; readonly description: string; readonly limit: number }
   | { readonly kind: "renderTransaction"; readonly transaction: Transaction }
+  | { readonly kind: "queryTerms"; readonly query: string }
+  | { readonly kind: "completions" }
 
 /**
  * The five kinds of account a report is built from, as hledger names them.
@@ -213,6 +215,36 @@ export interface Answer {
   /** Past transactions resembling a description, most alike and most recent first. */
   similar: readonly Transaction[]
   renderTransaction: string
+  queryTerms: QueryTerms
+  completions: Completions
+}
+
+/** One term of a query, as hledger split it and reads it. */
+export interface QueryTerm {
+  /** The term as hledger has it, a quoted pattern already unquoted. */
+  readonly text: string
+  readonly negated: boolean
+  /** One of hledger's query prefixes with its colon, eg `date:`; empty for a bare account pattern. */
+  readonly prefix: string
+  readonly value: string
+  /** Whether hledger can read it. A term it cannot is still a term of the query. */
+  readonly readable: boolean
+}
+
+/** A query as hledger reads it, and the dates it comes to — the end exclusive, as hledger keeps it. */
+export interface QueryTerms {
+  readonly terms: readonly QueryTerm[]
+  readonly dates?: { readonly from?: string; readonly to?: string }
+}
+
+/** What can be written in a query: hledger's prefixes, and what the journal holds under each. */
+export interface Completions {
+  readonly prefixes: readonly string[]
+  readonly accounts: readonly string[]
+  readonly descriptions: readonly string[]
+  readonly payees: readonly string[]
+  readonly tags: readonly string[]
+  readonly commodities: readonly string[]
 }
 
 /**
