@@ -176,9 +176,9 @@ export const syncEn = {
   ],
 } as const satisfies Document
 
-/* ------------------------------------------------------------------- ai ---- */
+/* --------------------------------------------------------------- import ---- */
 
-export const aiEn = {
+export const importEn = {
   title: "Reading receipts and statements in",
   intro:
     "There is no chat inside choai, and no model that writes. What there is, is reading things in: a photographed receipt, or a CSV statement from a bank, a card or another bookkeeping app, turned into entries for you to check. Jev, TypeSafe's model, does the sorting, reached through OpenRouter with a key of your own — so none of it does anything until you bring one. Nothing is written without being shown to you first, and anything you want to ask about your books, you ask an agent of your own.",
@@ -380,7 +380,7 @@ export const syncJa: Translated<typeof syncEn> = {
   ],
 }
 
-export const aiJa: Translated<typeof aiEn> = {
+export const importJa: Translated<typeof importEn> = {
   title: "領収書と明細の取り込み",
   intro:
     "choai の中にチャットはありませんし、文章を書くモデルもいません。あるのは取り込みです。撮った領収書や、銀行・カードの明細、ほかの会計ソフトから書き出した CSV を、確かめるための仕訳にします。仕分けるのは TypeSafe のモデル Jev で、自分の鍵で OpenRouter 経由で呼び出すので、鍵を入れるまでは何も動きません。見せる前に書き込むことは決してなく、帳簿について尋ねたいことは、自分のエージェントに尋ねてください。",

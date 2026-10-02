@@ -13,7 +13,7 @@
  */
 
 import type { Document } from "./document"
-import { aiEn, aiJa, howEn, howJa, syncEn, syncJa, usingEn, usingJa } from "./guides"
+import { importEn, importJa, howEn, howJa, syncEn, syncJa, usingEn, usingJa } from "./guides"
 import { privacyEn, privacyJa, termsEn, termsJa } from "./legal"
 
 export interface Reading {
@@ -55,9 +55,9 @@ export const GUIDES: readonly Reading[] = [
     },
   },
   {
-    path: "/ai/",
-    en: aiEn,
-    ja: aiJa,
+    path: "/import/",
+    en: importEn,
+    ja: importJa,
     blurb: {
       en: "Reading receipts and CSV statements in with Jev, what goes where, and why there is no chat.",
       ja: "領収書と CSV 明細を Jev で取り込む。何がどこへ渡るか。なぜチャットが無いか。",
