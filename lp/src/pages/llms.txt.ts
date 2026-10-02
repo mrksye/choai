@@ -20,6 +20,10 @@ const PREAMBLE = `# choai
 > the browser. There is no backend: nothing a reader opens is uploaded anywhere,
 > and syncing goes from the browser straight to api.github.com.
 
+There is no chat in the app. Receipts and CSV statements can be read into
+proposed entries, sorted by TypeSafe's Jev model reached through OpenRouter
+with the reader's own key; nothing is written until the reader keeps it.
+
 This site explains the app to a person. The app is at https://std.choai.dev.
 
 **It also opens an interface for programs.** Opening the app puts a

@@ -38,9 +38,9 @@ export const en = {
       at: "/sync/",
     },
     {
-      heading: "Receipts, read on your phone",
-      body: "Photograph a receipt and it is read into an entry on the device, with the figures checked against each other before a total is believed. Nothing goes in without being shown to you first, and talking about your books is for an agent of your own.",
-      more: "Receipts and agents",
+      heading: "Receipts and statements, read in by Jev",
+      body: "Photograph a receipt, or drop in a CSV from your bank, your card or another bookkeeping app, and it comes back as entries to check. Jev, TypeSafe's model, sorts what was read, reached through OpenRouter with a key of your own. There is no chat in the app: nothing goes in without being shown to you first, and talking about your books is for an agent of your own.",
+      more: "Reading things in",
       at: "/ai/",
     },
     {
@@ -95,9 +95,9 @@ export const ja: Words = {
       at: "/sync/",
     },
     {
-      heading: "領収書はスマホで読み取り",
-      body: "撮った領収書を端末の中で仕訳に読み取ります。合計は、紙の記載どうしの辻褄を確かめてから信じます。見せる前に入ることはなく、帳簿について話すのは自分のエージェントの役目です。",
-      more: "領収書とエージェント",
+      heading: "領収書も明細も、Jev で取り込み",
+      body: "領収書を撮るか、銀行・カードの明細やほかの会計ソフトから書き出した CSV を入れると、確かめるための仕訳になって返ってきます。読み取ったものを仕分けるのは TypeSafe のモデル Jev で、自分の鍵で OpenRouter 経由で呼び出します。アプリの中にチャットはありません。見せる前に入ることはなく、帳簿について話すのは自分のエージェントの役目です。",
+      more: "取り込みについて",
       at: "/ai/",
     },
     {

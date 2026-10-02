@@ -4,7 +4,8 @@
  * Written against what the code does, not against what a template says a policy
  * usually contains. Every claim here can be checked in the repository: the
  * journal never leaves the device except to GitHub, what is read off a receipt
- * goes to OpenRouter and through it to TypeSafe, and nowhere else, the token and the key are kept in
+ * or out of a statement goes to OpenRouter and through it to TypeSafe, and
+ * nowhere else, the token and the key are kept in
  * IndexedDB, and the only thing this site reports is that a page was opened.
  *
  * English is the shape the other language is checked against, as everywhere
@@ -17,7 +18,7 @@ import type { Document } from "./document"
 export type { Document }
 
 /** Both documents say the same date, because they were written together. */
-const UPDATED = "2026-08-13"
+const UPDATED = "2026-10-02"
 
 export const termsEn: Document = {
   title: "Terms of use",
@@ -97,9 +98,9 @@ export const privacyEn: Document = {
       ],
     },
     {
-      heading: "OpenRouter, if you save a key to read receipts",
+      heading: "OpenRouter, if you save a key to read receipts and statements",
       body: [
-        "A receipt is read in your browser; the photograph does not leave the device. To sort what was read, your browser sends the rows of text off the receipt, and the names of your accounts to choose from, to openrouter.ai directly. They reach TypeSafe, whose Jev model does the sorting, by way of OpenRouter and whatever OpenRouter itself routes the request through. Nothing goes through anything of ours.",
+        "A receipt is read in your browser; the photograph does not leave the device. To sort what was read, your browser sends the rows of text off the receipt, and the names of your accounts to choose from, to openrouter.ai directly. A CSV statement is read in your browser too; what is sent is its file name, its column headings with up to five values from each column, the payees on lines your books have not seen before, and the names of your accounts — not the file whole. They reach TypeSafe, whose Jev model does the sorting, by way of OpenRouter and whatever OpenRouter itself routes the request through. Nothing goes through anything of ours.",
         "The key is kept in your browser's storage on that device, and is removed when you forget it. What OpenRouter, anything it routes through, and TypeSafe then do with what they receive is covered by their own privacy statements.",
       ],
     },
@@ -215,9 +216,9 @@ export const privacyJa: Document = {
       ],
     },
     {
-      heading: "領収書を読むために OpenRouter の鍵を保存した場合",
+      heading: "領収書や明細を読むために OpenRouter の鍵を保存した場合",
       body: [
-        "領収書はブラウザの中で読み取り、写真は端末から出ません。読み取ったものを仕分けるために、ブラウザは領収書から読み取った文字の行と、選ぶための勘定科目の名前を openrouter.ai に直接送ります。それらは OpenRouter と、OpenRouter 自身が経由させる中継などを通して、仕分けを行う Jev モデルの提供元である TypeSafe に渡ります。こちらを経由するものはありません。",
+        "領収書はブラウザの中で読み取り、写真は端末から出ません。読み取ったものを仕分けるために、ブラウザは領収書から読み取った文字の行と、選ぶための勘定科目の名前を openrouter.ai に直接送ります。CSV の明細もブラウザの中で読みます。送るのは、ファイル名、列の見出しと各列の値を最大5件、帳簿でまだ見たことのない行の摘要、そして勘定科目の名前で、ファイルをまるごと送ることはありません。それらは OpenRouter と、OpenRouter 自身が経由させる中継などを通して、仕分けを行う Jev モデルの提供元である TypeSafe に渡ります。こちらを経由するものはありません。",
         "鍵はその端末のブラウザ保存領域に置かれ、削除すると消えます。OpenRouter、その経由先、TypeSafe が受け取ったものをどう扱うかは、それぞれのプライバシーに関する声明によります。",
       ],
     },

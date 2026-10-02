@@ -50,8 +50,8 @@ export const GUIDES: readonly Reading[] = [
     en: aiEn,
     ja: aiJa,
     blurb: {
-      en: "Bringing your own key, what goes where, and why nothing is written without you.",
-      ja: "自分の鍵を持ち込む。何がどこへ渡るか。なぜ勝手に書かれないか。",
+      en: "Reading receipts and CSV statements in with Jev, what goes where, and why there is no chat.",
+      ja: "領収書と CSV 明細を Jev で取り込む。何がどこへ渡るか。なぜチャットが無いか。",
     },
   },
 ]

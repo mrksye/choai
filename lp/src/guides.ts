@@ -3,7 +3,8 @@
  *
  * Three subjects, each too long for a card and each one a reader actually gets
  * stuck on: how the accounting is really hledger's, how a repository is kept in
- * step, and what reading a receipt does and what an agent of your own is for.
+ * step, and what reading a receipt or a statement in does and what an agent of
+ * your own is for.
  *
  * English is written first and the Japanese is held to its bones by
  * `Translated` — the same count of sections and paragraphs, so a page cannot
@@ -129,14 +130,14 @@ export const syncEn = {
 /* ------------------------------------------------------------------- ai ---- */
 
 export const aiEn = {
-  title: "Receipts, and an agent of your own",
+  title: "Reading receipts and statements in",
   intro:
-    "There is no chat inside choai. A photographed receipt can be read into an entry here, and anything you want to ask about your books, you ask an agent of your own — which works the app through the same table its screens use. Reading receipts does nothing until you bring a key, and nothing is written without being shown to you first.",
+    "There is no chat inside choai, and no model that writes. What there is, is reading things in: a photographed receipt, or a CSV statement from a bank, a card or another bookkeeping app, turned into entries for you to check. Jev, TypeSafe's model, does the sorting, reached through OpenRouter with a key of your own — so none of it does anything until you bring one. Nothing is written without being shown to you first, and anything you want to ask about your books, you ask an agent of your own.",
   sections: [
     {
       heading: "A receipt, read on the device",
       body: [
-        "Choose one photograph or a dozen. The text is read off each one in the browser itself, by OCR models that are fetched the first time — about 45 MB — and kept after that. A phone held on its side, a receipt a fifth of the frame: it turns the picture and looks again, closer, where the text is.",
+        "Choose one photograph or a dozen, or take one with the camera. The text is read off each one in the browser itself, by OCR models that are fetched the first time — about 45 MB — and kept after that. A phone held on its side, a receipt a fifth of the frame: it turns the picture and looks again, closer, where the text is.",
         "The photograph never leaves the device. What goes anywhere is the text read off it, and it goes to one place.",
       ],
     },
@@ -148,16 +149,23 @@ export const aiEn = {
       ],
     },
     {
+      heading: "A statement, read as CSV",
+      body: [
+        "Download a statement from your bank or card as CSV — or export entries from another bookkeeping app — and drop it in. Jev says what each column is: the date, the payee, money out, money in, the debit and credit accounts another app wrote. It says which of your accounts the statement is of, and for each line, which account the other side goes to — after your own books are asked first, so a payee you have written before goes where you put it last time.",
+        "What comes of that is an hledger CSV rules file, and hledger reads the statement under it, so the figures are hledger's own. A line your books seem to have already — the same day, the same amount — is offered unticked and said to be a possible duplicate. Shift_JIS, which Japanese banks still write, is recognised rather than read as nonsense.",
+      ],
+    },
+    {
       heading: "The key is yours, and it stays here",
       body: [
         "Jev is reached through OpenRouter, with a key of your own kept in this browser beside the journal. It is sent to openrouter.ai and nowhere else; there is no server of ours for it to pass through, which is also why there is nothing here that could read it.",
-        "What goes over is the rows of text read off a receipt and the names of your accounts, so an account can be chosen from them. Not the photograph, not the rest of the journal.",
+        "What goes over is what each question needs and no more. For a receipt, the rows of text read off it. For a statement, its name, its column headings with a few values from each, and the payees on lines your books have not seen before. For either, the names of your accounts, so an account can be chosen from them. Not the photograph, not the statement whole, not the rest of the journal.",
       ],
     },
     {
       heading: "It proposes; you keep",
       body: [
-        "A receipt becomes an entry shown as the text it would be, offered to hledger to be sure it reads, and kept only when you say so. Where the reading was sure it says so, and where something was guessed it says what, so the settled ones go in with one press and the rest can wait — or go in tagged, to be found again later with a query.",
+        "A receipt or a statement becomes entries shown as the text they would be, offered to hledger to be sure it reads, and kept only when you say so. Where the reading was sure it says so, and where something was guessed it says what, so the settled ones go in with one press and the rest can wait — or go in tagged, to be found again later with a query.",
         "In the Japan edition the same reading also says what was charged at each consumption tax rate, tags each line with its band, and checks the paper against what a simplified qualified invoice must carry — naming whatever is missing rather than assuming it is there.",
       ],
     },
@@ -171,7 +179,7 @@ export const aiEn = {
     {
       heading: "What it costs",
       body: [
-        "OpenRouter's charge for what Jev was sent, billed to you by them — for a receipt, a small fraction of a cent. Nothing is added here and nothing is taken.",
+        "OpenRouter's charge for what Jev was sent, billed to you by them — for a receipt, a small fraction of a cent, and for a statement, a little more for each payee it has not seen. Nothing is added here and nothing is taken.",
       ],
     },
   ],
@@ -282,14 +290,14 @@ export const syncJa: Translated<typeof syncEn> = {
 }
 
 export const aiJa: Translated<typeof aiEn> = {
-  title: "領収書と、自分のエージェント",
+  title: "領収書と明細の取り込み",
   intro:
-    "choai の中にチャットはありません。撮った領収書はここで仕訳に読み取れます。帳簿について尋ねたいことは、自分のエージェントに尋ねてください ── エージェントは、画面と同じ表を通してこのアプリを動かします。領収書の読み取りは鍵を入れるまで動かず、見せる前に書き込むことは決してありません。",
+    "choai の中にチャットはありませんし、文章を書くモデルもいません。あるのは取り込みです。撮った領収書や、銀行・カードの明細、ほかの会計ソフトから書き出した CSV を、確かめるための仕訳にします。仕分けるのは TypeSafe のモデル Jev で、自分の鍵で OpenRouter 経由で呼び出すので、鍵を入れるまでは何も動きません。見せる前に書き込むことは決してなく、帳簿について尋ねたいことは、自分のエージェントに尋ねてください。",
   sections: [
     {
       heading: "領収書は端末の中で読みます",
       body: [
-        "写真は1枚でも10枚でも選べます。文字は各写真からブラウザの中で読み取ります。使う OCR のモデルは初回だけ約 45MB を取得し、以降は保存されたものを使います。スマホを横にして撮った写真も、領収書が画面の端に小さく写った写真も、向きを直し、文字のあるところを寄って見直します。",
+        "写真は1枚でも10枚でも選べますし、カメラでその場で撮ることもできます。文字は各写真からブラウザの中で読み取ります。使う OCR のモデルは初回だけ約 45MB を取得し、以降は保存されたものを使います。スマホを横にして撮った写真も、領収書が画面の端に小さく写った写真も、向きを直し、文字のあるところを寄って見直します。",
         "写真そのものは端末から出ません。外に渡るのは写真から読み取った文字で、行き先は一か所だけです。",
       ],
     },
@@ -301,16 +309,23 @@ export const aiJa: Translated<typeof aiEn> = {
       ],
     },
     {
+      heading: "明細は CSV で読みます",
+      body: [
+        "銀行やカードの明細を CSV で書き出して ── ほかの会計ソフトから仕訳を書き出したものでも ── 入れてください。Jev が各列が何かを答えます。日付、摘要、出金、入金、ほかのソフトが書いた借方・貸方の科目。明細がどの勘定科目のものか、各行の相手科目がどれかも答えます。ただし先に帳簿そのものに尋ねるので、前に書いたことのある摘要は、前回と同じ科目に入ります。",
+        "そこから hledger の CSV ルールファイルを作り、hledger がそのルールで明細を読みます。だから数字は hledger のものです。帳簿にもうありそうな行 ── 同じ日、同じ金額 ── は、重複かもしれないと告げて、チェックを外した状態で示します。日本の銀行がいまも書き出す Shift_JIS も見分けるので、文字化けして読まれることはありません。",
+      ],
+    },
+    {
       heading: "鍵はあなたのもので、ここから出ません",
       body: [
         "Jev は OpenRouter 経由で呼び出し、鍵はあなたのものを帳簿と同じくこのブラウザの中に置きます。鍵は openrouter.ai にだけ送られ、他のどこにも行きません。通り道になるサーバーがこちらに無いからで、それは同時に、こちらに読めるものが何も無いという意味でもあります。",
-        "渡るのは、領収書から読み取った文字の行と、勘定科目を選ぶための勘定科目の名前だけです。写真も、帳簿のほかの部分も渡りません。",
+        "渡るのは、それぞれの問いに要るものだけです。領収書なら、読み取った文字の行。明細なら、ファイル名、列の見出しと各列の値を数件、帳簿でまだ見たことのない行の摘要。どちらでも、勘定科目を選ぶための勘定科目の名前。写真も、明細のまるごとも、帳簿のほかの部分も渡りません。",
       ],
     },
     {
       heading: "提案するだけで、残すのはあなた",
       body: [
-        "領収書は「こういうテキストになります」という仕訳の形で示され、読めるかどうかを hledger に確かめさせたうえで、あなたが良いと言ったときにだけ残ります。確かな読み取りはそう言い、推測したところは何を推測したかを言うので、確かなものは一押しで入り、残りは待たせても、印を付けたまま入れて後から検索で見つけても構いません。",
+        "領収書も明細も「こういうテキストになります」という仕訳の形で示され、読めるかどうかを hledger に確かめさせたうえで、あなたが良いと言ったときにだけ残ります。確かな読み取りはそう言い、推測したところは何を推測したかを言うので、確かなものは一押しで入り、残りは待たせても、印を付けたまま入れて後から検索で見つけても構いません。",
         "日本版では、同じ読み取りが消費税の税率ごとの金額も示し、各行に税区分のタグを付け、適格簡易請求書の記載事項を満たしているかを照らし合わせます。欠けているものは、あるものと見なさず名前を挙げて示します。",
       ],
     },
@@ -324,7 +339,7 @@ export const aiJa: Translated<typeof aiEn> = {
     {
       heading: "費用について",
       body: [
-        "Jev に送った分に対して OpenRouter が請求する額で、請求するのも OpenRouter です。領収書1枚あたりにすれば1円にもなりません。こちらで上乗せするものも、受け取るものもありません。",
+        "Jev に送った分に対して OpenRouter が請求する額で、請求するのも OpenRouter です。領収書1枚あたりにすれば1円にもならず、明細は見たことのない摘要の数だけ少し増えます。こちらで上乗せするものも、受け取るものもありません。",
       ],
     },
   ],
