@@ -29,8 +29,9 @@ import Source from "~/core/routes/source"
  * the statements they come to are read, all of them on one screen rather than
  * a button each. The daily journal is first on both counts — it is where the
  * books are kept and it is what the app is opened for; the rest are things you
- * go and look at. Last among them is the text all of it is read from, for what no
- * screen writes — a correction, a directive, a comment.
+ * go and look at. After them is the text all of it is read from, for what no
+ * screen writes — a correction, a directive, a comment — and then the
+ * repository that text is sent to and taken from.
  */
 export { ADD, SOURCE }
 
@@ -63,9 +64,7 @@ const CORE: readonly View[] = [
     writes: true,
     reached: { from: "rail" },
   },
-  // Neither is one of the books, so both sit at the foot of the rail,
-  // apart from the views — source control above settings, as the editor this
-  // shell is shaped after keeps them.
+  // Right after the text, because the text is what it sends and takes.
   {
     href: "/git",
     label: () => t("nav.git"),
@@ -74,8 +73,9 @@ const CORE: readonly View[] = [
     page: Git,
     writes: false,
     attention: () => behindNow().length > 0,
-    reached: { from: "foot" },
+    reached: { from: "rail" },
   },
+  // Not one of the books, so it sits at the foot of the rail, apart from the views.
   {
     href: "/settings",
     label: () => t("nav.settings"),
