@@ -452,3 +452,27 @@ test("a period is two days, which a shortcut fills in and which can be typed", a
   await expect(report.getByText("food")).toBeVisible()
   await expect(report.getByText("rent")).toBeHidden()
 })
+
+/**
+ * Leaving a view from the rail takes out of the query what that view's own
+ * controls wrote into it, and carries the rest: the journal's account goes on
+ * the way to the statements, the statements' ledger on the way back, and the
+ * period goes along both ways.
+ */
+test("the rail carries the query on without what the view being left wrote into it", async ({ page }) => {
+  await openTheDemo(page)
+  const search = page.getByRole("searchbox")
+  const rail = (name: string) => page.getByRole("button", { name, exact: true }).first()
+
+  await page.goto("/journal?q=acct%3Aexpenses%3Afood%20date%3A2026#work")
+  await expect(search).toHaveValue("acct:expenses:food date:2026")
+  await rail("Financial statements").click()
+  await expect(page).toHaveURL(/\/reports\?q=date%3A2026$/)
+  await expect(search).toHaveValue("date:2026")
+
+  await page.goto("/reports?q=date%3A2026%20inacct%3Aexpenses%3Afood#trial-balance+ledger")
+  await expect(dock(page).getByRole("heading", { name: "expenses:food" })).toBeVisible()
+  await rail("Journal").click()
+  await expect(page).toHaveURL(/\/journal\?q=date%3A2026/)
+  await expect(search).toHaveValue("date:2026")
+})

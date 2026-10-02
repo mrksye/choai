@@ -10,7 +10,7 @@ import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtersShown, toggleFilters } from "~/core/reports/filters"
-import { focusOf, narrowsByDate, unfocused } from "~/core/journal/terms"
+import { focusOf, narrowsByDate, unfocused, without } from "~/core/journal/terms"
 import { createReading, readQuery } from "~/core/reports/reading"
 import { AccountLedger } from "~/core/components/account-ledger"
 import { ledgerHasAPlace, statementAt } from "~/core/routes/reports"
@@ -206,15 +206,29 @@ export function Layout(props: ParentProps) {
    * editor this shell is shaped after.
    *
    * The query travels along. It belongs to the books being looked at rather than
-   * to the report looking at them, so changing report must not drop it.
+   * to the report looking at them, so changing report must not drop it — all
+   * but what the view being left wrote into it itself.
    */
-  const select = (href: string): void => {
+  const select = async (href: string): Promise<void> => {
     if (location.pathname === href) {
       snapped() ? moves.toTheWork() : setPanelOpen((open) => !open)
       return
     }
     setPanelOpen(true)
-    moves.move((at) => ({ ...at, path: href, fragment: atTheList(at.fragment) }))
+    const search = await searchLeaving(current())
+    moves.move((at) => ({ ...at, path: href, search: search ?? at.search, fragment: atTheList(at.fragment) }))
+  }
+
+  /**
+   * The query as it goes on from a view being left, without the terms that
+   * view's own controls wrote. Undefined where nothing comes out, so the
+   * address is left exactly as it is.
+   */
+  const searchLeaving = async (leaving: View): Promise<string | undefined> => {
+    const owned = leaving.owns
+    if (owned === undefined) return undefined
+    const read = await readQuery(untrack(query))
+    return read.ok && read.value.terms.some(owned) ? searchFor(without(read.value, owned)) : undefined
   }
 
   /**
@@ -425,7 +439,7 @@ export function Layout(props: ParentProps) {
       icon: <entry.Icon class="h-5 w-5" />,
       active: railOf(current()) === entry.href,
       attention: entry.attention?.() === true,
-      onSelect: () => select(entry.href),
+      onSelect: () => void select(entry.href),
       ...groupOf(entry),
     }))
 

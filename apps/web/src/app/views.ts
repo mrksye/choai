@@ -8,6 +8,7 @@ import { SourceExplorer } from "~/core/explorer/SourceExplorer"
 import { SettingsExplorer } from "~/core/explorer/SettingsExplorer"
 import { ReportsExplorer } from "~/core/explorer/ReportsExplorer"
 import { t } from "~/core/i18n"
+import { focusesAnAccount, namesAccounts } from "~/core/journal/terms"
 import { FileCodeIcon, GitBranchIcon, ReceiptIcon, ScaleIcon, SettingsIcon } from "~/core/lib/ui/icons"
 import Add from "~/core/routes/add"
 import Git from "~/core/routes/git"
@@ -44,6 +45,7 @@ const CORE: readonly View[] = [
     page: Journal,
     writes: true,
     queried: true,
+    owns: namesAccounts,
     reached: { from: "rail" },
   },
   {
@@ -55,6 +57,7 @@ const CORE: readonly View[] = [
     writes: false,
     periodic: true,
     queried: true,
+    owns: focusesAnAccount,
     reached: { from: "rail" },
   },
   {

@@ -1,6 +1,7 @@
 import type { Component } from "solid-js"
 
 import type { SomeCapability } from "~/core/api/capability"
+import type { QueryTerm } from "~/core/hledger/wire"
 import type { ReceiptReading } from "~/core/receipt/reading"
 import type { EditionId } from "./roll"
 
@@ -81,6 +82,14 @@ export interface View {
    * nothing on screen answers.
    */
   readonly queried?: boolean
+  /**
+   * The terms of the query this view's own controls write — the journal's
+   * account chosen in its explorer, the statements' ledger as `inacct:` — taken
+   * out when the view is left from the rail. They say what this view was
+   * looking at, and carried to another they would narrow it by a choice made
+   * somewhere it no longer is.
+   */
+  readonly owns?: (term: QueryTerm) => boolean
   /** Whether something there wants doing now, which puts a dot on its rail button. */
   readonly attention?: () => boolean
   readonly reached: Reached
