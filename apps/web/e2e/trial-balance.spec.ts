@@ -261,6 +261,28 @@ test("a ledger's account is in the query, and survives a reload and a change of 
   await expect(page.getByRole("heading", { name: "expenses:food" })).toBeHidden()
 })
 
+/**
+ * The ledger is the query's `inacct:`, so writing one in the title bar and
+ * pressing Enter opens it beside whichever statement is on screen. Enter with
+ * no account to focus on opens nothing, rather than an empty panel.
+ */
+for (const id of ["trial-balance", "balance-sheet", "income-statement"]) {
+  test(`Enter on ${id} opens the ledger the query focuses on`, async ({ page }) => {
+    await openTheDemo(page)
+    await page.goto(`/reports#${id}`)
+    const search = page.getByRole("searchbox")
+
+    await search.fill("date:2026 ")
+    await search.press("Enter")
+    await expect(page).toHaveURL(new RegExp(`#${id}$`))
+
+    await search.fill("inacct:assets:bank:checking ")
+    await search.press("Enter")
+    await expect(page).toHaveURL(new RegExp(`#${id}\\+ledger$`))
+    await expect(dock(page).getByRole("heading", { name: "assets:bank:checking" })).toBeVisible()
+  })
+}
+
 test("a ledger's balances are hledger's running totals, and its other side is named without its kind", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/reports#trial-balance")

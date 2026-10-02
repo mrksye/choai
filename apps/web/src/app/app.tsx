@@ -10,8 +10,8 @@ import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtersShown, toggleFilters } from "~/core/reports/filters"
-import { narrowsByDate } from "~/core/journal/terms"
-import { createReading } from "~/core/reports/reading"
+import { focusOf, narrowsByDate } from "~/core/journal/terms"
+import { createReading, readQuery } from "~/core/reports/reading"
 import { AccountLedger } from "~/core/components/account-ledger"
 import { ledgerHasAPlace, statementAt } from "~/core/routes/reports"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
@@ -95,7 +95,7 @@ const EDGES = 2
 export function Layout(props: ParentProps) {
   const location = useLocation()
   const moves = useMoves()
-  const [query, setQuery] = useQuery()
+  const [, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
   const [railVisible, setRailVisible] = createSignal(true)
   const [panelOpen, setPanelOpen] = createSignal(true)
@@ -373,11 +373,17 @@ export function Layout(props: ParentProps) {
 
   /**
    * Enter in the query where nothing on screen reads it takes the query to the
-   * journal's entries; where something does, it has been answering all along.
+   * journal's entries; where something does, it has been answering all along,
+   * and beside the statements Enter opens the ledger the query focuses on.
    */
-  const toTheJournalAsked = (): void => {
-    if (current().queried === true) return
-    moves.move((at) => ({ path: JOURNAL, search: searchFor(query()), fragment: atTheWork(atTheList(at.fragment)) }))
+  const queryEntered = async (asked: string): Promise<void> => {
+    if (current().queried !== true) {
+      moves.move((at) => ({ path: JOURNAL, search: searchFor(asked), fragment: atTheWork(atTheList(at.fragment)) }))
+      return
+    }
+    if (!ledgerHasAPlace(location.pathname)) return
+    const read = await readQuery(asked)
+    if (read.ok && focusOf(read.value) !== undefined) dock.show("ledger")
   }
 
   /** Whether the journal's own text is what is on screen. */
@@ -442,7 +448,7 @@ export function Layout(props: ParentProps) {
               // One query for whichever report is open, the way the hledger
               // command line takes one.
               <Show when={getOrUndefined(journal())}>
-                <QueryBox box={setSearchBox} onEntered={toTheJournalAsked} />
+                <QueryBox box={setSearchBox} onEntered={(asked) => void queryEntered(asked)} />
               </Show>
             }
             right={

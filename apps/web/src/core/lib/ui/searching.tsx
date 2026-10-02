@@ -39,8 +39,12 @@ export function Searching(props: {
   readonly onSuggested?: (index: number) => void
   /** Called with where the cursor is whenever it moves, typing included. */
   readonly onCursor?: (position: number) => void
-  /** Called on Enter while no suggestion is offered: the box has been asked to act on what is in it. */
-  readonly onEntered?: () => void
+  /**
+   * Called on Enter while no suggestion is offered: the box has been asked to
+   * act on what is in it. Handed the text itself, which whoever holds the value
+   * may not have caught up with yet.
+   */
+  readonly onEntered?: (value: string) => void
 }): JSX.Element {
   const [focused, setFocused] = createSignal(false)
   const [dismissed, setDismissed] = createSignal(false)
@@ -67,7 +71,7 @@ export function Searching(props: {
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.isComposing) return
     if (!open()) {
-      if (event.key === "Enter") props.onEntered?.()
+      if (event.key === "Enter" && event.currentTarget instanceof HTMLInputElement) props.onEntered?.(event.currentTarget.value)
       return
     }
     const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0
