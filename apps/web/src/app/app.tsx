@@ -30,7 +30,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
+import { JOURNAL, atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -95,7 +95,7 @@ const EDGES = 2
 export function Layout(props: ParentProps) {
   const location = useLocation()
   const moves = useMoves()
-  const [, setQuery] = useQuery()
+  const [query, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
   const [railVisible, setRailVisible] = createSignal(true)
   const [panelOpen, setPanelOpen] = createSignal(true)
@@ -371,6 +371,15 @@ export function Layout(props: ParentProps) {
     onCleanup(() => window.removeEventListener("keydown", onKey))
   })
 
+  /**
+   * Enter in the query where nothing on screen reads it takes the query to the
+   * journal's entries; where something does, it has been answering all along.
+   */
+  const toTheJournalAsked = (): void => {
+    if (current().queried === true) return
+    moves.move((at) => ({ path: JOURNAL, search: searchFor(query()), fragment: atTheWork(atTheList(at.fragment)) }))
+  }
+
   /** Whether the journal's own text is what is on screen. */
 
   /** The view being shown, which is what the explorer beside it belongs to. */
@@ -433,7 +442,7 @@ export function Layout(props: ParentProps) {
               // One query for whichever report is open, the way the hledger
               // command line takes one.
               <Show when={getOrUndefined(journal())}>
-                <QueryBox box={setSearchBox} />
+                <QueryBox box={setSearchBox} onEntered={toTheJournalAsked} />
               </Show>
             }
             right={

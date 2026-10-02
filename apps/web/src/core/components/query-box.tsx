@@ -21,6 +21,8 @@ import { t } from "~/core/i18n"
 export function QueryBox(props: {
   /** Handed the box itself, for the key that puts the cursor in it. */
   readonly box: (element: HTMLInputElement) => void
+  /** Called on Enter, when nothing is being offered. */
+  readonly onEntered?: () => void
 }): JSX.Element {
   const [query, setQuery] = useQuery()
   const [cursor, setCursor] = createSignal(0)
@@ -79,6 +81,7 @@ export function QueryBox(props: {
       suggestions={offered().map((suggestion) => suggestion.written)}
       onSuggested={take}
       onCursor={setCursor}
+      onEntered={() => props.onEntered?.()}
     />
   )
 }

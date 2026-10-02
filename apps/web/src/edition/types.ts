@@ -74,6 +74,13 @@ export interface View {
   readonly writes: boolean
   /** Whether what it shows is narrowed to a period, which is what puts the filter beside it. */
   readonly periodic?: boolean
+  /**
+   * Whether what it shows is narrowed by the query in the title bar. Enter in
+   * the bar anywhere else takes the query to the journal, as `hledger print
+   * QUERY` would, since a query typed where nothing reads it asks a question
+   * nothing on screen answers.
+   */
+  readonly queried?: boolean
   /** Whether something there wants doing now, which puts a dot on its rail button. */
   readonly attention?: () => boolean
   readonly reached: Reached

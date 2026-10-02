@@ -203,3 +203,23 @@ test("the query offers to finish the term being typed, from hledger", async ({ p
   await expect(offered).toBeHidden()
   await expect(search).toHaveValue("acct:expenses:food acct:ren")
 })
+
+/**
+ * A query typed where nothing reads it is taken to the journal by Enter, as
+ * `hledger print QUERY` would answer it. Where the screen does read it, Enter
+ * leaves it there: it has been answering since the first key.
+ */
+test("Enter takes a query to the journal from a screen that does not read it", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/git")
+  const search = page.getByRole("searchbox")
+  await search.fill("desc:coffee ")
+  await search.press("Enter")
+  await expect(page).toHaveURL(/\/journal\?q=desc%3Acoffee(%20|\+)#work$/)
+  await expect(search).toHaveValue("desc:coffee ")
+
+  await page.goto("/reports#trial-balance")
+  await search.fill("acct:food ")
+  await search.press("Enter")
+  await expect(page).toHaveURL(/\/reports\?q=acct%3Afood(%20|\+)#trial-balance$/)
+})

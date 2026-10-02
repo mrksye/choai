@@ -39,6 +39,8 @@ export function Searching(props: {
   readonly onSuggested?: (index: number) => void
   /** Called with where the cursor is whenever it moves, typing included. */
   readonly onCursor?: (position: number) => void
+  /** Called on Enter while no suggestion is offered: the box has been asked to act on what is in it. */
+  readonly onEntered?: () => void
 }): JSX.Element {
   const [focused, setFocused] = createSignal(false)
   const [dismissed, setDismissed] = createSignal(false)
@@ -57,10 +59,17 @@ export function Searching(props: {
 
   /**
    * The arrows, Enter and Tab belong to the list only while it is open; closed,
-   * they do what they always do in a box, and Tab still leaves it.
+   * they do what they always do in a box, Tab still leaves it, and Enter is
+   * handed to whoever asked for it. A key that is settling what an input method
+   * is composing belongs to the input method, or a Japanese word confirmed with
+   * Enter would also be taken as the box being asked to act.
    */
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (!open()) return
+    if (event.isComposing) return
+    if (!open()) {
+      if (event.key === "Enter") props.onEntered?.()
+      return
+    }
     const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0
     if (step !== 0) {
       event.preventDefault()

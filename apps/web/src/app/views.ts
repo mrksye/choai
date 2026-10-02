@@ -43,6 +43,7 @@ const CORE: readonly View[] = [
     Explorer: JournalExplorer,
     page: Journal,
     writes: true,
+    queried: true,
     reached: { from: "rail" },
   },
   {
@@ -53,6 +54,7 @@ const CORE: readonly View[] = [
     page: Reports,
     writes: false,
     periodic: true,
+    queried: true,
     reached: { from: "rail" },
   },
   {
