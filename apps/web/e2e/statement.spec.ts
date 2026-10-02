@@ -141,23 +141,30 @@ test("a file holding several accounts reads each row into its own, with its note
   })
 })
 
+/**
+ * Proposed and dropped through `window.choai`, the app's own instance, rather
+ * than through modules imported here: a dev server that has seen a file change
+ * serves its importers that module under a new `?t=`, and a copy imported by
+ * its bare path is then a second one, whose drop the statement never hears of.
+ */
 test("a statement is let go of once what it proposed is thrown away", async ({ page }) => {
   await openTheDemo(page)
   const left = await page.evaluate(async () => {
     const served = (path: string): Promise<unknown> => import(/* @vite-ignore */ `/src/core/${path}.ts`)
-    const { propose, drop } = (await served("journal/proposals")) as typeof import("~/core/journal/proposals")
     const statement = (await served("statement/store")) as typeof import("~/core/statement/store")
-    const made = await propose([
-      {
-        is: "add",
-        draft: { date: "2026-03-01", payee: "x", note: "", tags: [], postings: [{ account: "expenses:food", amount: "1", tags: [] }, { account: "assets:cash", amount: "", tags: [] }] },
-        confidence: 1,
-      },
-    ])
+    const made = await window.choai.transaction.propose({
+      transactions: [
+        {
+          date: "2026-03-01",
+          payee: "x",
+          postings: [{ account: "expenses:food", amount: "1" }, { account: "assets:cash" }],
+        },
+      ],
+    })
     if (!made.ok) return "not proposed"
     statement.statementWasProposed(made.value.id)
     const held = statement.statementProposed()
-    drop(made.value.id)
+    await window.choai.proposal.drop({ id: made.value.id })
     await new Promise((settle) => setTimeout(settle, 0))
     return { held: held === made.value.id, after: statement.statementProposed() ?? "gone" }
   })
