@@ -27,3 +27,21 @@ export const namesAccounts = (term: QueryTerm): boolean => term.prefix === "" ||
 export const isDateTerm = (term: QueryTerm): boolean => term.prefix === "date:"
 
 export const narrowsByDate = (read: QueryTerms): boolean => read.terms.some(isDateTerm)
+
+/**
+ * Whether a term is hledger's `inacct:` — not a narrowing but an option, which
+ * hledger reads as matching everything and hledger-web reads as the account
+ * whose register is open. So a statement asked under it is the statement
+ * without it, and the ledger beside it knows which account it is.
+ */
+export const focusesAnAccount = (term: QueryTerm): boolean => !term.negated && term.prefix === "inacct:"
+
+/** The account a query focuses on: the first `inacct:`, as hledger takes it. */
+export const focusOf = (read: QueryTerms): string | undefined => read.terms.find(focusesAnAccount)?.value
+
+/** The query focused on another account, with every term but the old focus kept. */
+export const focusedOn = (read: QueryTerms, account: string): string =>
+  writtenQuery(
+    read.terms.filter((term) => !focusesAnAccount(term)),
+    writtenTerm({ text: "", negated: false, prefix: "inacct:", value: account, readable: true }),
+  )

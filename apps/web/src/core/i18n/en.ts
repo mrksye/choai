@@ -80,6 +80,7 @@ export const en = {
     balance: "Balance",
     empty: "Nothing has moved in this account.",
     latest: "The latest {{ shown }} of {{ total }} movements.",
+    unfocused: "Press a line of the statement, or write inacct:ACCOUNT in the query.",
   },
   report: {
     total: "Total",

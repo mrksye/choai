@@ -1,15 +1,16 @@
 import { For, Show, createResource, type JSX } from "solid-js"
 
 import { formatMixed } from "~/core/hledger/amount"
+import type { Reply } from "~/core/hledger/client"
 import type { MixedAmount } from "~/core/hledger/wire"
 import { withoutKindNow } from "~/core/journal/chart"
 import { journal } from "~/core/journal/store"
 import { accountQuery, useQuery } from "~/core/journal/query"
-import { namesAccounts, writtenQuery } from "~/core/journal/terms"
+import { focusOf, namesAccounts, writtenQuery } from "~/core/journal/terms"
 import { readQuery } from "~/core/reports/reading"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
 import { byMonth, dayOf, type LedgerLine } from "~/core/reports/ledger"
-import { getOrUndefined, matchResource } from "~/core/lib/monad"
+import { Ok, getOrUndefined, matchResource } from "~/core/lib/monad"
 import { NeedsAJournal, Waiting } from "./balance-report"
 import { TroubleNote } from "./trouble-note"
 import { t } from "~/core/i18n"
@@ -21,42 +22,59 @@ import { t } from "~/core/i18n"
  * there. Its ledger says both, beside the statement rather than in place of it,
  * so the figure being questioned stays in view while it is.
  *
- * Narrowed by the query in the title bar, as the statement beside it is, with
- * its account patterns swapped for the one account: hledger ORs account
- * patterns rather than ANDing them, so one more beside those already there
- * would widen the ledger instead of narrowing it. The account was on the
- * statement, so it already matched them.
+ * Its account is the query's `inacct:`, which hledger reads as an option rather
+ * than a narrowing, and is narrowed by the rest of the query as the statement
+ * beside it is — with its account patterns swapped for the one account: hledger
+ * ORs account patterns rather than ANDing them, so one more beside those
+ * already there would widen the ledger instead of narrowing it. The account was
+ * on the statement, so it already matched them.
  */
-export function AccountLedger(props: { account: string; historical: boolean }): JSX.Element {
+export function AccountLedger(props: { historical: boolean }): JSX.Element {
   const [query] = useQuery()
   const [ledger] = createResource(
     () => {
       const open = getOrUndefined(journal())
       return open === undefined ? undefined : { open, query: query(), historical: props.historical }
     },
-    async (asked) => {
+    async (asked): Promise<Reply<Focused | undefined>> => {
       const read = await readQuery(asked.query)
       if (!read.ok) return read
+      const account = focusOf(read.value)
+      if (account === undefined) return Ok(undefined)
       const besides = writtenQuery(read.value.terms.filter((term) => !namesAccounts(term)))
-      return askLedger(props.account, narrowed(accountQuery(props.account), besides), asked.historical)
+      const asking = await askLedger(account, narrowed(accountQuery(account), besides), asked.historical)
+      return asking.ok ? Ok({ account, ledger: asking.value }) : asking
     },
   )
 
   return (
     <section class="flex flex-col gap-2 p-3">
-      <h2 class="text-base font-semibold" title={props.account}>
-        {props.account}
-      </h2>
-      <p class="text-xs text-muted-foreground">{t("ledger.lead")}</p>
       <Show when={getOrUndefined(journal())} fallback={<NeedsAJournal />}>
         {matchResource(ledger(), {
           Loading: () => <Waiting />,
           Err: (trouble) => <TroubleNote trouble={trouble} />,
-          Ok: (data) => <Lines ledger={data} account={props.account} />,
+          Ok: (focused) =>
+            focused === undefined ? (
+              <p class="text-sm text-muted-foreground">{t("ledger.unfocused")}</p>
+            ) : (
+              <>
+                <h2 class="text-base font-semibold" title={focused.account}>
+                  {focused.account}
+                </h2>
+                <p class="text-xs text-muted-foreground">{t("ledger.lead")}</p>
+                <Lines ledger={focused.ledger} account={focused.account} />
+              </>
+            ),
         })}
       </Show>
     </section>
   )
+}
+
+/** The account the query focuses on, and its ledger. */
+interface Focused {
+  readonly account: string
+  readonly ledger: Ledger
 }
 
 /**

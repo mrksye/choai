@@ -2,7 +2,7 @@ import { For, type JSX } from "solid-js"
 import { useLocation } from "@solidjs/router"
 
 import { STATEMENTS, statementAt, type Statement } from "~/core/routes/reports"
-import { addressOfStatement, statementPartOf } from "~/core/address/address"
+import { addressOfStatement } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 
 /**
@@ -14,8 +14,8 @@ import { useMoves } from "~/core/address/moves"
  *
  * Choosing takes its own address, as the settings' sections do, so nothing is
  * handed up but that a choice was made — which is how a window too narrow for
- * both gets from the list to the statement. The account whose ledger is open
- * goes along, so the ledger beside one statement stays beside the next.
+ * both gets from the list to the statement. The ledger beside one statement
+ * stays beside the next, since its account is in the query, which goes along.
  */
 export function ReportsExplorer(props: {
   /** Called once something has been chosen here, whatever it was. */
@@ -27,7 +27,7 @@ export function ReportsExplorer(props: {
   const here = (statement: Statement): boolean => statementAt(location.hash).id === statement.id
 
   const choose = (statement: Statement): void => {
-    moves.goTo(addressOfStatement({ ...statementPartOf(location.hash), statement: statement.id }))
+    moves.goTo(addressOfStatement(statement.id))
     props.onChosen?.()
   }
 

@@ -27,6 +27,8 @@ const listFor = (prefix: string, lists: Completions): readonly string[] => {
   switch (prefix) {
     case "":
     case "acct:":
+    case "inacct:":
+    case "inacctonly:":
       return lists.accounts
     case "desc:":
       return lists.descriptions

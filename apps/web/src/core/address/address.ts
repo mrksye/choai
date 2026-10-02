@@ -36,35 +36,21 @@ export const addressOfSourceFile = (path: string): string => `${SOURCE}#${encode
 
 /**
  * The statements the books come to. The page's own part of the address is the
- * statement on screen and, after a `/`, the account whose ledger was opened
- * from it — `#balance-sheet/assets%3Abank` — so a ledger is somewhere that can
- * be gone back to, reloaded and sent like any other screen. The account is
- * encoded, so neither the `/` nor the joining mark can be read out of a name.
+ * statement on screen. The account whose ledger is open is not here but in the
+ * query, as hledger's `inacct:` — the way hledger-web keeps the account of the
+ * register it shows — so the title bar says which ledger it is, and a statement
+ * asked under that query is the statement as it was, since hledger reads
+ * `inacct:` as matching everything.
  *
  * Whether the ledger is on screen is the dock's layer, not this: closing the
  * dock is not forgetting which account it held, as with everything else there.
  */
 export const REPORTS = "/reports"
 
-export interface StatementPart {
-  /** The statement's id; empty where the address names none. */
-  readonly statement: string
-  readonly account?: string
-}
+/** The statement's id an address names; empty where it names none. */
+export const statementOf = (hash: string): string => readFragment(hash).page
 
-const ACCOUNT_AFTER = "/"
-
-export const statementPartOf = (hash: string): StatementPart => {
-  const [statement = "", account] = readFragment(hash).page.split(ACCOUNT_AFTER)
-  return account === undefined || account === ""
-    ? { statement }
-    : { statement, account: decodeURIComponent(account) }
-}
-
-export const addressOfStatement = (part: StatementPart): string =>
-  part.account === undefined
-    ? `${REPORTS}#${part.statement}`
-    : `${REPORTS}#${part.statement}${ACCOUNT_AFTER}${encodeURIComponent(part.account)}`
+export const addressOfStatement = (statement: string): string => `${REPORTS}#${statement}`
 
 /** Another book, added beside the ones already here. */
 export const ADD = "/add"

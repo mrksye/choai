@@ -303,9 +303,12 @@ three tsconfigs agree on where the seam resolves.
   shows what the query says and changes it by rewriting its own terms and
   leaving the rest, and a term typed by hand is read back the same way. What
   a term is, and what dates it comes to, is hledger's to say (`queryTerms` in
-  `Bindings.hs`), not a second parser's here. The ledger in the dock takes the
-  same query with its account patterns swapped for its own account, because
-  hledger ORs account patterns rather than ANDing them. Outside the address
+  `Bindings.hs`), not a second parser's here. The ledger in the dock is the
+  query's `inacct:`, as hledger-web keeps the account of its register: hledger
+  reads it as an option matching everything, so the statement beside it is
+  asked the same query and is not narrowed by it. The ledger itself takes the
+  rest of the query with its account patterns swapped for its own account,
+  because hledger ORs account patterns rather than ANDing them. Outside the address
   on purpose: which book is open (kept on the device), how the chrome is laid
   out (the rail, the explorer, the filters folded or not), and work in hand
   (a draft, the lines of an entry being corrected, a proposal) — none of these

@@ -14,7 +14,7 @@ import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
 import { saidIn } from "~/core/ai/reach"
 import { narrowed } from "~/core/reports/ask"
 import { ALL_TIME, SHORTCUTS, dayAfter, rangeOf, sameRange, termOf, withRange } from "~/core/reports/periods"
-import { namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
+import { focusOf, focusedOn, namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
 import type { QueryTerm } from "~/core/hledger/wire"
 import { offsetOf, pageIn, searchWithPage } from "~/core/journal/paging"
 import { suggestionsFor, termStart, withSuggestion } from "~/core/journal/completing"
@@ -50,7 +50,7 @@ import {
   readFragment,
   sameBesideTheDock,
   showsTheWork,
-  statementPartOf,
+  statementOf,
   withLayer,
   withoutLayer,
   writeAddress,
@@ -228,6 +228,16 @@ describe("periods", () => {
     expect(writtenTerm(term("desc:", "coffee", true))).toBe("not:desc:coffee")
     expect([term("acct:", "food"), term("", "food"), term("acct:", "food", true)].every(namesAccounts)).toBe(true)
     expect([term("date:", "2026"), term("desc:", "coffee"), term("tag:", "x")].some(namesAccounts)).toBe(false)
+  })
+
+  test("the ledger's account is hledger's inacct:, the first of them, and focusing moves it", () => {
+    const term = (prefix: string, value: string, negated = false): QueryTerm => ({ text: "", negated, prefix, value, readable: true })
+    const read = { terms: [term("acct:", "assets"), term("inacct:", "assets:my bank"), term("date:", "2026")] }
+    expect(focusOf(read)).toBe("assets:my bank")
+    expect(focusOf({ terms: [term("inacct:", "x", true)] })).toBeUndefined()
+    expect(focusOf({ terms: [term("acct:", "assets")] })).toBeUndefined()
+    expect(focusedOn(read, "assets:cash")).toBe("acct:assets date:2026 inacct:assets:cash")
+    expect(focusedOn({ terms: [] }, "assets:my bank")).toBe('inacct:"assets:my bank"')
   })
 
   test("a shortcut only writes the two days, worked out from today", () => {
@@ -1027,16 +1037,10 @@ describe("where the app is, as the address says it", () => {
     expect(arrivalsAt(readAddress("/settings"))).toEqual([])
   })
 
-  test("a statement's address carries the account whose ledger was opened from it", () => {
-    const written = addressOfStatement({ statement: "balance-sheet", account: "assets:my bank/cash+card" })
-    expect(written).toBe("/reports#balance-sheet/assets%3Amy%20bank%2Fcash%2Bcard")
-    expect(statementPartOf("#balance-sheet/assets%3Amy%20bank%2Fcash%2Bcard+ledger")).toEqual({
-      statement: "balance-sheet",
-      account: "assets:my bank/cash+card",
-    })
-    expect(statementPartOf("#income-statement")).toEqual({ statement: "income-statement" })
-    expect(statementPartOf("#work")).toEqual({ statement: "" })
-    expect(addressOfStatement({ statement: "trial-balance" })).toBe("/reports#trial-balance")
+  test("a statement's address names the statement and nothing else", () => {
+    expect(addressOfStatement("trial-balance")).toBe("/reports#trial-balance")
+    expect(statementOf("#balance-sheet+ledger")).toBe("balance-sheet")
+    expect(statementOf("#work")).toBe("")
   })
 })
 

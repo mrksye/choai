@@ -4,9 +4,14 @@ import { useLocation } from "@solidjs/router"
 import { BalanceReportView } from "~/core/components/balance-report"
 import { DeclareTypes } from "~/core/components/declare-types"
 import { TrialBalanceView } from "~/core/components/trial-balance"
-import { REPORTS, addressOfStatement, statementPartOf } from "~/core/address/address"
+import { REPORTS, statementOf } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { dock } from "~/core/dock"
+import { searchFor, useQuery } from "~/core/journal/query"
+import { inAccountQuery } from "~/core/journal/account-query"
+import { focusOf, focusedOn } from "~/core/journal/terms"
+import { narrowed } from "~/core/reports/ask"
+import { createReading, readQuery } from "~/core/reports/reading"
 import { t } from "~/core/i18n"
 
 /**
@@ -93,18 +98,10 @@ export const STATEMENTS: readonly Statement[] = [
 
 /** The statement an address names, and the first where it names none it knows. */
 export const statementAt = (hash: string): Statement =>
-  STATEMENTS.find((statement) => statement.id === statementPartOf(hash).statement) ?? STATEMENTS[0]
+  STATEMENTS.find((statement) => statement.id === statementOf(hash)) ?? STATEMENTS[0]
 
-/** The ledger an address names, counted the way the statement it was opened from counts. */
-export interface LedgerAt {
-  readonly account: string
-  readonly historical: boolean
-}
-
-export const ledgerAt = (path: string, hash: string): LedgerAt | undefined => {
-  const account = path === REPORTS ? statementPartOf(hash).account : undefined
-  return account === undefined ? undefined : { account, historical: statementAt(hash).historical }
-}
+/** Whether a ledger can be beside the page at this address: only the statements have one. */
+export const ledgerHasAPlace = (path: string): boolean => path === REPORTS
 
 /**
  * The statement the address names, with each of its lines leading to the
@@ -114,17 +111,26 @@ export const ledgerAt = (path: string, hash: string): LedgerAt | undefined => {
 export default function Reports(): JSX.Element {
   const location = useLocation()
   const moves = useMoves()
+  const [query] = useQuery()
+  const reading = createReading(query)
   const statement = (): Statement => statementAt(location.hash)
 
-  const chosen = (): string | undefined => (dock.is("ledger") ? statementPartOf(location.hash).account : undefined)
+  const chosen = (): string | undefined => {
+    const read = reading()
+    return dock.is("ledger") && read !== undefined ? focusOf(read) : undefined
+  }
 
   /**
-   * The account is written in first and the dock lent after, which the moves
-   * make one navigation: going back closes the ledger, and going back again is
-   * the statement as it was before it was pressed.
+   * The account is written into the query as hledger's `inacct:`, in place of
+   * any focus already there, and the dock lent after, which the moves make one
+   * navigation: going back closes the ledger and takes the account out of the
+   * query again. A query hledger cannot read is kept as typed, with the focus
+   * after it.
    */
-  const openLedger = (account: string): void => {
-    moves.goTo(addressOfStatement({ statement: statement().id, account }))
+  const openLedger = async (account: string): Promise<void> => {
+    const read = await readQuery(query())
+    const focused = read.ok ? focusedOn(read.value, account) : narrowed(query(), inAccountQuery(account))
+    moves.move((at) => ({ ...at, search: searchFor(focused), fragment: { ...at.fragment, page: statement().id } }))
     dock.show("ledger")
   }
 
@@ -135,7 +141,7 @@ export default function Reports(): JSX.Element {
         {(shown) => (
           <shown.Body
             chosen={chosen()}
-            onChosen={openLedger}
+            onChosen={(account) => void openLedger(account)}
           />
         )}
       </Show>

@@ -71,6 +71,7 @@ export const ja: Dictionary = {
     balance: "残高",
     empty: "この勘定科目にはまだ動きがありません。",
     latest: "最新の {{ shown }} 件を表示しています（全 {{ total }} 件）。",
+    unfocused: "表の行を押すか、クエリに inacct:勘定科目 と書いてください。",
   },
   report: {
     total: "合計",

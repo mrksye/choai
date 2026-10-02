@@ -234,21 +234,25 @@ for (const report of [
 }
 
 /**
- * A ledger is a place like any other: its account is in the address, so a
- * reload finds it again, back closes it, and the statement chosen beside it
- * keeps it open.
+ * A ledger is a place like any other: its account is in the query, as
+ * hledger's `inacct:`, so the title bar says which it is, a reload finds it
+ * again, back closes it, and the statement chosen beside it keeps it open.
+ * hledger reads `inacct:` as matching everything, so the statement beside it
+ * is not narrowed by it.
  */
-test("a ledger's account is in the address, and survives a reload and a change of statement", async ({ page }) => {
+test("a ledger's account is in the query, and survives a reload and a change of statement", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/reports#trial-balance")
   await page.locator("main").getByTitle("expenses:food", { exact: true }).click()
-  await expect(page).toHaveURL(/\/reports#trial-balance\/expenses%3Afood\+ledger$/)
+  await expect(page).toHaveURL(/\/reports\?q=inacct%3Aexpenses%3Afood#trial-balance\+ledger$/)
+  await expect(page.getByRole("searchbox")).toHaveValue("inacct:expenses:food")
+  await expect(page.locator("main").getByTitle("assets:bank:checking", { exact: true })).toBeVisible()
 
   await page.reload()
   await expect(dock(page).getByRole("heading", { name: "expenses:food" })).toBeVisible()
 
   await page.getByRole("button", { name: "Income statement", exact: true }).click()
-  await expect(page).toHaveURL(/\/reports#income-statement\/expenses%3Afood\+ledger$/)
+  await expect(page).toHaveURL(/\/reports\?q=inacct%3Aexpenses%3Afood#income-statement\+ledger$/)
   await expect(dock(page).getByRole("heading", { name: "expenses:food" })).toBeVisible()
 
   await page.goBack()

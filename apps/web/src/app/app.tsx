@@ -13,7 +13,7 @@ import { filtersShown, toggleFilters } from "~/core/reports/filters"
 import { narrowsByDate } from "~/core/journal/terms"
 import { createReading } from "~/core/reports/reading"
 import { AccountLedger } from "~/core/components/account-ledger"
-import { ledgerAt } from "~/core/routes/reports"
+import { ledgerHasAPlace, statementAt } from "~/core/routes/reports"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
 import type { View } from "~/edition/types"
 import { appName } from "~/edition"
@@ -277,7 +277,7 @@ export function Layout(props: ParentProps) {
     const empty =
       (showing === "editing" && editing() === undefined) ||
       (showing === "reviewing" && underReview() === undefined) ||
-      (showing === "ledger" && ledgerAt(location.pathname, location.hash) === undefined)
+      (showing === "ledger" && !ledgerHasAPlace(location.pathname))
     if (empty) dock.close()
   })
 
@@ -569,8 +569,8 @@ export function Layout(props: ParentProps) {
             <Show when={dock.showing() === "composing"}>
               <ComposePanel />
             </Show>
-            <Show when={dock.showing() === "ledger" && ledgerAt(location.pathname, location.hash)} keyed>
-              {(shown) => <AccountLedger account={shown.account} historical={shown.historical} />}
+            <Show when={dock.showing() === "ledger" && ledgerHasAPlace(location.pathname)}>
+              <AccountLedger historical={statementAt(location.hash).historical} />
             </Show>
           </AuxPanel>
         }
