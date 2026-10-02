@@ -9,7 +9,7 @@ import helpSvg from './help.svg?raw'
 import downloadSvg from './download.svg?raw'
 import fileCodeSvg from './file-code.svg?raw'
 import cloudSvg from './cloud.svg?raw'
-import sparklesSvg from './sparkles.svg?raw'
+import importSvg from './import.svg?raw'
 import refreshCwSvg from './refresh-cw.svg?raw'
 import searchSvg from './search.svg?raw'
 import chevronLeftSvg from './chevron-left.svg?raw'
@@ -62,8 +62,8 @@ export const FileCodeIcon = icon(fileCodeSvg)
 /** Back the way you came. */
 /** Somewhere else the books are kept. */
 export const CloudIcon = icon(cloudSvg)
-/** Where a model does the reading: receipts photographed, statements downloaded, sorted by Jev. */
-export const SparklesIcon = icon(sparklesSvg)
+/** Taking something into the books: receipts photographed, statements downloaded. */
+export const ImportIcon = icon(importSvg)
 
 export const RefreshIcon = icon(refreshCwSvg)
 

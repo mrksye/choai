@@ -7,7 +7,7 @@ import { getOrUndefined } from "~/core/lib/monad"
 import { ActivityBar, AuxPanel, Shell, SidePanel, TitlesBar, type ActivityItem } from "~/core/lib/solid-workbench-ui"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/core/components/ui/tooltip"
 import { Button } from "~/core/components/ui/button"
-import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, SparklesIcon } from "~/core/lib/ui/icons"
+import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtering, filtersShown, toggleFilters } from "~/core/reports/filters"
 import { AccountLedger } from "~/core/components/account-ledger"
@@ -452,7 +452,7 @@ export function Layout(props: ParentProps) {
                     class="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     classList={{ "bg-accent text-foreground": dock.is("importing") || dock.is("connecting") }}
                   >
-                    <SparklesIcon class="h-4 w-4" />
+                    <ImportIcon class="h-4 w-4" />
                   </button>
                 </Show>
                 {/* Last, and there whether or not a journal is open: the keys
