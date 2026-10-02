@@ -125,7 +125,7 @@ export const usingEn = {
 /* ----------------------------------------------------------------- sync ---- */
 
 export const syncEn = {
-  title: "Keeping it in a repository",
+  title: "Connecting GitHub",
   intro:
     "Your journal can live in a private GitHub repository, so the same books open on a phone and on a desktop. The browser talks to GitHub directly; there is nothing of ours in between.",
   sections: [
@@ -329,7 +329,7 @@ export const usingJa: Translated<typeof usingEn> = {
 }
 
 export const syncJa: Translated<typeof syncEn> = {
-  title: "リポジトリに置いておく",
+  title: "GitHub 連携",
   intro:
     "帳簿は private な GitHub リポジトリに置けます。同じ帳簿がスマホでもパソコンでも開きます。通信するのはブラウザと GitHub の間だけで、あいだにこちらのものは何もありません。",
   sections: [

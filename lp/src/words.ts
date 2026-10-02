@@ -34,7 +34,7 @@ export const en = {
     {
       heading: "Kept in a private repository",
       body: "It syncs with a private repository through a fine-grained token, straight from the browser. Entries written on a phone land after the ones written on a desktop. Where both have rewritten the same lines, it says so rather than letting either win.",
-      more: "Keeping it in a repository",
+      more: "Connecting GitHub",
       at: "/sync/",
     },
     {
@@ -91,7 +91,7 @@ export const ja: Words = {
     {
       heading: "private リポジトリに置く",
       body: "fine-grained トークンで private リポジトリと同期します。ブラウザから直接です。スマホで書いた仕訳は、パソコンで書いた仕訳の後ろに並びます。同じ行を両方で書き換えていたときは、どちらかを勝たせずにそう告げます。",
-      more: "リポジトリに置いておく",
+      more: "GitHub 連携",
       at: "/sync/",
     },
     {
