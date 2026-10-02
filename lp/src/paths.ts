@@ -13,7 +13,7 @@
  */
 
 import type { Document } from "./document"
-import { aiEn, aiJa, howEn, howJa, syncEn, syncJa } from "./guides"
+import { aiEn, aiJa, howEn, howJa, syncEn, syncJa, usingEn, usingJa } from "./guides"
 import { privacyEn, privacyJa, termsEn, termsJa } from "./legal"
 
 export interface Reading {
@@ -34,6 +34,15 @@ export const GUIDES: readonly Reading[] = [
     blurb: {
       en: "Why the accounting is hledger's own, and what happens to your file.",
       ja: "計算しているのがなぜ hledger 本体なのか。ファイルはどう扱われるのか。",
+    },
+  },
+  {
+    path: "/using/",
+    en: usingEn,
+    ja: usingJa,
+    blurb: {
+      en: "The keys, the hledger query the screen is driven by, and an address for every screen.",
+      ja: "ショートカットと、画面を動かす hledger クエリと、どの画面にもあるアドレス。",
     },
   },
   {

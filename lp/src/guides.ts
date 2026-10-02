@@ -1,10 +1,10 @@
 /**
  * The pages somebody reads when the front page has made them curious.
  *
- * Three subjects, each too long for a card and each one a reader actually gets
- * stuck on: how the accounting is really hledger's, how a repository is kept in
- * step, and what reading a receipt or a statement in does and what an agent of
- * your own is for.
+ * Four subjects, each too long for a card and each one a reader actually gets
+ * stuck on: how the accounting is really hledger's, how the screen is worked,
+ * how a repository is kept in step, and what reading a receipt or a statement in
+ * does and what an agent of your own is for.
  *
  * English is written first and the Japanese is held to its bones by
  * `Translated` — the same count of sections and paragraphs, so a page cannot
@@ -68,6 +68,55 @@ export const howEn = {
       body: [
         "Opening the app puts a `window.choai` in the page: the same core the screens use, answering a script, a test, or an agent. It is not a web API and cannot be reached by fetching an address — there is no server to ask.",
         "What it offers are named acts, the same ones the screens perform. There is no way to run code through it, no way to write a file as raw text, and no way to read back the keys or tokens the app holds.",
+      ],
+    },
+  ],
+} as const satisfies Document
+
+/* ---------------------------------------------------------------- using ---- */
+
+/*
+ * Copied from the app: the keys from apps/web/src/core/lib/shortcuts.ts, the
+ * query as the state from CLAUDE.md ("The hledger query is the state"), and the
+ * address from apps/web/src/core/address/address.ts.
+ */
+export const usingEn = {
+  title: "Using it",
+  intro:
+    "The screen is worked the way hledger is: by a query. What you type in the bar at the top changes what is on screen, what you press on screen is written back into that bar, and every screen has an address you can keep or send.",
+  sections: [
+    {
+      heading: "The keys are in the top right corner",
+      body: [
+        "The question mark at the right of the top bar lists every key that does something, and only those — the list and the keys are built from one table, so neither can have one the other lacks.",
+        "⌘K (Ctrl+K off a Mac) writes an entry. ⌘J reads receipts and statements in. ⌘B shows or hides the sidebars. Esc closes the panel on the right.",
+      ],
+    },
+    {
+      heading: "Type a query, and the screen follows",
+      body: [
+        "The bar in the middle of the top is an hledger query, the same one you would hand to hledger on the command line: acct:food, desc:coffee, date:2026-02, or several of them together. It narrows whichever screen is open — the journal's entries, the trial balance, the balance sheet, the income statement — and it stays as you move between them, the way one query can be given to hledger's reg and bal alike.",
+      ],
+    },
+    {
+      heading: "Press on screen, and the query follows",
+      body: [
+        "It works the other way round as well. Choosing an account in the list beside the journal writes acct: and that account into the bar. Choosing a period beside the statements writes a date: term, and leaves the rest of the query as it was.",
+        "What the filters show is read back out of that query, not kept beside it. A date typed by hand fills in the period's two days, and the filter button stays filled in and marked while the query still narrows by date — even with the filters put away — because a statement that is not all of the books should not look like one that is.",
+      ],
+    },
+    {
+      heading: "Project + Query = UI state",
+      body: [
+        "That is the rule the screen is built to: the set of books open, and the query, are what decides what is shown. Nothing narrows a screen without being written in the bar, so what you read there is what you are looking at, and it is something hledger itself would understand.",
+        "It is not everywhere yet. It holds for what is on the screen now — the accounts beside the journal, and the period beside the statements — and whatever is added is added the same way.",
+      ],
+    },
+    {
+      heading: "Every screen has an address",
+      body: [
+        "Every move that changes the screen changes the address, so the browser's back and forward — a phone's back button — undo and redo it, and any screen can be bookmarked, reloaded, or sent. The address carries the page, the query, and the parts of the page: which statement, which account's ledger is open beside it, what the panel on the right is holding.",
+        "So https://std.choai.dev/reports?q=date%3A2026-01-01..2027-01-01#balance-sheet/assets%3Abank+ledger is the balance sheet for 2026 with the bank's ledger open beside it. Which books it is read from is not in the address: a link opens on the books open on whoever's device it is, and holds nothing of yours but the query and the account names written into it.",
       ],
     },
   ],
@@ -232,6 +281,48 @@ export const howJa: Translated<typeof howEn> = {
       body: [
         "アプリを開くと、ページの中に `window.choai` が置かれます。画面が使っているのと同じ中身が、スクリプトにも、テストにも、エージェントにも答えます。Web API ではないので、アドレスを叩いても届きません ── 訊きに行くサーバーが無いからです。",
         "できるのは名前の付いた行為だけで、それは画面がやっているのと同じものです。コードを実行させる道も、ファイルを生テキストで書く道も、アプリが持っている鍵やトークンを読み返す道もありません。",
+      ],
+    },
+  ],
+}
+
+export const usingJa: Translated<typeof usingEn> = {
+  title: "操作方法",
+  intro:
+    "画面の動かし方は hledger と同じで、クエリで動きます。上のバーに打ったものが画面を変え、画面で押したものはそのバーに書き戻されます。そしてどの画面にも、取っておいたり送ったりできるアドレスがあります。",
+  sections: [
+    {
+      heading: "ショートカットは右上にあります",
+      body: [
+        "上のバーの右端にある「?」が、効くキーを全部、それだけを並べます。一覧とキーの動きは一つの表から作っているので、どちらかにだけあるキーはありません。",
+        "⌘K（Mac 以外は Ctrl+K）で仕訳を書く。⌘J で領収書や明細を取り込む。⌘B でサイドバーを出し入れ。Esc で右のパネルを閉じます。",
+      ],
+    },
+    {
+      heading: "クエリを打てば、画面が変わります",
+      body: [
+        "上のバーの真ん中は hledger のクエリです。コマンドラインで hledger に渡すのと同じもの ── acct:食費、desc:コーヒー、date:2026-02、あるいはそれらを並べたもの。開いている画面を絞り込みます ── 仕訳帳の仕訳も、試算表も、貸借対照表も、損益計算書も。画面を移ってもクエリはそのまま残ります。一つのクエリを hledger の reg にも bal にも渡せるのと同じです。",
+      ],
+    },
+    {
+      heading: "画面で押せば、クエリが変わります",
+      body: [
+        "逆向きにも動きます。仕訳帳の横の一覧で勘定科目を選ぶと、バーに acct: とその科目が書かれます。財務諸表の横で期間を選ぶと date: の項が書かれ、クエリのほかの部分はそのまま残ります。",
+        "フィルターに出ているものは、そのクエリから読み戻したもので、横に別に持っているものではありません。手で打った日付は期間の二つの日に入りますし、クエリが日付で絞っている間は、フィルターを閉じていてもフィルターボタンは塗りつぶされて印が付きます。帳簿の全部ではない財務諸表が、全部のように見えてはいけないからです。",
+      ],
+    },
+    {
+      heading: "Project + Query = UI state",
+      body: [
+        "画面はこの決まりで作っています。開いている帳簿と、クエリ。この二つが何を見せるかを決めます。バーに書かれていないもので画面が絞られることはないので、バーに読めるものが、いま見ているものです。そしてそれは hledger 自身にも通じるものです。",
+        "まだすべてがそうなっているわけではありません。いま画面にあるもの ── 仕訳帳の横の勘定科目と、財務諸表の横の期間 ── について成り立っていて、これから足すものも同じやり方で足していきます。",
+      ],
+    },
+    {
+      heading: "どの画面にもアドレスがあります",
+      body: [
+        "画面を変える操作は、どれもアドレスを変えます。だからブラウザの戻る・進む ── スマホの戻るボタン ── で取り消したりやり直したりでき、どの画面もブックマークも、再読み込みも、人に送ることもできます。アドレスには、ページと、クエリと、ページの中の部分が入っています。どの財務諸表か、どの勘定科目の元帳を横に開いているか、右のパネルに何を出しているか。",
+        "たとえば https://std.choai.dev/reports?q=date%3A2026-01-01..2027-01-01#balance-sheet/assets%3Abank+ledger は、2026 年の貸借対照表に、銀行の元帳を横に開いた画面です。どの帳簿から読むかはアドレスに入っていません。リンクは開いた人の端末で開いている帳簿で開き、あなたのものとしては、クエリと書き込まれた勘定科目の名前のほかには何も含みません。",
       ],
     },
   ],
