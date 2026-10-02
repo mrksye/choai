@@ -17,6 +17,7 @@ import { ALL_TIME, SHORTCUTS, dayAfter, rangeOf, sameRange, termOf, withRange } 
 import { namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
 import type { QueryTerm } from "~/core/hledger/wire"
 import { offsetOf, pageIn, searchWithPage } from "~/core/journal/paging"
+import { suggestionsFor, termStart, withSuggestion } from "~/core/journal/completing"
 import {
   CAME_AND_WENT,
   OWNED_AND_OWED,
@@ -251,6 +252,63 @@ describe("the journal's page", () => {
     expect(searchWithPage("?q=desc%3Acoffee", 2)).toBe("?q=desc%3Acoffee&page=2")
     expect(searchWithPage("?q=desc%3Acoffee&page=2", 1)).toBe("?q=desc%3Acoffee")
     expect(searchWithPage("", 1)).toBe("")
+  })
+})
+
+describe("finishing a query term", () => {
+  const lists = {
+    prefixes: ["acct:", "amt:", "desc:", "date:", "payee:", "tag:", "cur:"],
+    accounts: ["assets:bank:checking", "expenses:food", "expenses:food:dining", "expenses:rent"],
+    descriptions: ["Coffee", "Restaurant"],
+    payees: ["Coffee"],
+    tags: ["trip"],
+    commodities: ["$", "JPY"],
+  }
+  const term = (prefix: string, value: string, negated = false): QueryTerm => ({
+    text: `${negated ? "not:" : ""}${prefix}${value}`,
+    negated,
+    prefix,
+    value,
+    readable: true,
+  })
+
+  test("offers what the journal holds under the term's prefix, those beginning with it first", () => {
+    expect(suggestionsFor("acct:food", term("acct:", "food"), lists).map((one) => one.written)).toEqual([
+      "acct:expenses:food",
+      "acct:expenses:food:dining",
+    ])
+    expect(suggestionsFor("x desc:co", term("desc:", "co"), lists).map((one) => one.written)).toEqual(["desc:Coffee"])
+    expect(suggestionsFor("not:acct:rent", term("acct:", "rent", true), lists).map((one) => one.written)).toEqual([
+      "not:acct:expenses:rent",
+    ])
+  })
+
+  test("offers a bare word both the prefixes it begins and the accounts it matches", () => {
+    const offered = suggestionsFor("a", term("", "a"), lists)
+    expect(offered.slice(0, 2)).toEqual([
+      { written: "acct:", whole: false },
+      { written: "amt:", whole: false },
+    ])
+    expect(offered[2]).toEqual({ written: "assets:bank:checking", whole: true })
+  })
+
+  test("offers nothing inside quotes, or where nothing is being typed", () => {
+    expect(suggestionsFor('acct:"my b', term("acct:", "my b"), lists)).toEqual([])
+    expect(suggestionsFor("desc:coffee ", undefined, lists)).toEqual([])
+  })
+
+  test("writes the chosen term over the one being typed, and puts the cursor after it", () => {
+    const typed = "desc:co acct:foo"
+    const being = term("acct:", "foo")
+    expect(termStart(typed, being)).toBe(8)
+    expect(withSuggestion(typed, typed.length, 8, { written: "acct:expenses:food", whole: true })).toEqual({
+      query: "desc:co acct:expenses:food ",
+      cursor: 27,
+    })
+    expect(withSuggestion("de date:2026", 2, 0, { written: "desc:", whole: false })).toEqual({
+      query: "desc: date:2026",
+      cursor: 5,
+    })
   })
 })
 
