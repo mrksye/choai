@@ -16,6 +16,7 @@ import { narrowed } from "~/core/reports/ask"
 import { ALL_TIME, SHORTCUTS, dayAfter, rangeOf, sameRange, termOf, withRange } from "~/core/reports/periods"
 import { namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
 import type { QueryTerm } from "~/core/hledger/wire"
+import { offsetOf, pageIn, searchWithPage } from "~/core/journal/paging"
 import {
   CAME_AND_WENT,
   OWNED_AND_OWED,
@@ -235,6 +236,21 @@ describe("periods", () => {
     expect(of("incomeStatement.lastYear")).toEqual({ from: "2027-01-01", to: "2027-12-31" })
     expect(of("incomeStatement.allTime")).toEqual(ALL_TIME)
     expect(sameRange({ from: "2028-01-01", to: "2028-12-31" }, of("incomeStatement.thisYear") ?? ALL_TIME)).toBe(true)
+  })
+})
+
+describe("the journal's page", () => {
+  test("is read from the address, the first wherever it names none it can be", () => {
+    expect(pageIn(undefined)).toBe(1)
+    expect(pageIn("3")).toBe(3)
+    expect(["0", "-2", "1.5", "two", ""].map(pageIn)).toEqual([1, 1, 1, 1, 1])
+    expect(offsetOf(3)).toBe(100)
+  })
+
+  test("is written beside the query, and the first page is not written at all", () => {
+    expect(searchWithPage("?q=desc%3Acoffee", 2)).toBe("?q=desc%3Acoffee&page=2")
+    expect(searchWithPage("?q=desc%3Acoffee&page=2", 1)).toBe("?q=desc%3Acoffee")
+    expect(searchWithPage("", 1)).toBe("")
   })
 })
 

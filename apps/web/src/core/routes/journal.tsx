@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createResource, createSignal, on, type JSX } from "solid-js"
+import { For, Show, createResource, type JSX } from "solid-js"
 
 import { ask } from "~/core/hledger/client"
 import { formatMixed } from "~/core/hledger/amount"
@@ -6,15 +6,14 @@ import type { Posting, Transaction } from "~/core/hledger/wire"
 import { journal } from "~/core/journal/store"
 import { byDay, weekdayOf } from "~/core/journal/days"
 import { withoutKindNow } from "~/core/journal/chart"
-import { useQuery } from "~/core/journal/query"
+import { usePage, useQuery } from "~/core/journal/query"
+import { PAGE, offsetOf } from "~/core/journal/paging"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
 import { startEditingEntry } from "~/core/compose/editing"
 import { TroubleNote } from "~/core/components/trouble-note"
 import { Welcome } from "~/core/components/welcome"
 import { locale, t } from "~/core/i18n"
-
-const PAGE = 50
 
 /**
  * How far the entries are let out across a wide window.
@@ -27,14 +26,12 @@ const WIDTH = "max-w-2xl"
 
 export default function Journal(): JSX.Element {
   const [query] = useQuery()
-  const [offset, setOffset] = createSignal(0)
+  const [at, toPage] = usePage()
 
   const [page] = createResource(
-    () => (getOrUndefined(journal()) === undefined ? undefined : { query: query(), offset: offset() }),
+    () => (getOrUndefined(journal()) === undefined ? undefined : { query: query(), offset: offsetOf(at()) }),
     (asked) => ask({ kind: "entries", query: asked.query, limit: PAGE, offset: asked.offset }),
   )
-
-  createEffect(on(query, () => setOffset(0), { defer: true }))
 
   return (
     <Show when={getOrUndefined(journal())} fallback={<Welcome />}>
@@ -52,7 +49,7 @@ export default function Journal(): JSX.Element {
                   variant="outline"
                   size="sm"
                   disabled={found.offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset() - PAGE))}
+                  onClick={() => toPage(at() - 1)}
                 >
                   {t("journal.newer")}
                 </Button>
@@ -60,7 +57,7 @@ export default function Journal(): JSX.Element {
                   variant="outline"
                   size="sm"
                   disabled={found.offset + PAGE >= found.total}
-                  onClick={() => setOffset(offset() + PAGE)}
+                  onClick={() => toPage(at() + 1)}
                 >
                   {t("journal.older")}
                 </Button>
