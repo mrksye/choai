@@ -3,7 +3,7 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "description": "The site that explains choai. Shares no code with the app; copyleft by choice rather than by inheritance.",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 45720",
