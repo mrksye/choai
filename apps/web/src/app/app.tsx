@@ -23,7 +23,7 @@ import { JevKeyPanel } from "~/core/components/jev-key-panel"
 import { AiImportPanel } from "~/core/components/ai-import-panel"
 import { ProposalReview } from "~/core/components/proposal-review"
 import { createRenewal } from "~/core/lib/renewal"
-import { Searching } from "~/core/lib/ui/searching"
+import { QueryBox } from "~/core/components/query-box"
 import { underReview } from "~/core/journal/proposals"
 import { showed, wantedQuery } from "~/core/journal/showing"
 import { ComposePanel } from "~/core/compose/ComposePanel"
@@ -95,7 +95,7 @@ const EDGES = 2
 export function Layout(props: ParentProps) {
   const location = useLocation()
   const moves = useMoves()
-  const [query, setQuery] = useQuery()
+  const [, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
   const [railVisible, setRailVisible] = createSignal(true)
   const [panelOpen, setPanelOpen] = createSignal(true)
@@ -433,13 +433,7 @@ export function Layout(props: ParentProps) {
               // One query for whichever report is open, the way the hledger
               // command line takes one.
               <Show when={getOrUndefined(journal())}>
-                <Searching
-                  value={query()}
-                  onInput={setQuery}
-                  placeholder={t("journal.queryPlaceholder")}
-                  label={t("journal.search")}
-                  box={setSearchBox}
-                />
+                <QueryBox box={setSearchBox} />
               </Show>
             }
             right={

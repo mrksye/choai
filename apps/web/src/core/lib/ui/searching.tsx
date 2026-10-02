@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js"
+import { For, Show, createSignal, type JSX } from "solid-js"
 
 import { SearchIcon } from "~/core/lib/ui/icons"
 
@@ -33,7 +33,51 @@ export function Searching(props: {
   readonly label: string
   /** Handed the box itself, for whoever has to put the cursor in it from elsewhere. */
   readonly box?: (element: HTMLInputElement) => void
+  /** Ways to finish what is being typed, offered under the box while it has the cursor. */
+  readonly suggestions?: readonly string[]
+  /** Called with the index of the suggestion taken. */
+  readonly onSuggested?: (index: number) => void
+  /** Called with where the cursor is whenever it moves, typing included. */
+  readonly onCursor?: (position: number) => void
 }): JSX.Element {
+  const [focused, setFocused] = createSignal(false)
+  const [dismissed, setDismissed] = createSignal(false)
+  const [highlighted, setHighlighted] = createSignal(0)
+
+  const offered = (): readonly string[] => props.suggestions ?? []
+  const open = (): boolean => focused() && !dismissed() && offered().length > 0
+  const current = (): number => Math.min(highlighted(), Math.max(0, offered().length - 1))
+
+  const moved = (element: HTMLInputElement): void => props.onCursor?.(element.selectionStart ?? element.value.length)
+
+  const take = (index: number): void => {
+    setHighlighted(0)
+    props.onSuggested?.(index)
+  }
+
+  /**
+   * The arrows, Enter and Tab belong to the list only while it is open; closed,
+   * they do what they always do in a box, and Tab still leaves it.
+   */
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (!open()) return
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0
+    if (step !== 0) {
+      event.preventDefault()
+      setHighlighted((current() + step + offered().length) % offered().length)
+      return
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault()
+      take(current())
+      return
+    }
+    if (event.key === "Escape") {
+      event.preventDefault()
+      setDismissed(true)
+    }
+  }
+
   return (
     <div
       class="relative transition-[width] duration-150"
@@ -46,12 +90,55 @@ export function Searching(props: {
       <input
         ref={props.box}
         type="search"
+        aria-autocomplete="list"
+        aria-expanded={open()}
         aria-label={props.label}
         placeholder={props.placeholder}
         value={props.value}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
+        onInput={(event) => {
+          setDismissed(false)
+          setHighlighted(0)
+          props.onInput(event.currentTarget.value)
+          moved(event.currentTarget)
+        }}
+        onKeyDown={onKeyDown}
+        onKeyUp={(event) => moved(event.currentTarget)}
+        onClick={(event) => moved(event.currentTarget)}
+        onFocus={(event) => {
+          setFocused(true)
+          moved(event.currentTarget)
+        }}
+        onBlur={() => setFocused(false)}
         class="h-6 w-full rounded border border-input bg-background pl-6 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-ring"
       />
+      <Show when={open()}>
+        {/* Pressed with the pointer held down rather than on release, so the box
+            keeps the cursor and the list is not closed by its own blur first. */}
+        <ul
+          role="listbox"
+          aria-label={props.label}
+          class="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-popover py-1 text-[13px] text-popover-foreground shadow-md"
+        >
+          <For each={offered()}>
+            {(suggestion, index) => (
+              <li
+                role="option"
+                aria-selected={index() === current()}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  take(index())
+                }}
+                onMouseEnter={() => setHighlighted(index())}
+                class="cursor-pointer truncate px-2 py-0.5 font-mono"
+                classList={{ "bg-accent text-accent-foreground": index() === current() }}
+                title={suggestion}
+              >
+                {suggestion}
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
     </div>
   )
 }

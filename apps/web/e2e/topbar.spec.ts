@@ -172,3 +172,34 @@ test("Ctrl+P goes to the query, and the help says so", async ({ page }) => {
   await expect(page.getByText("Type an hledger query")).toBeVisible()
   await expect(page.getByText("Ctrl+P")).toBeVisible()
 })
+
+/**
+ * The term being typed is finished from what hledger offers: its own prefixes,
+ * and under each what the journal holds. Enter takes the one lit, a whole term
+ * is followed by a space so the next can be typed, and Esc puts the list away.
+ */
+test("the query offers to finish the term being typed, from hledger", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/journal#work")
+  const search = page.getByRole("searchbox")
+  const offered = page.getByRole("listbox")
+
+  await search.click()
+  await page.keyboard.type("de")
+  await expect(offered.getByRole("option").first()).toHaveText("desc:")
+  await page.keyboard.press("Enter")
+  await expect(search).toHaveValue("desc:")
+
+  await search.fill("")
+  await page.keyboard.type("acct:foo")
+  await expect(offered.getByRole("option").first()).toHaveText("acct:expenses:food")
+  await page.keyboard.press("Enter")
+  await expect(search).toHaveValue("acct:expenses:food ")
+  await expect(page).toHaveURL(/q=acct%3Aexpenses%3Afood/)
+
+  await page.keyboard.type("acct:ren")
+  await expect(offered).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(offered).toBeHidden()
+  await expect(search).toHaveValue("acct:expenses:food acct:ren")
+})
