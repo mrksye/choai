@@ -14,6 +14,7 @@ import refreshCwSvg from './refresh-cw.svg?raw'
 import searchSvg from './search.svg?raw'
 import chevronLeftSvg from './chevron-left.svg?raw'
 import gitBranchSvg from './git-branch.svg?raw'
+import funnelSvg from './funnel.svg?raw'
 
 /**
  * Icons. The SVG bodies live beside this file as .svg files, drawn with
@@ -42,6 +43,8 @@ export const ReceiptIcon = icon(receiptSvg)
 export const ScaleIcon = icon(scaleSvg)
 /** Settings. */
 export const SettingsIcon = icon(settingsSvg)
+/** Narrowing what a report covers. */
+export const FunnelIcon = icon(funnelSvg)
 /** The repository the books are kept in, and the history of what was sent to it. */
 export const GitBranchIcon = icon(gitBranchSvg)
 /** Fold or unfold the side panel. */

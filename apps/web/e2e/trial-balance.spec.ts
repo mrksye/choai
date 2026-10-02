@@ -182,6 +182,8 @@ test("the trial balance is the first of the financial statements, in name and on
 
   await page.getByRole("button", { name: "Financial statements" }).first().click()
   await expect(page).toHaveURL(/\/reports/)
+  // The rail's tooltip is drawn over the top of the list until the pointer leaves.
+  await page.mouse.move(640, 400)
 
   await expect(page.getByRole("heading", { name: "Trial balance" })).toBeVisible()
   await expect(page.getByRole("columnheader", { name: "Debit" })).toBeVisible()
@@ -272,18 +274,30 @@ test("a ledger's balances are hledger's running totals, and its other side is na
 })
 
 /**
- * The period sits beside the statements rather than inside one of them, and
- * is there without being asked for.
+ * A period is a filter, opened from the button beside the list and put away
+ * again; what it narrows stays narrowed when it is put away, and the button
+ * says so rather than looking as it does over all of the books.
  */
-test("the period beside the statements narrows the one on screen", async ({ page }) => {
+test("the period is a filter that says it is on while put away", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/reports#income-statement")
 
   const period = page.getByRole("group", { name: "Period" })
+  await expect(period).toBeHidden()
+
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
   await period.getByRole("button", { name: "Last year" }).click()
   await expect(page.getByText("Nothing in this period.")).toBeVisible()
 
+  const on = page.getByRole("button", { name: "Filters — narrowing this report" })
+  await on.click()
+  await expect(period).toBeHidden()
+  await expect(on).toBeVisible()
+  await expect(page.getByText("Nothing in this period.")).toBeVisible()
+
+  await on.click()
   await period.getByRole("button", { name: "All time" }).click()
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()
   await expect(page.getByText("Nothing in this period.")).toBeHidden()
 })
 
@@ -294,6 +308,7 @@ test("the period beside the statements narrows the one on screen", async ({ page
 test("a period chosen on one statement narrows the other two", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/reports#income-statement")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
   await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "Last year" }).click()
 
   for (const [view, empty] of [
@@ -329,6 +344,7 @@ test("the balance sheet's ledger under a period still shows the account's balanc
   expect(added.ok).toBe(true)
 
   await page.goto("/reports#balance-sheet")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
   await page.getByRole("group", { name: "Period" }).getByRole("button", { name: "This month" }).click()
   await page.locator("main").getByTitle("assets:bank:checking", { exact: true }).click()
 
@@ -345,6 +361,7 @@ test("the balance sheet's ledger under a period still shows the account's balanc
 test("a period is two days, which a shortcut fills in and which can be typed", async ({ page }) => {
   await openTheDemo(page)
   await page.goto("/reports#income-statement")
+  await page.getByRole("button", { name: "Filters", exact: true }).click()
   const period = page.getByRole("group", { name: "Period" })
   const from = period.getByLabel("From (included)")
   const to = period.getByLabel("To (included)")

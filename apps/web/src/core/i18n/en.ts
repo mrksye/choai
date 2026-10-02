@@ -88,6 +88,8 @@ export const en = {
     period: "Period",
     from: "From (included)",
     to: "To (included)",
+    filters: "Filters",
+    filtered: "Filters — narrowing this report",
   },
   propose: {
     title: "Written, not yet kept",

@@ -1,19 +1,16 @@
-import { For, Show, type JSX } from "solid-js"
+import { For, type JSX } from "solid-js"
 import { useLocation } from "@solidjs/router"
 
-import { ReportFilters } from "~/core/components/report-filters"
 import { STATEMENTS, statementAt, type Statement } from "~/core/routes/reports"
-import { journal } from "~/core/journal/store"
 import { addressOfStatement, statementPartOf } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
-import { getOrUndefined } from "~/core/lib/monad"
 
 /**
- * The explorer beside the statements: which of them to read, and over what.
+ * The explorer beside the statements: which of them to read.
  *
- * The period sits above the list rather than inside any one statement, because
- * it narrows all of them: chosen while reading one, it is still chosen on the
- * next, and a filter drawn beside a single statement would say otherwise.
+ * The period is opened above the list rather than inside any one statement,
+ * because it narrows all of them: chosen while reading one, it is still chosen
+ * on the next, and a filter drawn beside a single statement would say otherwise.
  *
  * Choosing takes its own address, as the settings' sections do, so nothing is
  * handed up but that a choice was made — which is how a window too narrow for
@@ -35,24 +32,19 @@ export function ReportsExplorer(props: {
   }
 
   return (
-    <>
-      <Show when={getOrUndefined(journal())}>
-        <ReportFilters />
-      </Show>
-      <div class="py-1">
-        <For each={STATEMENTS}>
-          {(statement) => (
-            <button
-              type="button"
-              onClick={() => choose(statement)}
-              class="w-full px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-              classList={{ "bg-accent text-accent-foreground": here(statement) }}
-            >
-              {statement.name()}
-            </button>
-          )}
-        </For>
-      </div>
-    </>
+    <div class="py-1">
+      <For each={STATEMENTS}>
+        {(statement) => (
+          <button
+            type="button"
+            onClick={() => choose(statement)}
+            class="w-full px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+            classList={{ "bg-accent text-accent-foreground": here(statement) }}
+          >
+            {statement.name()}
+          </button>
+        )}
+      </For>
+    </div>
   )
 }

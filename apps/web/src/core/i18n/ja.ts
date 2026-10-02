@@ -79,6 +79,8 @@ export const ja: Dictionary = {
     period: "期間",
     from: "開始日（この日を含む）",
     to: "終了日（この日を含む）",
+    filters: "フィルター",
+    filtered: "フィルター — 絞り込み中",
   },
   propose: {
     title: "書かれた、まだ入れていない仕訳",

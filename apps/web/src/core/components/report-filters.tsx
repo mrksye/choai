@@ -6,7 +6,7 @@ import { chooseRange, rangeNow, todayHere } from "~/core/reports/filters"
 import { t } from "~/core/i18n"
 
 /**
- * The filters every statement is narrowed by, above the list of them.
+ * The filters every statement is narrowed by, opened above the list beside them.
  *
  * One row per filter, each under its own name, so a filter added later is one
  * more row rather than a different place to look.

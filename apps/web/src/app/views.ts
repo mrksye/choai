@@ -51,6 +51,7 @@ const CORE: readonly View[] = [
     Explorer: ReportsExplorer,
     page: Reports,
     writes: false,
+    periodic: true,
     reached: { from: "rail" },
   },
   {
