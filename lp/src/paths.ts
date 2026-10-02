@@ -41,8 +41,8 @@ export const GUIDES: readonly Reading[] = [
     en: usingEn,
     ja: usingJa,
     blurb: {
-      en: "The keys, the hledger query the screen is driven by, and an address for every screen.",
-      ja: "ショートカットと、画面を動かす hledger クエリと、どの画面にもあるアドレス。",
+      en: "The keys, the hledger query the screen is driven by — Query → URL → View — and its completions.",
+      ja: "ショートカットと、画面を動かす hledger クエリ（Query → URL → View）と、その補完。",
     },
   },
   {
