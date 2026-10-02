@@ -63,9 +63,7 @@ for (const { what, width } of WINDOWS) {
   })
 }
 
-test("it widens for what is being typed, and stays wide while that is still there", async ({
-  page,
-}) => {
+test("it widens only while it has the cursor, whatever is in it", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await openTheDemo(page)
 
@@ -75,17 +73,21 @@ test("it widens for what is being typed, and stays wide while that is still ther
   await search.fill("acct:expenses")
   await expect.poll(async () => (await search.boundingBox())!.width).toBeGreaterThan(idle * 2)
 
-  // Put away, and it keeps its room: a filter that is on and out of sight is
-  // worse than one taking up space, since the box is the only place the
-  // question every figure is answering is written down.
+  // Put away, it gives the room back and still holds the query, whole on hover.
   await page.locator("body").click({ position: { x: 5, y: 400 } })
   await expect(search).not.toBeFocused()
-  expect((await search.boundingBox())!.width).toBeGreaterThan(idle * 2)
-
-  // Emptied, it gives the room back.
-  await search.fill("")
-  await page.locator("body").click({ position: { x: 5, y: 400 } })
   await expect.poll(async () => (await search.boundingBox())!.width).toBe(idle)
+  await expect(search).toHaveValue("acct:expenses")
+
+  // Written by a click elsewhere, it stays as narrow as it was.
+  await page.goto("/journal#work")
+  await page.getByRole("button", { name: "food", exact: true }).first().click()
+  await expect(search).toHaveValue(/acct:expenses:food/)
+  expect((await search.boundingBox())!.width).toBe(idle)
+
+  // Ctrl+P is asking for it.
+  await page.keyboard.press("Control+p")
+  await expect.poll(async () => (await search.boundingBox())!.width).toBeGreaterThan(idle * 2)
 })
 
 /**

@@ -20,10 +20,11 @@ import { SearchIcon } from "~/core/lib/ui/icons"
  * recognised first and pressed second, which is two more steps than the thing it
  * replaces.
  *
- * Wide while it has something in it, whether or not anybody is looking at it. A
- * filter that is on and out of sight is worse than one taking up room: every
- * figure on the screen is answering a question that is written down in only one
- * place, and that place is this box.
+ * Wide only while it has the cursor, whatever is in it. Most of what is written
+ * here is written by a click elsewhere — an account chosen, a ledger opened —
+ * and a bar that widened for each would push its neighbours about for something
+ * nobody asked to type. Out of focus, what it holds is still in it and whole on
+ * hover.
  */
 export function Searching(props: {
   readonly value: string
@@ -93,11 +94,8 @@ export function Searching(props: {
 
   return (
     <div
-      class="relative transition-[width] duration-150"
-      classList={{
-        "w-24 sm:w-28 focus-within:w-[min(28rem,60vw)]": props.value === "",
-        "w-[min(28rem,60vw)]": props.value !== "",
-      }}
+      class="relative w-24 transition-[width] duration-150 focus-within:w-[min(28rem,60vw)] sm:w-28"
+      title={props.value === "" ? undefined : props.value}
     >
       <SearchIcon class="pointer-events-none absolute left-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
       <input
