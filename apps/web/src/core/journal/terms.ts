@@ -39,6 +39,9 @@ export const focusesAnAccount = (term: QueryTerm): boolean => !term.negated && t
 /** The account a query focuses on: the first `inacct:`, as hledger takes it. */
 export const focusOf = (read: QueryTerms): string | undefined => read.terms.find(focusesAnAccount)?.value
 
+/** The query focused on nothing, with every other term kept. */
+export const unfocused = (read: QueryTerms): string => writtenQuery(read.terms.filter((term) => !focusesAnAccount(term)))
+
 /** The query focused on another account, with every term but the old focus kept. */
 export const focusedOn = (read: QueryTerms, account: string): string =>
   writtenQuery(

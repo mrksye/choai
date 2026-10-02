@@ -1,5 +1,5 @@
 import type { JSX, ParentProps } from "solid-js"
-import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js"
+import { Show, createEffect, createSignal, on, onCleanup, onMount, untrack } from "solid-js"
 import { useLocation } from "@solidjs/router"
 import { Dynamic } from "solid-js/web"
 import { getOrUndefined } from "~/core/lib/monad"
@@ -10,7 +10,7 @@ import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtersShown, toggleFilters } from "~/core/reports/filters"
-import { focusOf, narrowsByDate } from "~/core/journal/terms"
+import { focusOf, narrowsByDate, unfocused } from "~/core/journal/terms"
 import { createReading, readQuery } from "~/core/reports/reading"
 import { AccountLedger } from "~/core/components/account-ledger"
 import { ledgerHasAPlace, statementAt } from "~/core/routes/reports"
@@ -95,7 +95,7 @@ const EDGES = 2
 export function Layout(props: ParentProps) {
   const location = useLocation()
   const moves = useMoves()
-  const [, setQuery] = useQuery()
+  const [query, setQuery] = useQuery()
   const [railExpanded, setRailExpanded] = createSignal(false)
   const [railVisible, setRailVisible] = createSignal(true)
   const [panelOpen, setPanelOpen] = createSignal(true)
@@ -261,9 +261,23 @@ export function Layout(props: ParentProps) {
     },
     close: () => {
       const showing = dock.showing()
-      if (showing !== undefined) moves.lift(LAYER_OF[showing])
+      if (showing === "ledger") void putTheLedgerDown()
+      else if (showing !== undefined) moves.lift(LAYER_OF[showing])
     },
   })
+
+  /**
+   * The ledger is the query's `inacct:`, so putting it down takes that out of
+   * the query and leaves the rest: a title bar still naming an account would
+   * describe a ledger nobody can see. Where the ledger was opened from the
+   * query as it is now, that is the step back it looks like.
+   */
+  const putTheLedgerDown = async (): Promise<void> => {
+    const read = await readQuery(untrack(query))
+    if (!read.ok) return moves.lift(LAYER_OF.ledger)
+    const search = searchFor(unfocused(read.value))
+    moves.lift(LAYER_OF.ledger, (at) => ({ ...at, search }))
+  }
 
   /**
    * An occupant with nothing to show gives the space back.

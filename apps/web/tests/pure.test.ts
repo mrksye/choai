@@ -14,7 +14,7 @@ import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
 import { saidIn } from "~/core/ai/reach"
 import { narrowed } from "~/core/reports/ask"
 import { ALL_TIME, SHORTCUTS, dayAfter, rangeOf, sameRange, termOf, withRange } from "~/core/reports/periods"
-import { focusOf, focusedOn, namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
+import { focusOf, focusedOn, unfocused, namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
 import type { QueryTerm } from "~/core/hledger/wire"
 import { offsetOf, pageIn, searchWithPage } from "~/core/journal/paging"
 import { suggestionsFor, termStart, withSuggestion } from "~/core/journal/completing"
@@ -238,6 +238,7 @@ describe("periods", () => {
     expect(focusOf({ terms: [term("acct:", "assets")] })).toBeUndefined()
     expect(focusedOn(read, "assets:cash")).toBe("acct:assets date:2026 inacct:assets:cash")
     expect(focusedOn({ terms: [] }, "assets:my bank")).toBe('inacct:"assets:my bank"')
+    expect(unfocused(read)).toBe("acct:assets date:2026")
   })
 
   test("a shortcut only writes the two days, worked out from today", () => {

@@ -230,6 +230,7 @@ for (const report of [
 
     await dock(page).getByRole("button", { name: "Close", exact: true }).click()
     await expect(page.getByRole("heading", { name: report.account })).toBeHidden()
+    await expect(page).toHaveURL(new RegExp(`/reports#${report.id}$`))
   })
 }
 
@@ -282,6 +283,23 @@ for (const id of ["trial-balance", "balance-sheet", "income-statement"]) {
     await expect(dock(page).getByRole("heading", { name: "assets:bank:checking" })).toBeVisible()
   })
 }
+
+/**
+ * Putting the ledger down takes its `inacct:` out of the query and leaves the
+ * rest, so the title bar does not go on naming a ledger nobody can see.
+ */
+test("closing a ledger takes its account out of the query and keeps the rest", async ({ page }) => {
+  await openTheDemo(page)
+  await page.goto("/reports#trial-balance")
+  const search = page.getByRole("searchbox")
+  await search.fill("date:2026 inacct:assets:bank:checking ")
+  await search.press("Enter")
+  await expect(dock(page).getByRole("heading", { name: "assets:bank:checking" })).toBeVisible()
+
+  await dock(page).getByRole("button", { name: "Close", exact: true }).click()
+  await expect(page).toHaveURL(/\/reports\?q=date%3A2026#trial-balance$/)
+  await expect(search).toHaveValue("date:2026")
+})
 
 test("a ledger's balances are hledger's running totals, and its other side is named without its kind", async ({ page }) => {
   await openTheDemo(page)

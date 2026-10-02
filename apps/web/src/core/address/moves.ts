@@ -51,8 +51,12 @@ export interface Moves {
   readonly move: (change: (here: Address) => Address, how?: { readonly replace?: boolean }) => void
   /** Another page, or another part of one, with the query and the layers kept. */
   readonly goTo: (written: string) => void
-  /** Take a dock layer off: a step back where laying it was the step before. */
-  readonly lift: (layer: Layer) => void
+  /**
+   * Take a dock layer off: a step back where laying it was the step before.
+   * `along` is whatever else goes with it — the ledger's account out of the
+   * query — and is part of what the step before is compared with.
+   */
+  readonly lift: (layer: Layer, along?: (here: Address) => Address) => void
   /**
    * Take off a dock layer that was laid in place of another, and put the dock
    * away altogether: two steps back where the other was laid from where this
@@ -121,9 +125,9 @@ export function useMoves(): Moves {
     move((at) => ({ ...at, path: going.path, fragment: { ...at.fragment, page: going.fragment.page } }))
   }
 
-  const lift = (layer: Layer): void => {
+  const lift = (layer: Layer, along: (here: Address) => Address = (at) => at): void => {
     if (!here().fragment.layers.includes(layer)) return
-    retreat((at) => ({ ...at, fragment: withoutLayer(at.fragment, layer) }), sameBesideTheDock)
+    retreat((at) => along({ ...at, fragment: withoutLayer(at.fragment, layer) }), sameBesideTheDock)
   }
 
   const liftThrough = (layer: Layer, under: Layer): void => {
