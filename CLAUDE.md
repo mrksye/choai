@@ -290,19 +290,26 @@ three tsconfigs agree on where the seam resolves.
   reads as the narrowed answer that was wanted. The fault names what the
   capability does take, so the second attempt needs no further asking. An e2e
   gives every capability a name it never asked for.
-- **The hledger query is the state, and the screen is read off it.** One query,
-  in the title bar and in the address's `q`, narrows whichever report is open,
-  as `hledger bal QUERY` does. Anything that narrows a report — an account
-  chosen in the explorer, a period in the filters — is a term written into
-  that query, never a signal beside it adding terms the bar does not show: a
-  report narrowed by something not written there looks like a report of what
-  is written there. So a control shows what the query says and changes it by
-  rewriting its own terms and leaving the rest (`rangeIn` and `withRange` in
-  `core/reports/periods.ts`), and a term typed by hand is read back the same
-  way. The direction is hledger query → UI state, never the reverse. Terms are
-  split as hledger splits them (`core/journal/terms.ts`). The ledger in the
-  dock takes the same query with its account patterns swapped for its own
-  account, because hledger ORs account patterns rather than ANDing them.
+- **Query → URL → View, in that direction only.** One hledger query, in the
+  title bar and in the address's `q`, narrows whichever report is open, as
+  `hledger bal QUERY` does; the address carries it and the rest of what is on
+  screen — the page, its own part after the `#`, the dock, the journal's page
+  of entries — and a view is read off the address and nothing else. A control
+  never sets a signal that a view reads: it rewrites the address, and the view
+  follows. Anything that narrows a report — an account chosen in the explorer,
+  a period in the filters — is a term written into the query, never a signal
+  beside it adding terms the bar does not show: a report narrowed by something
+  not written there looks like a report of what is written there. A control
+  shows what the query says and changes it by rewriting its own terms and
+  leaving the rest, and a term typed by hand is read back the same way. What
+  a term is, and what dates it comes to, is hledger's to say (`queryTerms` in
+  `Bindings.hs`), not a second parser's here. The ledger in the dock takes the
+  same query with its account patterns swapped for its own account, because
+  hledger ORs account patterns rather than ANDing them. Outside the address
+  on purpose: which book is open (kept on the device), how the chrome is laid
+  out (the rail, the explorer, the filters folded or not), and work in hand
+  (a draft, the lines of an entry being corrected, a proposal) — none of these
+  is a view of the books.
 - **The trial balance is a check, so nothing here does its arithmetic.** It is
   the balance report asked for flat and with the empty accounts kept (`Listing`
   in `Bindings.hs`) — a parent counted beside its own children would be counted
