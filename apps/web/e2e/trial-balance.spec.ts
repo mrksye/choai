@@ -320,6 +320,11 @@ test("the period is the query's date term, typed or chosen", async ({ page }) =>
   await expect(period.getByLabel("From (included)")).toHaveValue("2026-02-14")
   await expect(period.getByLabel("To (included)")).toHaveValue("2026-02-14")
 
+  // However hledger takes a date, it is hledger that says which days it is.
+  await search.fill("desc:restaurant date:2026-02")
+  await expect(period.getByLabel("From (included)")).toHaveValue("2026-02-01")
+  await expect(period.getByLabel("To (included)")).toHaveValue("2026-02-28")
+
   await period.getByRole("button", { name: "All time" }).click()
   await expect(search).toHaveValue("desc:restaurant")
   await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible()

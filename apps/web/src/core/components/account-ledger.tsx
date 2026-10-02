@@ -5,7 +5,8 @@ import type { MixedAmount } from "~/core/hledger/wire"
 import { withoutKindNow } from "~/core/journal/chart"
 import { journal } from "~/core/journal/store"
 import { accountQuery, useQuery } from "~/core/journal/query"
-import { joinedTerms, namesAccounts, termsOf } from "~/core/journal/terms"
+import { namesAccounts, writtenQuery } from "~/core/journal/terms"
+import { readQuery } from "~/core/reports/reading"
 import { askLedger, narrowed, type Ledger } from "~/core/reports/ask"
 import { byMonth, dayOf, type LedgerLine } from "~/core/reports/ledger"
 import { getOrUndefined, matchResource } from "~/core/lib/monad"
@@ -31,12 +32,14 @@ export function AccountLedger(props: { account: string; historical: boolean }): 
   const [ledger] = createResource(
     () => {
       const open = getOrUndefined(journal())
-      const besides = joinedTerms(termsOf(query()).filter((term) => !namesAccounts(term)))
-      return open === undefined
-        ? undefined
-        : { open, terms: narrowed(accountQuery(props.account), besides), historical: props.historical }
+      return open === undefined ? undefined : { open, query: query(), historical: props.historical }
     },
-    (asked) => askLedger(props.account, asked.terms, asked.historical),
+    async (asked) => {
+      const read = await readQuery(asked.query)
+      if (!read.ok) return read
+      const besides = writtenQuery(read.value.terms.filter((term) => !namesAccounts(term)))
+      return askLedger(props.account, narrowed(accountQuery(props.account), besides), asked.historical)
+    },
   )
 
   return (

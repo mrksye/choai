@@ -10,7 +10,8 @@ import { Button } from "~/core/components/ui/button"
 import { ChevronLeftIcon, FunnelIcon, RefreshIcon, PanelLeftIcon, PlusIcon, ImportIcon } from "~/core/lib/ui/icons"
 import { ReportFilters } from "~/core/components/report-filters"
 import { filtersShown, toggleFilters } from "~/core/reports/filters"
-import { narrowsByDate } from "~/core/reports/periods"
+import { narrowsByDate } from "~/core/journal/terms"
+import { createReading } from "~/core/reports/reading"
 import { AccountLedger } from "~/core/components/account-ledger"
 import { ledgerAt } from "~/core/routes/reports"
 import { ADD, FOOT, NAV, railOf, viewAt } from "./views"
@@ -613,7 +614,11 @@ export function Layout(props: ParentProps) {
  */
 function FilterButton(): JSX.Element {
   const [query] = useQuery()
-  const filtering = (): boolean => narrowsByDate(query())
+  const reading = createReading(query)
+  const filtering = (): boolean => {
+    const read = reading()
+    return read !== undefined && narrowsByDate(read)
+  }
   return (
     <Button
       variant="outline"

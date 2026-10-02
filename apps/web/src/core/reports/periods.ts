@@ -1,4 +1,5 @@
-import { joinedTerms, termsOf } from "~/core/journal/terms"
+import type { QueryTerms } from "~/core/hledger/wire"
+import { isDateTerm, writtenQuery } from "~/core/journal/terms"
 
 /**
  * The stretch of time a report is narrowed to, as two days.
@@ -68,31 +69,26 @@ export const SHORTCUTS = [
 
 export const sameRange = (a: Range, b: Range): boolean => a.from === b.from && a.to === b.to
 
-const isDateTerm = (term: string): boolean => term.startsWith("date:")
-
-/** Whether a query narrows by date at all, however the date is written. */
-export const narrowsByDate = (query: string): boolean => termsOf(query).some(isDateTerm)
-
-const WRITTEN_AS_DAYS = /^date:(\d{4}-\d{2}-\d{2})?\.\.(\d{4}-\d{2}-\d{2})?$/
-
 /**
- * The range a query's date term comes to, read back out of the query.
+ * The range a query comes to, as hledger read it.
  *
- * The query is what narrows the report, so the period shown beside it is
- * read off the query rather than kept beside it. All of the books where it has
- * no date term; `undefined` where it has one written some other way —
- * `date:2026`, `date:thismonth` — which narrows the report just the same but is
- * not two days that could be put in the boxes.
+ * The query is what narrows the report, so the period shown beside it is read
+ * off the query rather than kept beside it — every date term together, written
+ * however hledger takes one: `date:2026`, `date:thismonth`, two days. All of
+ * the books where there is no date term; `undefined` where there is one and
+ * hledger could not read the query, which narrows nothing that could be put in
+ * the boxes.
  */
-export const rangeIn = (query: string): Range | undefined => {
-  const dated = termsOf(query).filter(isDateTerm)
-  if (dated.length === 0) return ALL_TIME
-  const days = dated.length === 1 ? WRITTEN_AS_DAYS.exec(dated[0] ?? "") : null
-  if (days === null) return undefined
-  const [, from = "", until] = days
-  return { from, to: until === undefined ? "" : dayBefore(until) }
-}
+export const rangeOf = (read: QueryTerms): Range | undefined =>
+  !read.terms.some(isDateTerm)
+    ? ALL_TIME
+    : read.dates === undefined
+      ? undefined
+      : { from: read.dates.from ?? "", to: read.dates.to === undefined ? "" : dayBefore(read.dates.to) }
 
-/** The query with its date terms replaced by the range, its other terms left as they were. */
-export const withRange = (query: string, range: Range): string =>
-  joinedTerms([...termsOf(query).filter((term) => !isDateTerm(term)), termOf(range)])
+/** The query with its date terms replaced by the range, its other terms left as hledger read them. */
+export const withRange = (read: QueryTerms, range: Range): string =>
+  writtenQuery(
+    read.terms.filter((term) => !isDateTerm(term)),
+    termOf(range),
+  )

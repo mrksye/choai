@@ -13,8 +13,9 @@ import { textOf } from "~/core/lib/text"
 import { allOf, anchorAfter, noneOf, tickedBy } from "~/core/journal/ticking"
 import { saidIn } from "~/core/ai/reach"
 import { narrowed } from "~/core/reports/ask"
-import { ALL_TIME, SHORTCUTS, dayAfter, narrowsByDate, rangeIn, sameRange, termOf, withRange } from "~/core/reports/periods"
-import { namesAccounts, termsOf } from "~/core/journal/terms"
+import { ALL_TIME, SHORTCUTS, dayAfter, rangeOf, sameRange, termOf, withRange } from "~/core/reports/periods"
+import { namesAccounts, narrowsByDate, writtenTerm } from "~/core/journal/terms"
+import type { QueryTerm } from "~/core/hledger/wire"
 import {
   CAME_AND_WENT,
   OWNED_AND_OWED,
@@ -195,26 +196,36 @@ describe("periods", () => {
     expect(dayAfter("2028-02-28")).toBe("2028-02-29")
   })
 
-  test("the period is read back out of the query, and written back into it", () => {
-    expect(rangeIn("")).toEqual(ALL_TIME)
-    expect(rangeIn("acct:food date:2026-01-01..2027-01-01")).toEqual({ from: "2026-01-01", to: "2026-12-31" })
-    expect(rangeIn("date:2026-02-01..")).toEqual({ from: "2026-02-01", to: "" })
-    expect(rangeIn("date:..2026-03-01")).toEqual({ from: "", to: "2026-02-28" })
-    expect(rangeIn("date:2026")).toBeUndefined()
-    expect(narrowsByDate("date:2026")).toBe(true)
-    expect(narrowsByDate("acct:food")).toBe(false)
-
+  test("the period is read off hledger's reading of the query, and written back into it", () => {
+    const term = (prefix: string, value: string, negated = false): QueryTerm => ({
+      text: `${negated ? "not:" : ""}${prefix}${value}`,
+      negated,
+      prefix,
+      value,
+      readable: true,
+    })
     const year = { from: "2026-01-01", to: "2026-12-31" }
-    expect(withRange("", year)).toBe("date:2026-01-01..2027-01-01")
-    expect(withRange('acct:"my bank" date:2025', year)).toBe('acct:"my bank" date:2026-01-01..2027-01-01')
-    expect(withRange("acct:food date:2025", ALL_TIME)).toBe("acct:food")
-    expect(rangeIn(withRange("desc:coffee", year))).toEqual(year)
+    const bank = term("acct:", "my bank")
+    const dated = { terms: [bank, term("date:", "2026")], dates: { from: "2026-01-01", to: "2027-01-01" } }
+
+    expect(rangeOf({ terms: [bank] })).toEqual(ALL_TIME)
+    expect(rangeOf(dated)).toEqual(year)
+    expect(rangeOf({ terms: [term("date:", "2026-02-01..")], dates: { from: "2026-02-01" } })).toEqual({ from: "2026-02-01", to: "" })
+    expect(rangeOf({ terms: [term("date:", "nonsense")] })).toBeUndefined()
+    expect(narrowsByDate(dated)).toBe(true)
+    expect(narrowsByDate({ terms: [bank] })).toBe(false)
+
+    expect(withRange({ terms: [] }, year)).toBe("date:2026-01-01..2027-01-01")
+    expect(withRange(dated, { from: "2025-01-01", to: "2025-12-31" })).toBe('acct:"my bank" date:2025-01-01..2026-01-01')
+    expect(withRange(dated, ALL_TIME)).toBe('acct:"my bank"')
   })
 
-  test("a query is split as hledger splits it, and its account patterns are told apart", () => {
-    expect(termsOf('acct:"my bank" desc:coffee  food')).toEqual(['acct:"my bank"', "desc:coffee", "food"])
-    expect(["acct:food", "food", "expenses:food", "not:acct:food"].every(namesAccounts)).toBe(true)
-    expect(["date:2026", "desc:coffee", "not:desc:coffee", "amt:>10", "tag:x"].some(namesAccounts)).toBe(false)
+  test("a term is written back as hledger reads it, and its account patterns are told apart", () => {
+    const term = (prefix: string, value: string, negated = false): QueryTerm => ({ text: "", negated, prefix, value, readable: true })
+    expect(writtenTerm(term("acct:", "my bank"))).toBe('acct:"my bank"')
+    expect(writtenTerm(term("desc:", "coffee", true))).toBe("not:desc:coffee")
+    expect([term("acct:", "food"), term("", "food"), term("acct:", "food", true)].every(namesAccounts)).toBe(true)
+    expect([term("date:", "2026"), term("desc:", "coffee"), term("tag:", "x")].some(namesAccounts)).toBe(false)
   })
 
   test("a shortcut only writes the two days, worked out from today", () => {

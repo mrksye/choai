@@ -1,41 +1,29 @@
-/**
- * A query's terms, split the way hledger splits them: on spaces, except inside
- * quotes, so `acct:"my bank" date:2026` is two terms and not three.
- */
-export const termsOf = (query: string): readonly string[] => query.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []
-
-export const joinedTerms = (terms: readonly string[]): string => terms.filter((term) => term !== "").join(" ")
+import type { QueryTerm, QueryTerms } from "~/core/hledger/wire"
 
 /**
- * The prefixes hledger reads as something other than an account.
+ * Rewriting a query hledger has already read.
  *
- * A term with none of them is an account pattern, whatever it looks like:
- * `expenses:food` written bare is read as `acct:expenses:food`, because the
- * part before its colon is not a prefix hledger knows.
+ * What a term is — its prefix, whether it is negated, what dates the query
+ * comes to — is hledger's answer to `queryTerms`. What is left here is putting
+ * terms back into one line of text, which hledger reads again the same way.
  */
-const NOT_ACCOUNT = [
-  "amt",
-  "code",
-  "cur",
-  "date",
-  "date2",
-  "depth",
-  "desc",
-  "expr",
-  "note",
-  "payee",
-  "real",
-  "status",
-  "tag",
-  "type",
-] as const
 
-const prefixOf = (term: string): string => {
-  const asserted = term.replace(/^not:/, "")
-  const colon = asserted.indexOf(":")
-  return colon < 0 ? "" : asserted.slice(0, colon)
-}
+/**
+ * A term written back as it is typed: a value with a space in it is quoted,
+ * after its prefix, so hledger reads it as one term again.
+ */
+export const writtenTerm = (term: QueryTerm): string =>
+  `${term.negated ? "not:" : ""}${term.prefix}${/\s/.test(term.value) ? `"${term.value}"` : term.value}`
 
-/** Whether hledger reads a term as an account pattern, negated or not. */
-export const namesAccounts = (term: string): boolean =>
-  !(NOT_ACCOUNT as readonly string[]).includes(prefixOf(term))
+export const writtenQuery = (terms: readonly QueryTerm[], ...added: readonly string[]): string =>
+  [...terms.map(writtenTerm), ...added].filter((written) => written !== "").join(" ")
+
+/**
+ * Whether hledger reads a term as an account pattern: `acct:`, or no prefix at
+ * all, since a bare word is an account pattern to hledger. Negated or not.
+ */
+export const namesAccounts = (term: QueryTerm): boolean => term.prefix === "" || term.prefix === "acct:"
+
+export const isDateTerm = (term: QueryTerm): boolean => term.prefix === "date:"
+
+export const narrowsByDate = (read: QueryTerms): boolean => read.terms.some(isDateTerm)
