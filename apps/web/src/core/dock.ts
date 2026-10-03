@@ -1,6 +1,6 @@
 import { createRoot, createSignal } from "solid-js"
 
-import type { Slot } from "~/core/lib/solid-workbench-ui"
+import type { Slot } from "~/core/lib/solid-workbench-shell"
 import type { Layer } from "~/core/address/address"
 
 /**

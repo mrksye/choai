@@ -1,4 +1,4 @@
-# solid-workbench-ui
+# solid-workbench-shell
 
 A **headless, VSCode-like application shell** for SolidJS. It divides one screen into the
 familiar workbench regions — title bar, activity bar, side panel, main content, auxiliary
@@ -35,7 +35,7 @@ layout, extracted as a reusable Solid primitive.
 ## Usage
 
 ```tsx
-import { Shell, ActivityBar, SidePanel, AuxPanel, TitlesBar, Tab, type ActivityItem } from '~/lib/solid-workbench-ui';
+import { Shell, ActivityBar, SidePanel, AuxPanel, TitlesBar, Tab, type ActivityItem } from '~/lib/solid-workbench-shell';
 
 const items: ActivityItem[] = [
   { id: 'files', label: 'Files', icon: <FilesIcon />, active: true, onSelect: openFiles },

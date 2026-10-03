@@ -1,5 +1,5 @@
 {
-  "name": "solid-workbench-ui",
+  "name": "solid-workbench-shell",
   "version": "0.1.0",
   "description": "A headless VSCode-like application shell for SolidJS — title bar, activity bar, side/aux panels and a main region, with resizable splitters. Bring your own content.",
   "type": "module",

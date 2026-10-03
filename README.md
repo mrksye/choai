@@ -282,7 +282,7 @@ GPL-3.0-or-later, so the combined work is too. Publishing the source here is
 what satisfies the corresponding-source obligation for the binary that browsers
 download.
 
-`apps/web/src/core/lib/solid-workbench-ui` is the author's own work under MIT, which
+`apps/web/src/core/lib/solid-workbench-shell` is the author's own work under MIT, which
 is compatible with the above and leaves it reusable outside this project.
 Components under `apps/web/src/core/components/ui` are adapted from
 [solid-ui](https://github.com/stefan-karger/solid-ui) (MIT). Icons are from

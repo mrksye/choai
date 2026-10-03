@@ -372,10 +372,10 @@ three tsconfigs agree on where the seam resolves.
   state — the name of whoever the panel is lent to. Not a flag per occupant with
   a rule about who wins: under that, opening the second does not close the first,
   it hides it, and pressing the loser does nothing. It answers to
-  `core/lib/solid-workbench-ui`'s `Slot` and is kept in the address, where the
+  `core/lib/solid-workbench-shell`'s `Slot` and is kept in the address, where the
   layout seats it; closing is never clearing, so a draft, an entry
   being corrected and a proposal all survive it.
-- **`app/app.tsx`** wires `core/lib/solid-workbench-ui` (MIT, kept app-agnostic); its
+- **`app/app.tsx`** wires `core/lib/solid-workbench-shell` (MIT, kept app-agnostic); its
   `NAV`/`FOOT`/`INNER` tables pair each route with its explorer, and one query in
   the URL is shared by every view.
 - **Choosing in the explorer lands on the view the explorer belongs to**, which
@@ -406,7 +406,7 @@ three tsconfigs agree on where the seam resolves.
   The design it comes to: **the ledger is continuous, periods are views, and
   closing is a view plus adjustments.**
 - **GPL-3.0-or-later**, inherited by linking hledger-lib; publishing here is what
-  satisfies it. Keep `core/lib/solid-workbench-ui` MIT and reusable.
+  satisfies it. Keep `core/lib/solid-workbench-shell` MIT and reusable.
 - **`lp/` is GPL by choice and must stay separable.** It links against nothing
   of the app's — no shared config, no shared dependencies, no imports across the
   two — so the copyleft does not reach it on its own; it carries the same licence

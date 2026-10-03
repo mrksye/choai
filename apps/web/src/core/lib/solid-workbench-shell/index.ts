@@ -1,5 +1,5 @@
 /**
- * solid-workbench-ui — a domain-free, VSCode-like application shell for SolidJS.
+ * solid-workbench-shell — a domain-free, VSCode-like application shell for SolidJS.
  * It divides one screen into nested regions — title bar, activity bar, side
  * panel, main content, auxiliary panel — with borders you drag to resize via a
  * dependency-free `createResizable` written for the purpose. The contents, and
