@@ -4,6 +4,10 @@ import { useLocation } from "@solidjs/router"
 import { STATEMENTS, statementAt, type Statement } from "~/core/routes/reports"
 import { addressOfStatement } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
+import { addressOfCustomReport, customReportIdOf } from "~/core/reports/custom"
+import { savedReports } from "~/core/reports/saved"
+import { t } from "~/core/i18n"
+import { FileCodeIcon } from "~/core/lib/ui/icons"
 
 /**
  * The explorer beside the statements: which of them to read.
@@ -31,6 +35,16 @@ export function ReportsExplorer(props: {
     props.onChosen?.()
   }
 
+  const chooseCustom = (id: string): void => {
+    moves.goTo(addressOfCustomReport(id))
+    props.onChosen?.()
+  }
+
+  const reports = () => {
+    const saved = savedReports()
+    return saved.ok ? saved.value : []
+  }
+
   return (
     <div class="py-1">
       <For each={STATEMENTS}>
@@ -45,6 +59,20 @@ export function ReportsExplorer(props: {
           </button>
         )}
       </For>
+      <For each={reports()}>{(report) => (
+        <button type="button" class="w-full px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+          classList={{ "bg-accent text-accent-foreground": customReportIdOf(location.hash) === report.id }}
+          onClick={() => chooseCustom(report.id)}>
+          <span class="inline-flex items-center gap-1.5">
+            <FileCodeIcon class="h-3 w-3" />
+            {report.name}
+          </span>
+        </button>
+      )}</For>
+      <button type="button" class="mt-2 w-full px-3 py-1 text-left text-xs hover:bg-accent"
+        onClick={() => { chooseCustom("new") }}>
+        {t("customReport.new")}
+      </button>
     </div>
   )
 }

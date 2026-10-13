@@ -28,7 +28,7 @@ import { MAIN, laidOut } from "./layout"
  */
 export const startFresh = async (remote?: Remote): Promise<Result<OpenJournal, Trouble>> => {
   const name = nameOf(remote?.path) ?? MAIN
-  return startBook({ label: name, files: laidOut(starterJournal(), name), entry: `/${name}` }, remote)
+  return startBook({ label: name, files: laidOut(starterJournal(), name), attachments: [], entry: `/${name}` }, remote)
 }
 
 const nameOf = (path: string | undefined): string | undefined => {

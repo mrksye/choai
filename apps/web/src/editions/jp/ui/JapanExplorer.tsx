@@ -1,6 +1,7 @@
 import { useLocation } from "@solidjs/router"
 import { For, type JSX } from "solid-js"
 
+import { appPath } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 
 import { ROUTE } from "../naming"
@@ -44,7 +45,7 @@ export function JapanExplorer(props: { readonly onChosen?: () => void }): JSX.El
             type="button"
             onClick={() => go(screen.href)}
             class="w-full truncate px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-            classList={{ "bg-accent text-accent-foreground": location.pathname === screen.href }}
+            classList={{ "bg-accent text-accent-foreground": appPath(location.pathname) === screen.href }}
           >
             {screen.name}
           </button>

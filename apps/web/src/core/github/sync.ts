@@ -1,9 +1,8 @@
 import { Err, Ok, getOrUndefined, type Result } from "~/core/lib/monad"
-import { companionsAcross } from "~/core/journal/companions"
-import { journal, openBringingMissing, putFiles, rewriteFile, type OpenJournal } from "~/core/journal/store"
-import type { Remote } from "~/core/journal/kept"
+import { journal, openBringingMissing, registerAttachmentLoader, rewriteFile, type Attachment, type OpenJournal } from "~/core/journal/store"
+import { putAttachments, type Remote } from "~/core/journal/kept"
 import type { Trouble } from "~/core/hledger/wire"
-import { fetchFile, putFile, type Failure, type Where } from "./api"
+import { fetchBinary, fetchFile, putFile, repositoryFiles, type Failure, type Where } from "./api"
 import { agree, agreedOn, token, type Agreed } from "./kept"
 
 /**
@@ -38,6 +37,7 @@ export type Outcome =
   | { readonly did: "nothing" }
 
 const directoryOf = (path: string): string => path.slice(0, path.lastIndexOf("/") + 1)
+const mimeOf = (path: string): string => ({ pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", bmp: "image/bmp" }[path.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream")
 const nameOf = (path: string): string => path.slice(path.lastIndexOf("/") + 1)
 
 const where = (remote: Remote, path: string): Where => ({
@@ -97,37 +97,59 @@ const take = async (
 ): Promise<Result<Outcome, Snag>> => {
   const entry = nameOf(remote.path)
   const directory = directoryOf(remote.path)
+  const tree = await repositoryFiles(key, { owner: remote.owner, repo: remote.repo }, remote.branch || "HEAD")
+  if (!tree.ok) return Err({ at: "github", failure: tree.error })
+  const paths = tree.value.filter((path) => path === remote.path || path.startsWith(directory))
+  if (!paths.includes(remote.path)) return Err({ at: "github", failure: { kind: "no-such-file" } })
+
   const brought = new Map<string, { text: string; sha: string; repoPath: string }>()
-
-  const bring = async (path: string): Promise<string | undefined> => {
-    const repoPath = `${directory}${path}`
-    const fetched = await fetchFile(key, where(remote, repoPath))
-    if (!fetched.ok) return undefined
-    brought.set(path, { text: fetched.value.text, sha: fetched.value.sha, repoPath })
-    return fetched.value.text
-  }
-
-  const first = await fetchFile(key, where(remote, remote.path))
-  if (!first.ok) return Err({ at: "github", failure: first.error })
-  brought.set(entry, { text: first.value.text, sha: first.value.sha, repoPath: remote.path })
+  const relative = (path: string): string => path.slice(directory.length)
+  const binary = (path: string): boolean => /\.(pdf|png|jpe?g|gif|webp|bmp)$/i.test(path)
+  const attachmentPaths = paths.filter(binary)
+  const attachments: readonly Attachment[] = attachmentPaths.map((path) => ({ path: relative(path), type: mimeOf(path), size: 0 }))
+  const fetched = await Promise.all(paths.filter((path) => !binary(path)).map(async (repoPath) => {
+    const file = await fetchFile(key, where(remote, repoPath))
+    return file.ok
+      ? { kind: "text" as const, path: relative(repoPath), repoPath, text: file.value.text, sha: file.value.sha }
+      : { kind: "failure" as const, error: file.error }
+  }))
+  const failure = fetched.find((file) => file.kind === "failure")
+  if (failure?.kind === "failure") return Err({ at: "github", failure: failure.error })
+  fetched.forEach((file) => {
+    if (file.kind === "text") brought.set(file.path, { text: file.text, sha: file.sha, repoPath: file.repoPath })
+  })
 
   const opened = await openBringingMissing(
-    { label: name, files: { [entry]: first.value.text }, entry: `/${entry}` },
-    bring,
+    {
+      label: name,
+      files: Object.fromEntries([...brought].map(([path, file]) => [path, file.text])),
+      attachments,
+      entry: `/${entry}`,
+    },
+    async (path) => {
+      const file = brought.get(path)
+      return file?.text
+    },
     remote,
     into,
   )
   if (!opened.ok) return Err({ at: "hledger", trouble: opened.error })
 
-  const alsoTaken = await takeCompanions(opened.value.source.files, brought, bring)
-  if (!alsoTaken.ok) return alsoTaken
+  registerAttachmentLoader(into, async (path) => {
+    const repoPath = `${directory}${path}`
+    const file = await fetchBinary(key, where(remote, repoPath))
+    if (!file.ok) return undefined
+    const metadata = attachments.find((attachment) => attachment.path === path)
+    if (metadata !== undefined) await putAttachments(into, [{ ...metadata, blob: file.value.blob }])
+    return file.value.blob
+  })
 
   await Promise.all(
     [...brought].map(([path, file]) =>
       agree(into, { path, repoPath: file.repoPath, sha: file.sha, baseText: file.text, at: Date.now() }),
     ),
   )
-  return Ok({ did: "pulled", files: brought.size })
+  return Ok({ did: "pulled", files: brought.size + attachments.length })
 }
 
 /**
@@ -142,27 +164,6 @@ const take = async (
  * a companion and not yet sent it is the ordinary state of one being started,
  * and the file is here already in that case.
  */
-const takeCompanions = async (
-  files: Readonly<Record<string, string>>,
-  brought: Map<string, { text: string; sha: string; repoPath: string }>,
-  bring: (path: string) => Promise<string | undefined>,
-): Promise<Result<void, Snag>> => {
-  const wanted = companionsAcross(files).filter((path) => !brought.has(path))
-  if (wanted.length === 0) return Ok(undefined)
-
-  const texts = await Promise.all(wanted.map(bring))
-  const arrived = Object.fromEntries(
-    wanted.flatMap((path, at) => {
-      const text = texts[at]
-      return text === undefined ? [] : [[path, text] as const]
-    }),
-  )
-  if (Object.keys(arrived).length === 0) return Ok(undefined)
-
-  const kept = await putFiles(arrived)
-  return kept.ok ? Ok(undefined) : Err({ at: "hledger", trouble: kept.error })
-}
-
 /** Every file of the open journal that is not already what the repository has. */
 const changedFiles = async (
   book: string,

@@ -92,6 +92,13 @@ export interface Address {
   readonly fragment: Fragment
 }
 
+export const BASE = import.meta.env.BASE_URL ?? "/"
+
+export const appPath = (path: string): string =>
+  path.startsWith(BASE) ? path.slice(BASE.length - 1) || "/" : path
+
+export const browserAddress = (written: string): string => `${BASE.slice(0, -1)}${written}`
+
 const isLayer = (part: string): part is Layer => (LAYERS as readonly string[]).includes(part)
 
 /**
@@ -158,7 +165,7 @@ const ORIGIN = "http://choai.invalid"
 
 export const readAddress = (written: string): Address => {
   const url = new URL(written, ORIGIN)
-  return { path: url.pathname, search: url.search, fragment: readFragment(url.hash) }
+  return { path: appPath(url.pathname), search: url.search, fragment: readFragment(url.hash) }
 }
 
 export const writeAddress = (address: Address): string =>

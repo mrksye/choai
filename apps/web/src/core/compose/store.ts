@@ -1,11 +1,8 @@
 import { createSignal, type Accessor } from "solid-js"
 
-import { ask } from "~/core/hledger/client"
 import type { Trouble } from "~/core/hledger/wire"
-import { journal } from "~/core/journal/store"
-import { getOrUndefined, None, Some, type Option } from "~/core/lib/monad"
+import { None, Some, type Option } from "~/core/lib/monad"
 import { commitDraft } from "./commit"
-import { followingPrevious } from "./following"
 import {
   emptyDraft,
   emptyPosting,
@@ -86,30 +83,6 @@ export const removePostingTag = (posting: number, index: number): void => {
 
 const replaceAt = <T,>(items: readonly T[], index: number, change: Partial<T>): T[] =>
   items.map((item, at) => (at === index ? { ...item, ...change } : item))
-
-/**
- * Offer the accounts used last time this payee was written, and what they were
- * tagged with.
- *
- * hledger decides what counts as similar — the same lookup its own `add`
- * consults — and comparing on the payee alone is why the note can differ every
- * time without costing a match. The figure is not taken: it differs even when
- * the accounts do not, so filling it in would mostly be something to delete.
- * The tags are, because a tag is how a book says what kind of thing an entry
- * is, and the same payee on the same accounts is usually the same kind of
- * thing again.
- */
-export const suggestFromPayee = async (payee: string): Promise<void> => {
-  if (payee.trim() === "" || getOrUndefined(journal()) === undefined) return
-
-  const reply = await ask({ kind: "similar", description: payee, limit: 1 })
-  if (!reply.ok) return
-
-  const previous = reply.value[0]
-  if (previous === undefined) return
-
-  setDraft((was) => followingPrevious(was, previous))
-}
 
 export const writable = (): boolean => isWritable(draft())
 

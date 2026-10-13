@@ -6,7 +6,7 @@ import { forgetStatement } from "~/core/statement/store"
 import { stopEditingEntry } from "~/core/compose/editing"
 import { dock } from "~/core/dock"
 import { forgetAll } from "./proposals"
-import { openBook, type OpenJournal } from "./store"
+import { openBook, switchEntries as changeEntries, type OpenJournal } from "./store"
 
 /**
  * Putting one book down and picking another up.
@@ -23,6 +23,12 @@ import { openBook, type OpenJournal } from "./store"
 export const switchTo = async (id: string): Promise<Result<OpenJournal, Trouble>> => {
   putDown()
   return openBook(id)
+}
+
+/** Change the entry files while keeping the other files of the same book. */
+export const switchEntries = async (paths: readonly string[]): Promise<Result<OpenJournal, Trouble>> => {
+  putDown()
+  return changeEntries(paths)
 }
 
 /**

@@ -39,6 +39,12 @@ const directory = new Map<string, File | Directory>()
 
 const started: { instance?: Exports } = {}
 
+/** stdout is retained only during a native report, never sent to the console. */
+const output: { chunks?: readonly Uint8Array[] } = {}
+const reportStdout = new ConsoleStdout((chunk) => {
+  if (output.chunks !== undefined) output.chunks = [...output.chunks, chunk.slice()]
+})
+
 /**
  * Give hledger a filesystem to read journals from.
  *
@@ -50,14 +56,17 @@ const started: { instance?: Exports } = {}
 const start = async (): Promise<Exports> => {
   const wasi = new WASI(
     [],
-    [],
+    // hledger probes PATH while deciding whether a pager is available, even
+    // when --pager=no is set. The browser has no executable search path; this
+    // empty, harmless root keeps that probe from failing before rendering.
+    ["PATH=/", "HOME=/", "XDG_CONFIG_HOME=/"],
     [
       new OpenFile(new File([])),
       // hledger's own stdout and stderr are wired to nothing. Everything it has
       // to say that anybody acts on comes back through `Trouble`, in the answer
       // to the question that provoked it; the same words a second time in a
       // console only crowd out the one line there that is meant to be read.
-      ConsoleStdout.lineBuffered(() => {}),
+      reportStdout,
       ConsoleStdout.lineBuffered(() => {}),
       new PreopenDirectory("/", directory),
     ],
@@ -148,6 +157,23 @@ const serve = async (message: Incoming): Promise<Reply> => {
     if (message.op === "open") {
       replaceFiles(message.files)
       return openEnvelope(await hledger.hledgerLoad(message.entry))
+    }
+    if (message.request.kind === "command") {
+      output.chunks = []
+      try {
+        const reply = openEnvelope(await hledger.hledgerQuery(JSON.stringify(message.request)))
+        const chunks = output.chunks
+        const bytes = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0))
+        chunks.reduce((offset, chunk) => {
+          bytes.set(chunk, offset)
+          return offset + chunk.length
+        }, 0)
+        return reply.ok
+          ? { ok: true, value: { format: reply.value, output: new TextDecoder().decode(bytes) } }
+          : reply
+      } finally {
+        output.chunks = undefined
+      }
     }
     return openEnvelope(await hledger.hledgerQuery(JSON.stringify(message.request)))
   } catch (cause) {

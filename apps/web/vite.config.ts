@@ -19,10 +19,13 @@ if (!isEditionId(asked)) {
   )
 }
 const EDITION = asked
+const BASE = process.env.CHOAI_BASE ?? "/"
+const atBase = (path: string): string => `${BASE}${path}`
 
 const inSource = (path: string): string => fileURLToPath(new URL(path, import.meta.url))
 
 export default defineConfig({
+  base: BASE,
   server: {
     // Fixed rather than auto-assigned, so the address stays the same between
     // restarts. 8-3-9-6 is a Japanese number mnemonic: the digits are read
@@ -70,7 +73,10 @@ export default defineConfig({
         handler: (html: string): string =>
           html
             .replaceAll("%CHOAI_NAME%", nameOf(EDITION))
-            .replace("</head>", `  <link rel="canonical" href="/" />\n  </head>`),
+            .replaceAll('href="/favicon.svg"', `href="${atBase("favicon.svg")}"`)
+            .replaceAll('href="/apple-touch-icon.png"', `href="${atBase("apple-touch-icon.png")}"`)
+            .replaceAll('content="/og.png"', `content="${atBase("og.png")}"`)
+            .replace("</head>", `  <link rel="canonical" href="${BASE}" />\n  </head>`),
       },
     },
     solid(),
@@ -101,13 +107,14 @@ export default defineConfig({
         theme_color: "#000031",
         background_color: "#ffffff",
         display: "standalone",
-        start_url: "/",
+        start_url: BASE,
+        scope: BASE,
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: atBase("icon-192.png"), sizes: "192x192", type: "image/png" },
+          { src: atBase("icon-512.png"), sizes: "512x512", type: "image/png" },
           // Android crops an icon to whatever shape it likes, so this one is
           // drawn small on a filled square and says it can take it.
-          { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: atBase("icon-maskable-512.png"), sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {

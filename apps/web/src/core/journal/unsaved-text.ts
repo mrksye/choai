@@ -38,3 +38,8 @@ export const differsFrom = (path: string, stored: string): boolean => {
   const held = unsaved()[path]
   return held !== undefined && held !== stored
 }
+
+/** Let go of editor text only once replacing the book from disk has succeeded. */
+export const forgetUnsavedText = (): void => {
+  setUnsaved({})
+}

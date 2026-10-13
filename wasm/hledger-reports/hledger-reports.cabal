@@ -1,0 +1,70 @@
+cabal-version: 2.4
+name: hledger-reports
+version: 0.1.0.0
+synopsis: Upstream hledger report commands without the executable or writers
+license: GPL-3.0-or-later
+build-type: Simple
+
+library
+  hs-source-dirs: .
+  default-language: GHC2021
+  cpp-options: -DVERSION="1.52.1"
+  ghc-options: -Wno-missing-signatures -Wno-unused-imports
+  exposed-modules:
+    Hledger.Cli.CliOptions
+    Hledger.Cli.Utils
+    Hledger.Cli.Commands.Accounts
+    Hledger.Cli.Commands.Activity
+    Hledger.Cli.Commands.Aregister
+    Hledger.Cli.Commands.Balance
+    Hledger.Cli.Commands.Balancesheet
+    Hledger.Cli.Commands.Balancesheetequity
+    Hledger.Cli.Commands.Cashflow
+    Hledger.Cli.Commands.Codes
+    Hledger.Cli.Commands.Commodities
+    Hledger.Cli.Commands.Descriptions
+    Hledger.Cli.Commands.Files
+    Hledger.Cli.Commands.Incomestatement
+    Hledger.Cli.Commands.Notes
+    Hledger.Cli.Commands.Payees
+    Hledger.Cli.Commands.Prices
+    Hledger.Cli.Commands.Print
+    Hledger.Cli.Commands.Register
+    Hledger.Cli.Commands.Roi
+    Hledger.Cli.Commands.Stats
+    Hledger.Cli.Commands.Tags
+  other-modules:
+    Hledger.Cli.Anchor
+    Hledger.Cli.Anon
+    Hledger.Cli.CompoundBalanceCommand
+    Hledger.Cli.DocFiles
+    Hledger.Cli.Version
+  build-depends:
+    base >=4.18,
+    hledger-lib >=1.52.1 && <1.53,
+    Decimal,
+    bytestring,
+    cmdargs,
+    containers,
+    data-default,
+    directory,
+    extra,
+    filepath,
+    githash,
+    hashable,
+    lucid,
+    math-functions,
+    megaparsec,
+    microlens,
+    mtl,
+    modern-uri,
+    process,
+    regex-tdfa,
+    safe,
+    split,
+    tabular,
+    temporary,
+    text,
+    text-ansi,
+    time,
+    unordered-containers

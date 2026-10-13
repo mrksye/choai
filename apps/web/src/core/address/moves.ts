@@ -3,6 +3,8 @@ import { RouterContext, useLocation, useNavigate } from "@solidjs/router"
 
 import {
   JOURNAL,
+  appPath,
+  browserAddress,
   atTheList,
   atTheWork,
   readAddress,
@@ -77,7 +79,7 @@ export function useMoves(): Moves {
   const location = useLocation<Came | undefined>()
   const navigate = useNavigate()
 
-  const settled = (): string => location.pathname + location.search + location.hash
+  const settled = (): string => appPath(location.pathname) + location.search + location.hash
   const here = (): Address => untrack(() => readAddress(router?.pendingTarget?.value ?? settled()))
 
   createEffect(
@@ -90,7 +92,7 @@ export function useMoves(): Moves {
     const before = here()
     const after = change(before)
     if (writeAddress(after) === writeAddress(before)) return
-    navigate(writeAddress(after), {
+    navigate(browserAddress(writeAddress(after)), {
       resolve: false,
       scroll: false,
       ...(how?.replace === true

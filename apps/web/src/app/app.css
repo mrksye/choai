@@ -7,6 +7,106 @@
 
 @custom-variant dark (&:where(.dark, .dark *, [data-kb-theme=dark], [data-kb-theme=dark] *));
 
+@media print {
+  @page {
+    margin: 1.5cm;
+  }
+
+  html,
+  body,
+  #root,
+  #root > * {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden;
+    overflow: visible !important;
+  }
+
+  .report-printable,
+  .report-printable * {
+    visibility: visible;
+  }
+
+  .report-printable {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    color: #000;
+    background: #fff;
+  }
+
+  .report-printable .report-print-action {
+    display: none;
+  }
+
+  .report-printable table {
+    border-color: #ccc;
+  }
+
+  .report-printable tr,
+  .report-printable section {
+    break-inside: avoid;
+  }
+}
+
+.report-output {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.report-output table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-output th {
+  color: var(--muted-foreground);
+  font-weight: 500;
+  text-align: left;
+}
+
+.report-output th,
+.report-output td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-output th:first-child,
+.report-output td:first-child {
+  padding-left: 0;
+}
+
+.report-output th:last-child,
+.report-output td:last-child {
+  padding-right: 0;
+}
+
+.report-output tr:last-child th,
+.report-output tr:last-child td {
+  border-bottom: 0;
+}
+
+.report-output pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  white-space: pre;
+  tab-size: 4;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

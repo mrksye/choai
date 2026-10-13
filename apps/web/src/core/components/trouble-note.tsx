@@ -37,6 +37,8 @@ const troubleHeadline = (trouble: Trouble): string => {
   switch (trouble.kind) {
     case "no-journal":
       return t("trouble.noJournal")
+    case "unsupported-file":
+      return t("trouble.unsupportedFile")
     case "file-missing":
       return t("trouble.fileMissing", { path: trouble.path })
     case "read-failed":

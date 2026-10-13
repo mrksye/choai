@@ -31,12 +31,15 @@ executable probe-cli
 executable hledger-bindings
   import:           probe
   main-is:          Bindings.hs
+  other-modules:    NativeReport
   build-depends:
     , aeson
     , base
     , directory
     , ghc-experimental
     , hledger-lib
+    , hledger-reports
+    , cmdargs
     , text
   ghc-options:      -optl-mexec-model=reactor -optl-Wl,--export=hs_init
 

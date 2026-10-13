@@ -5,14 +5,16 @@ import { missingFile } from "~/core/hledger/diagnose"
 import type { DefaultCommodity, JournalSummary, Transaction, Trouble } from "~/core/hledger/wire"
 import { deferred } from "~/core/lib/deferred"
 import { readText } from "~/core/lib/text"
+import { mapLimited } from "~/core/lib/map-limited"
 import { createGate } from "~/core/lib/gate"
 import { createTask } from "~/core/lib/pending"
 import { Err, None, Ok, Some, getOrUndefined, type Option, type Result } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 import { atTheJournal } from "~/core/hledger/turn"
 import { demoJournal } from "./demo"
-import { MAIN, TRANSACTIONS, including, laidOut } from "./layout"
+import { MAIN, TRANSACTIONS, includedBy, including, laidOut } from "./layout"
 import { retitled, titleOf } from "./title"
+import { changedPaths, permitLocalFolder, saveLocalFolder, type LocalFolder, type LocalFailure } from "./local"
 import {
   allBooks,
   bookWithFiles,
@@ -20,6 +22,8 @@ import {
   forgetBook,
   keepBook,
   markCurrent,
+  attachmentOf,
+  putAttachments,
   type BookCard,
   type Remote,
 } from "./kept"
@@ -32,13 +36,23 @@ import {
  * screens only ask questions afterwards.
  */
 
+export interface Attachment {
+  readonly path: string
+  readonly type: string
+  readonly size: number
+}
+
 export interface Source {
   /** Shown on screen, so it is plain which journal is loaded. */
   readonly label: string
-  /** Every file the journal needs, keyed by the path hledger will see. */
+  /** Every real file the journal needs, keyed by the path hledger will see. */
   readonly files: Readonly<Record<string, string>>
-  /** Which of them to parse; the rest are reached through `include`. */
+  /** Which file to parse when one entry is selected. */
   readonly entry: string
+  /** Files that travel with the book but are not parsed by hledger. */
+  readonly attachments: readonly Attachment[]
+  /** Several real entry files to combine, kept as local book state. */
+  readonly selectedEntries?: readonly string[]
 }
 
 export interface OpenJournal {
@@ -47,12 +61,14 @@ export interface OpenJournal {
   readonly source: Source
   /** Where this book is kept away from here, if it is kept anywhere. */
   readonly remote?: Remote
+  readonly local?: LocalFolder
   readonly summary: JournalSummary
 }
 
 const [opened, setOpened] = createSignal<Option<OpenJournal>>(None)
 const [trouble, setTrouble] = createSignal<Option<Trouble>>(None)
 const [shelf, setShelf] = createSignal<readonly BookCard[]>([])
+const attachmentLoaders = new Map<string, (path: string) => Promise<Blob | undefined>>()
 
 /**
  * The journal outlives any one screen, so this state lives at module scope.
@@ -98,10 +114,19 @@ export const startBook = async (
 export const openBook = async (id: string): Promise<Result<OpenJournal, Trouble>> => {
   const kept = await bookWithFiles(id)
   if (kept === undefined) return Err({ kind: "no-journal" })
-  const source = { label: kept.name, files: kept.files, entry: kept.entry }
+  const oldSelection = kept.entry === `/${SELECTION}` ? includedBy(kept.files[SELECTION] ?? "") : []
+  const selected = kept.selectedEntries ?? (oldSelection.length > 1 ? oldSelection : undefined)
+  const files = Object.fromEntries(Object.entries(kept.files).filter(([path]) => path !== SELECTION))
+  const source = {
+    label: kept.name,
+    files,
+    attachments: kept.attachments,
+    entry: selected?.[0] === undefined ? kept.entry : `/${selected[0]}`,
+    selectedEntries: selected,
+  }
   const read = await attempt(source)
   return read.ok
-    ? remember({ bookId: kept.id, source, remote: kept.remote, summary: read.value })
+    ? remember({ bookId: kept.id, source, remote: kept.remote, local: kept.local, summary: read.value })
     : forget(read.error)
 }
 
@@ -113,9 +138,24 @@ export const openBook = async (id: string): Promise<Result<OpenJournal, Trouble>
  * of these overlapping would each end up describing what the other had already
  * replaced.
  */
+const SELECTION = ".choai-selection.journal"
+
+const virtualFiles = (source: Source): Readonly<Record<string, string>> => {
+  const selected = source.selectedEntries
+  return selected === undefined || selected.length < 2
+    ? source.files
+    : { ...source.files, [SELECTION]: selected.map((path) => `include ${path}`).join("\n") + "\n" }
+}
+
+const virtualEntry = (source: Source): string =>
+  source.selectedEntries === undefined || source.selectedEntries.length < 2 ? source.entry : `/${SELECTION}`
+
+const openSource = (source: Source): ReturnType<typeof openJournal> =>
+  openJournal(virtualFiles(source), virtualEntry(source))
+
 const attempt = (source: Source): Promise<Result<JournalSummary, Trouble>> =>
   atTheJournal
-    .through(() => task.run(() => openJournal(source.files, source.entry)))
+    .through(() => task.run(() => openSource(source)))
     .catch((cause: unknown) => Err<Trouble, JournalSummary>({ kind: "unreachable", detail: String(cause) }))
 
 /**
@@ -164,9 +204,12 @@ const keep = async (open: OpenJournal): Promise<void> => {
       id: open.bookId,
       name: open.source.label,
       entry: open.source.entry,
+      selectedEntries: open.source.selectedEntries,
       remote: open.remote,
+      local: open.local,
       openedAt: Date.now(),
       files: open.source.files,
+      attachments: open.source.attachments,
     })
     await markCurrent(open.bookId)
     await restock()
@@ -311,7 +354,7 @@ export const tryOut = async (
   return atTheJournal
     .through(async () => {
       const read = await openJournal(files, entry)
-      if (read.ok) await openJournal(current.source.files, current.source.entry)
+      if (read.ok) await openSource(current.source)
       return read
     })
     .catch((cause: unknown) => Err<Trouble, JournalSummary>({ kind: "unreachable", detail: String(cause) }))
@@ -344,7 +387,7 @@ export const readAside = async (
     .through(async () => {
       const read = await openJournal(files, entry)
       const entries = read.ok ? await everyEntry(0, []) : read
-      await openJournal(current.source.files, current.source.entry)
+      await openSource(current.source)
       return entries
     })
     .catch((cause: unknown) => Err<Trouble, readonly Transaction[]>({ kind: "unreachable", detail: String(cause) }))
@@ -514,6 +557,7 @@ export const openDemo = (): Promise<Result<OpenJournal, Trouble>> => {
   return startBook({
     label: t("welcome.demoLabel"),
     files: laidOut(demoJournal()),
+    attachments: [],
     entry: `/${MAIN}`,
   })
 }
@@ -525,20 +569,202 @@ export const openDemo = (): Promise<Result<OpenJournal, Trouble>> => {
  * journal split across files with `include` works: hledger resolves those names
  * itself against the same directory.
  */
-export const openFiles = async (chosen: FileList): Promise<Result<OpenJournal, Trouble>> => {
-  const contents = await Promise.all(
-    [...chosen].map(async (file) => [file.name, await readText(file)] as const),
-  )
-  const files = Object.fromEntries(contents)
-  const names = contents.map(([name]) => name)
-  const entry = names.find(looksLikeAnEntry) ?? names[0] ?? ""
-  return startBook({
-    label: names.length > 1 ? `${entry} (+${names.length - 1} more)` : entry,
-    files,
-    entry: `/${entry}`,
-  })
+export const openFiles = async (chosen: FileList): Promise<Result<OpenJournal, Trouble>> =>
+  openChosenFiles([...chosen].map((file) => [filePath(file), file] as const))
+
+/** Load only the companion named by the current view. */
+export const loadAttachment = async (book: string, path: string): Promise<Blob | undefined> =>
+  (await attachmentOf(book, path)) ?? (await attachmentLoaders.get(book)?.(path))
+
+/** Register a remote fallback; the fetched blob is cached by the caller. */
+export const registerAttachmentLoader = (book: string, load: (path: string) => Promise<Blob | undefined>): void => {
+  attachmentLoaders.set(book, load)
 }
 
-/** The conventional names for the file that includes the others. */
-const looksLikeAnEntry = (name: string): boolean =>
-  /^(main|all)\.(journal|hledger|ledger)$/i.test(name)
+/** The journal files in the current source that can be opened as entries. */
+export const entryCandidates = (source: Source): readonly string[] => {
+  const included = new Set(Object.values(source.files).flatMap(includedBy))
+  const paths = Object.keys(source.files).filter(
+    (path) => path !== SELECTION && /\.(journal|hledger|ledger)$/i.test(path) && !included.has(path),
+  )
+  const current = source.entry.replace(/^\//, "")
+  return [current, ...paths.filter((path) => path !== current)]
+}
+
+/** The entries currently combined in the open book. */
+export const selectedEntries = (source: Source): readonly string[] =>
+  source.selectedEntries ?? [source.entry.replace(/^\//, "")]
+
+/** Read one or more entries from the same set of files, without making another book. */
+export const switchEntries = async (paths: readonly string[]): Promise<Result<OpenJournal, Trouble>> => {
+  const current = getOrUndefined(opened())
+  if (current === undefined) return Err({ kind: "no-journal" })
+  if (paths.length === 0) return Err({ kind: "no-journal" })
+  const absent = paths.find((path) => current.source.files[path] === undefined)
+  if (absent !== undefined) return Err({ kind: "file-missing", path: absent })
+  const entry = paths[0]!
+  const source = {
+    ...current.source,
+    entry: `/${entry}`,
+    selectedEntries: paths.length > 1 ? [...paths] : undefined,
+  }
+  const read = await attempt(source)
+  if (!read.ok) {
+    setTrouble(Some(read.error))
+    return Err(read.error)
+  }
+  return remember({ ...current, source, summary: read.value })
+}
+
+/**
+ * Open selected files, optionally treating every entry file as one book.
+ *
+ * File selection can intentionally combine entries. A directory cannot: it may
+ * contain independent books alongside the files included by the selected one.
+ */
+const openChosenFiles = async (
+  chosen: readonly (readonly [string, File])[],
+  combineEntries: boolean = true,
+): Promise<Result<OpenJournal, Trouble>> => {
+  const usable = chosen.filter(([path]) => !isDocumentation(path) && !isGitMetadata(path))
+  const contents = await Promise.all(
+    usable.filter(([path]) => !isAttachment(path)).map(async ([path, file]) => [path, await readText(file)] as const),
+  )
+  const binary = usable.filter(([path]) => isAttachment(path))
+  const files = Object.fromEntries(contents)
+  const names = contents.map(([name]) => name)
+  const entries = names.filter(looksLikeJournalFile)
+  const included = new Set(Object.values(files).flatMap(includedBy))
+  const standalone = entries.filter((path) => !included.has(path))
+  const entry = (combineEntries ? entries[0] : standalone[0]) ?? entries[0]
+  if (entry === undefined) return Err({ kind: "unsupported-file" })
+  const selected = combineEntries && entries.length > 1 ? entries : undefined
+  const opened = await startBook({
+    label: selected === undefined ? entry : `${entry} (+${entries.length - 1} more)`,
+    files,
+    attachments: binary.map(([path, file]) => ({ path, type: file.type, size: file.size })),
+    entry: `/${entry}`,
+    selectedEntries: selected,
+  })
+  if (opened.ok) {
+    await mapLimited(binary, 2, async ([path, file]) => putAttachments(opened.value.bookId, [{ path, type: file.type, size: file.size, blob: file }]))
+  }
+  return opened
+}
+
+const filePath = (file: File): string => file.webkitRelativePath.replace(/^[^/]+\//, "") || file.name
+
+const isDocumentation = (path: string): boolean => /\.(md|markdown)$/i.test(path)
+
+const isAttachment = (path: string): boolean => /\.(pdf|png|jpe?g|gif|webp|bmp)$/i.test(path)
+
+const isGitMetadata = (path: string): boolean => path === ".git" || path.startsWith(".git/")
+
+interface FolderFile {
+  readonly kind: "file"
+  readonly name: string
+  readonly getFile: () => Promise<File>
+}
+
+interface FolderDirectory {
+  readonly kind: "directory"
+  readonly name: string
+  readonly values: () => AsyncIterableIterator<FolderFile | FolderDirectory>
+}
+
+type FolderPicker = () => Promise<FileSystemDirectoryHandle & FolderDirectory>
+
+const folderPicker = (): FolderPicker | undefined => {
+  const picker = (window as { showDirectoryPicker?: FolderPicker }).showDirectoryPicker
+  return picker?.bind(window)
+}
+
+export const canOpenFolder = (): boolean => folderPicker() !== undefined
+
+/** Open every file below a chosen folder, preserving the paths hledger includes. */
+export const openFolder = async (): Promise<Result<OpenJournal, Trouble> | undefined> => {
+  const choose = folderPicker()
+  if (choose === undefined) return undefined
+  try {
+    const root = await choose()
+    const chosen = await filesBelow(root)
+    const result = await openChosenFiles(chosen, false)
+    return result.ok ? remember({ ...result.value, local: { handle: root, base: result.value.source.files } }) : result
+  } catch (cause) {
+    return isCancelled(cause) ? undefined : Err({ kind: "unreachable", detail: String(cause) })
+  }
+}
+
+const filesBelow = async (
+  folder: FolderDirectory,
+  prefix: string = "",
+): Promise<readonly (readonly [string, File])[]> => {
+  const children: (FolderFile | FolderDirectory)[] = []
+  for await (const child of folder.values()) children.push(child)
+  const files = await Promise.all(
+    children.filter((child) => child.name !== ".git").map(async (child) =>
+      child.kind === "file"
+        ? ([[prefix + child.name, await child.getFile()]] as const)
+        : filesBelow(child, `${prefix + child.name}/`),
+    ),
+  )
+  return files.flat()
+}
+
+const isCancelled = (cause: unknown): boolean => cause instanceof DOMException && cause.name === "AbortError"
+
+/** Only these file names are handed to hledger as journal entries. */
+const looksLikeJournalFile = (name: string): boolean =>
+  /\.(journal|hledger|ledger)$/i.test(name)
+
+/** Disk operations are explicit and serialized; browser edits remain safe until sent. */
+const localWork = createRoot(() => createGate())
+export const localBusy = localWork.busy
+
+export type LocalTrouble = LocalFailure | { readonly at: "unsaved" } | { readonly at: "hledger"; readonly trouble: Trouble }
+
+/** Write only changed files and keep the baseline after each successful filesystem write. */
+export const saveToLocalFolder = (): Promise<Result<void, LocalTrouble>> => localWork.through(async () => {
+  const open = getOrUndefined(opened())
+  if (open?.local === undefined) return Err({ at: "not-linked" })
+  const result = await saveLocalFolder(open.local, open.source.files, async (local) => {
+    const current = getOrUndefined(opened())
+    const updated = { ...(current?.bookId === open.bookId ? current : open), local }
+    if (current?.bookId === open.bookId) setOpened(Some(updated))
+    await keepOnThisDevice(updated)
+  })
+  return result.ok ? Ok(undefined) : result
+})
+
+/** Replacing pending changes requires the screen to ask explicitly; hledger still validates the disk copy. */
+export const reloadLocalFolder = (how: "clean" | "discard" = "clean"): Promise<Result<void, LocalTrouble>> => localWork.through(async () => {
+  const open = getOrUndefined(opened())
+  if (open?.local === undefined) return Err({ at: "not-linked" })
+  if (how === "clean" && changedPaths(open.local.base, open.source.files).length > 0) return Err({ at: "unsaved" })
+  const permitted = await permitLocalFolder(open.local)
+  if (!permitted.ok) return permitted
+  try {
+    const chosen = await filesBelow(open.local.handle as FileSystemDirectoryHandle & FolderDirectory)
+    const contents = await Promise.all(chosen.filter(([path]) => !isDocumentation(path) && !isGitMetadata(path) && !isAttachment(path))
+      .map(async ([path, file]) => [path, await readText(file)] as const))
+    const files = Object.fromEntries(contents)
+    const attachments = chosen.filter(([path]) => isAttachment(path))
+    const source = { ...open.source, files, attachments: attachments.map(([path, file]) => ({ path, type: file.type, size: file.size })) }
+    return atTheJournal.through(async (): Promise<Result<void, LocalTrouble>> => {
+      if (getOrUndefined(opened()) !== open) return Err({ at: "unsaved" })
+      const read = await openSource(source)
+      if (!read.ok) return Err({ at: "hledger", trouble: read.error })
+      if (getOrUndefined(opened()) !== open) {
+        const current = getOrUndefined(opened())
+        if (current !== undefined) await openSource(current.source)
+        return Err({ at: "unsaved" })
+      }
+      const result = await remember({ ...open, source, summary: read.value, local: { handle: open.local!.handle, base: files } })
+      if (!result.ok) return Err({ at: "hledger", trouble: result.error })
+      await mapLimited(attachments, 2, async ([path, file]) => putAttachments(open.bookId, [{ path, type: file.type, size: file.size, blob: file }]))
+      return Ok(undefined)
+    })
+  } catch (cause) {
+    return Err({ at: "filesystem", cause })
+  }
+})

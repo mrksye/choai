@@ -1,7 +1,8 @@
-import { For, Show, createSignal, type JSX } from "solid-js"
+import { For, Show, createEffect, createSignal, type JSX } from "solid-js"
 
-import { books, journal } from "~/core/journal/store"
-import { switchTo } from "~/core/journal/switching"
+import { books, entryCandidates, journal, selectedEntries } from "~/core/journal/store"
+import { switchEntries, switchTo } from "~/core/journal/switching"
+import { titleOf } from "~/core/journal/title"
 import { getOrUndefined } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
 
@@ -18,14 +19,21 @@ import { t } from "~/core/i18n"
  * With nothing open it says so. The app's own name would be advertising in the
  * one place that is meant to answer a question.
  */
-export function BookSwitcher(props: { onAdd: () => void; onSwitched: () => void }): JSX.Element {
+export function BookSwitcher(props: { onAdd: () => void; onSwitched: (kind: "book" | "entries") => void }): JSX.Element {
   const [open, setOpen] = createSignal(false)
+  const [chosenEntries, setChosenEntries] = createSignal<readonly string[]>([])
   const current = (): string | undefined => getOrUndefined(journal())?.source.label
+  const source = () => getOrUndefined(journal())?.source
+
+  createEffect(() => {
+    const currentSource = source()
+    if (currentSource !== undefined) setChosenEntries(selectedEntries(currentSource))
+  })
 
   const choose = async (id: string): Promise<void> => {
     setOpen(false)
     if (id === getOrUndefined(journal())?.bookId) return
-    props.onSwitched()
+    props.onSwitched("book")
     await switchTo(id)
   }
 
@@ -72,6 +80,38 @@ export function BookSwitcher(props: { onAdd: () => void; onSwitched: () => void 
               )}
             </For>
           </ul>
+          <Show when={source() !== undefined && entryCandidates(source()!).length > 1}>
+            <div class="my-1 border-t border-border" />
+            <p class="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {t("books.entries")}
+            </p>
+            <ul class="flex flex-col">
+              <For each={entryCandidates(source()!)}>
+                {(entry) => (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = chosenEntries().includes(entry)
+                          ? chosenEntries().filter((one) => one !== entry)
+                          : [...chosenEntries(), entry]
+                        if (next.length === 0) return
+                        setChosenEntries(next)
+                        props.onSwitched("entries")
+                        void switchEntries(next)
+                      }}
+                      class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-accent"
+                    >
+                      <span aria-hidden="true" class="w-3 shrink-0 text-muted-foreground">
+                        {chosenEntries().includes(entry) ? "✓" : ""}
+                      </span>
+                      <span class="truncate">{titleOf(source()?.files[entry] ?? "") ?? entry}</span>
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </Show>
           <div class="my-1 border-t border-border" />
           <button
             type="button"

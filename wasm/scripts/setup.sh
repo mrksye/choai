@@ -15,9 +15,18 @@ if [ -x "$PREFIX/wasm32-wasi-ghc/bin/wasm32-wasi-ghc" ]; then
   echo "toolchain: already present at $PREFIX, skipping bootstrap"
 else
   echo "toolchain: bootstrapping into $PREFIX (multi-GB download, 15-30 min)"
+  bootstrap_dir="$(mktemp -d)"
+  trap 'rm -rf "$bootstrap_dir"' EXIT
   curl -f -L --retry 5 \
-    https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/raw/master/bootstrap.sh \
-    | PREFIX="$PREFIX" sh
+    https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/master/ghc-wasm-meta-master.tar.gz \
+    | tar xz --strip-components=1 -C "$bootstrap_dir"
+
+  # The current metadata points at a broken GitHub asset. Nix supplies the
+  # native utilities used by setup; keep only the SDK/GHC bindists here.
+  sed -i \
+    's|https://github.com/haskell-wasm/ghc-wasm-bindists/releases/download/20251219T213239/wasi-sdk.tar.gz|https://github.com/haskell-wasm/ghc-wasm-bindists/releases/download/20260215T021831/wasi-sdk-debug.tar.gz|' \
+    "$bootstrap_dir/autogen.json"
+  PREFIX="$PREFIX" "$bootstrap_dir/setup.sh"
 fi
 
 # shellcheck disable=SC1091

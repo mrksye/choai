@@ -15,7 +15,7 @@ import "./app.css"
 /* Puts window.choai in place before anything is drawn. */
 import "~/core/api/install"
 import { Layout } from "./app"
-import { arrivalsAt, readAddress, writeAddress } from "~/core/address/address"
+import { BASE, arrivalsAt, browserAddress, readAddress, writeAddress } from "~/core/address/address"
 import type { Came } from "~/core/address/moves"
 import { VIEWS } from "./views"
 
@@ -42,13 +42,13 @@ const ROUTES: readonly RouteDefinition[] = VIEWS.map((view) => ({
  */
 const [arrived, ...onwards] = arrivalsAt(readAddress(window.location.href))
 if (arrived !== undefined) {
-  window.history.replaceState(window.history.state, "", writeAddress(arrived))
+  window.history.replaceState(window.history.state, "", browserAddress(writeAddress(arrived)))
   onwards.forEach((next) =>
-    window.history.pushState({ from: writeAddress(arrived) } satisfies Came, "", writeAddress(next)),
+    window.history.pushState({ from: writeAddress(arrived) } satisfies Came, "", browserAddress(writeAddress(next))),
   )
 }
 
 render(
-  () => <Router root={Layout}>{[...ROUTES]}</Router>,
+  () => <Router base={BASE} root={Layout}>{[...ROUTES]}</Router>,
   document.getElementById("root")!,
 )

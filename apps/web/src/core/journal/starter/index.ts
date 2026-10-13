@@ -13,6 +13,7 @@ import { starterJa } from "./ja"
 const STARTERS: Readonly<Record<Locale, Book>> = {
   en: starterEn,
   ja: starterJa,
+  fr: starterEn,
 }
 
 export const starterJournal = (): Book => STARTERS[locale()]

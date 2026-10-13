@@ -13,7 +13,7 @@ const DB = "choai"
  * out below, because someone's books are already in the database by the time it
  * runs.
  */
-const VERSION = 5
+const VERSION = 6
 
 /** The stores, by the name they are opened with. */
 export const STORE = {
@@ -21,6 +21,8 @@ export const STORE = {
   books: "books",
   /** One record per file of a journal, keyed by the book it belongs to and its path. */
   files: "files",
+  /** Binary companions, kept apart from journal text so opening a book is cheap. */
+  attachments: "attachments",
   /** Which book is open: a single record under a known key. */
   state: "state",
   /** What syncing knows: the token, and what each file was last agreed at. */
@@ -86,6 +88,10 @@ const raise = (db: IDBDatabase, upgrade: IDBTransaction, from: number): void => 
   if (from >= 4 && from < 5) {
     forgetEveryKeyButOpenRouters(upgrade)
   }
+  if (from < 6) {
+    db.createObjectStore(STORE.attachments, { keyPath: ["book", "path"] })
+    moveOldAttachments(upgrade)
+  }
 }
 
 /**
@@ -100,6 +106,17 @@ const forgetEveryKeyButOpenRouters = (upgrade: IDBTransaction): void => {
   const ids = keys.getAllKeys()
   ids.onsuccess = () => {
     ids.result.filter((id) => id !== "openrouter").forEach((id) => keys.delete(id))
+  }
+}
+
+/** Move blobs from the old mixed file store without making them part of opening a book. */
+const moveOldAttachments = (upgrade: IDBTransaction): void => {
+  const files = upgrade.objectStore(STORE.files).getAll() as IDBRequest<{ book: string; path: string; blob?: Blob; updatedAt?: number }[]>
+  files.onsuccess = () => {
+    const attachments = upgrade.objectStore(STORE.attachments)
+    for (const file of files.result ?? []) {
+      if (file.blob !== undefined) attachments.put({ ...file, type: file.blob.type, size: file.blob.size })
+    }
   }
 }
 

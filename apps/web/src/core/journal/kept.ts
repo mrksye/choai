@@ -18,6 +18,8 @@
  */
 
 import { STORE, filesOf, rowsOf, within } from "~/core/lib/idb"
+import type { Attachment } from "./store"
+import type { LocalFolder } from "./local"
 
 /** Where a book is kept away from this device. */
 export interface Remote {
@@ -36,25 +38,40 @@ export interface BookCard {
   readonly name: string
   /** Which file to parse; the rest are reached through `include`. */
   readonly entry: string
+  /** Entry files selected together, kept outside the journal files. */
+  readonly selectedEntries?: readonly string[]
   readonly remote?: Remote
+  readonly local?: LocalFolder
   readonly openedAt: number
 }
 
 /** One file of a book, as it stands here. */
+interface AttachmentRow {
+  readonly book: string
+  readonly path: string
+  readonly type: string
+  readonly size: number
+  readonly blob?: Blob
+  readonly updatedAt: number
+}
+
 export interface KeptFile {
   readonly book: string
   readonly path: string
-  readonly text: string
+  readonly text?: string
+  readonly blob?: Blob
   readonly updatedAt: number
 }
 
 /** A book and everything in it. */
 export interface KeptBook extends BookCard {
   readonly files: Readonly<Record<string, string>>
+  readonly attachments: readonly Attachment[]
 }
 
 const BOOKS = STORE.books
 const FILES = STORE.files
+const ATTACHMENTS = STORE.attachments
 const STATE = STORE.state
 const CURRENT = "current"
 
@@ -96,15 +113,17 @@ export const currentBook = async (): Promise<string | undefined> => {
 
 /** One book with its text, ready to be handed to hledger. */
 export const bookWithFiles = async (id: string): Promise<KeptBook | undefined> => {
-  const [card, files] = await within("readonly", [BOOKS, FILES], (transaction) => {
+  const [card, files, attachments] = await within("readonly", [BOOKS, FILES, ATTACHMENTS], (transaction) => {
     const card = transaction.objectStore(BOOKS).get(id) as IDBRequest<BookCard | undefined>
     const files = transaction.objectStore(FILES).getAll(filesOf(id)) as IDBRequest<KeptFile[]>
-    return [card, files] as const
+    const attachments = transaction.objectStore(ATTACHMENTS).getAll(filesOf(id)) as IDBRequest<AttachmentRow[]>
+    return [card, files, attachments] as const
   })
   if (card.result === undefined) return undefined
   return {
     ...card.result,
-    files: Object.fromEntries(rowsOf(files).map((file) => [file.path, file.text])),
+    files: Object.fromEntries(rowsOf(files).flatMap((file) => (file.text === undefined ? [] : [[file.path, file.text]]))),
+    attachments: rowsOf(attachments).map(({ path, type, size }) => ({ path, type, size })),
   }
 }
 
@@ -118,13 +137,17 @@ export const bookWithFiles = async (id: string): Promise<KeptBook | undefined> =
 export const keepBook = async (book: KeptBook): Promise<void> => {
   askToKeep()
   const now = Date.now()
-  await within("readwrite", [BOOKS, FILES], (transaction) => {
+  await within("readwrite", [BOOKS, FILES, ATTACHMENTS], (transaction) => {
     const { files: _, ...card } = book
     transaction.objectStore(BOOKS).put(card)
     const files = transaction.objectStore(FILES)
     files.delete(filesOf(book.id))
+    transaction.objectStore(ATTACHMENTS).delete(filesOf(book.id))
     for (const [path, text] of Object.entries(book.files)) {
       files.put({ book: book.id, path, text, updatedAt: now })
+    }
+    for (const attachment of book.attachments) {
+      transaction.objectStore(ATTACHMENTS).put({ ...attachment, book: book.id, updatedAt: now })
     }
   })
 }
@@ -144,9 +167,10 @@ export const markCurrent = async (id: string): Promise<void> => {
  * stays where it is.
  */
 export const forgetBook = async (id: string): Promise<void> => {
-  await within("readwrite", [BOOKS, FILES, STATE, STORE.remote], (transaction) => {
+  await within("readwrite", [BOOKS, FILES, ATTACHMENTS, STATE, STORE.remote], (transaction) => {
     transaction.objectStore(BOOKS).delete(id)
     transaction.objectStore(FILES).delete(filesOf(id))
+    transaction.objectStore(ATTACHMENTS).delete(filesOf(id))
     transaction.objectStore(STORE.remote).delete(IDBKeyRange.bound(`agreed:${id}:`, `agreed:${id}:￿`))
     const state = transaction.objectStore(STATE)
     const open = state.get(CURRENT) as IDBRequest<CurrentBook | undefined>
@@ -154,4 +178,28 @@ export const forgetBook = async (id: string): Promise<void> => {
       if (open.result?.bookId === id) state.delete(CURRENT)
     }
   })
+}
+
+/** Read one companion without loading any other attachment. */
+export const attachmentOf = async (book: string, path: string): Promise<Blob | undefined> => {
+  const row = await within("readonly", [ATTACHMENTS], (transaction) =>
+    transaction.objectStore(ATTACHMENTS).get([book, path]) as IDBRequest<AttachmentRow | undefined>,
+  )
+  return row.result?.blob
+}
+
+/** Store one companion after it was fetched or selected locally. */
+export const putAttachments = async (book: string, attachments: readonly (Attachment & { readonly blob: Blob })[]): Promise<void> => {
+  await within("readwrite", [ATTACHMENTS], (transaction) => {
+    const store = transaction.objectStore(ATTACHMENTS)
+    for (const attachment of attachments) store.put({ ...attachment, book, updatedAt: Date.now() })
+  })
+}
+
+/** List companion metadata without reading any companion body. */
+export const attachmentMetadata = async (book: string): Promise<readonly Attachment[]> => {
+  const rows = await within("readonly", [ATTACHMENTS], (transaction) =>
+    transaction.objectStore(ATTACHMENTS).getAll(filesOf(book)) as IDBRequest<AttachmentRow[]>,
+  )
+  return rowsOf(rows).map(({ path, type, size }) => ({ path, type, size }))
 }

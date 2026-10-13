@@ -1,0 +1,13 @@
+cabal-version: 2.4
+name: hledger-reports-test
+version: 0.1.0.0
+build-type: Simple
+license: GPL-3.0-or-later
+
+test-suite native-reports
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: ., ../hledger-wasm/src
+  other-modules: NativeReport
+  default-language: GHC2021
+  build-depends: base, hledger-lib, hledger-reports, cmdargs, text, directory, temporary

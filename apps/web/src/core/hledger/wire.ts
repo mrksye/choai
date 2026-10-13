@@ -160,7 +160,13 @@ export interface JournalSummary {
   readonly defaultCommodity?: DefaultCommodity
 }
 
+export interface CommandReport {
+  readonly format: string
+  readonly output: string
+}
+
 export type Request =
+  | { readonly kind: "command"; readonly command: string }
   | { readonly kind: "entries"; readonly query: string; readonly limit: number; readonly offset: number }
   | {
       readonly kind: "register"
@@ -195,6 +201,7 @@ export type AccountType = "Asset" | "Liability" | "Equity" | "Revenue" | "Expens
 
 /** What each request answers with. */
 export interface Answer {
+  command: CommandReport
   entries: Page<Transaction>
   register: Page<RegisterRow>
   balance: BalanceReport
@@ -256,6 +263,7 @@ export interface Completions {
  */
 export type Trouble =
   | { readonly kind: "no-journal" }
+  | { readonly kind: "unsupported-file" }
   | { readonly kind: "file-missing"; readonly path: string }
   | { readonly kind: "read-failed"; readonly detail: string }
   | { readonly kind: "malformed-request"; readonly detail: string }

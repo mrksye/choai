@@ -1,7 +1,7 @@
 import { Show, type JSX } from "solid-js"
 import { useMoves } from "~/core/address/moves"
 
-import { openDemo, openFiles, opening, openingTrouble, settling } from "~/core/journal/store"
+import { canOpenFolder, openDemo, openFiles, openFolder, opening, openingTrouble, settling } from "~/core/journal/store"
 import { startFresh } from "~/core/journal/fresh"
 import { putDown } from "~/core/journal/switching"
 import { getOrUndefined } from "~/core/lib/monad"
@@ -30,15 +30,21 @@ export function Welcome(props: { adding?: boolean }): JSX.Element {
 
 function Choices(props: { adding: boolean }): JSX.Element {
   let chooser!: HTMLInputElement
+  let folderChooser!: HTMLInputElement
   const moves = useMoves()
 
   /**
    * Whatever was in hand belonged to the book open before, so it is put down;
    * and a book that opened is a book to look at, so this screen steps aside.
    */
-  const then = async (open: () => Promise<{ ok: boolean }>): Promise<void> => {
+  const then = async (open: () => Promise<{ ok: boolean } | undefined>): Promise<void> => {
     putDown()
-    if ((await open()).ok) moves.toTheJournal()
+    if ((await open())?.ok) moves.toTheJournal()
+  }
+
+  const chooseFolder = (): void => {
+    if (canOpenFolder()) void then(openFolder)
+    else folderChooser.click()
   }
 
   return (
@@ -58,6 +64,9 @@ function Choices(props: { adding: boolean }): JSX.Element {
         <Button onClick={() => chooser.click()} disabled={opening()}>
           {t("welcome.openFiles")}
         </Button>
+        <Button variant="outline" onClick={chooseFolder} disabled={opening()}>
+          {t("welcome.openFolder")}
+        </Button>
         <Button variant="outline" onClick={() => void then(() => startFresh())} disabled={opening()}>
           {t("welcome.startFresh")}
         </Button>
@@ -68,7 +77,20 @@ function Choices(props: { adding: boolean }): JSX.Element {
         type="file"
         class="hidden"
         multiple
-        accept=".journal,.hledger,.ledger,.txt"
+        accept=".journal,.hledger,.ledger"
+        onChange={(event) => {
+          const chosen = event.currentTarget.files
+          if (chosen !== null && chosen.length > 0) void then(() => openFiles(chosen))
+        }}
+      />
+      <input
+        ref={(element) => {
+          folderChooser = element
+          element.setAttribute("webkitdirectory", "")
+        }}
+        type="file"
+        class="hidden"
+        multiple
         onChange={(event) => {
           const chosen = event.currentTarget.files
           if (chosen !== null && chosen.length > 0) void then(() => openFiles(chosen))

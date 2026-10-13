@@ -587,7 +587,7 @@ const ja: typeof en = {
   },
 }
 
-const WORDS: Readonly<Record<Locale, typeof en>> = { en, ja }
+const WORDS: Readonly<Record<Locale, typeof en>> = { en, ja, fr: en }
 
 /** The words, in whichever language the screens are speaking. */
 export const words = (): typeof en => WORDS[locale()]

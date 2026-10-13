@@ -8,7 +8,7 @@ import { GIT, addressOf, lookingAt, type Looking } from "~/core/components/git/l
 import { agreements, token } from "~/core/github/kept"
 import { pull, push, type Outcome, type Snag } from "~/core/github/sync"
 import { journal } from "~/core/journal/store"
-import { pageOf } from "~/core/address/address"
+import { appPath, pageOf } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { getOrUndefined, type Result } from "~/core/lib/monad"
 import { t } from "~/core/i18n"
@@ -44,7 +44,7 @@ export function GitExplorer(props: {
   }
   const showing = (path: string): boolean => {
     const now = lookingAt(pageOf(location.hash))
-    return location.pathname === GIT && now.at === "change" && now.path === path
+    return appPath(location.pathname) === GIT && now.at === "change" && now.path === path
   }
 
   const run = async (work: () => Promise<Result<Outcome, Snag>>): Promise<void> => {
@@ -74,7 +74,7 @@ export function GitExplorer(props: {
     return remote === undefined ? "" : `${remote.owner}/${remote.repo}`
   }
   const lookingAtConnection = (): boolean =>
-    location.pathname === GIT && lookingAt(pageOf(location.hash)).at === "connection"
+    appPath(location.pathname) === GIT && lookingAt(pageOf(location.hash)).at === "connection"
 
   return (
     <div class="flex flex-col gap-2 py-2">
@@ -176,7 +176,7 @@ export function GitExplorer(props: {
           class="w-full px-3 py-1 text-left text-xs hover:bg-accent hover:text-accent-foreground"
           classList={{
             "bg-accent text-accent-foreground":
-              location.pathname === GIT && lookingAt(pageOf(location.hash)).at === "history",
+              appPath(location.pathname) === GIT && lookingAt(pageOf(location.hash)).at === "history",
           }}
         >
           {t("git.graph")}

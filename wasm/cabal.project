@@ -8,6 +8,7 @@
 
 packages:
   hledger-wasm
+  hledger-reports
   vendor/hledger/hledger-lib
 
 -- Replacements for Hackage packages that cannot compile for wasm32-wasi.

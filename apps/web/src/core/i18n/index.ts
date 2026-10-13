@@ -3,6 +3,7 @@ import * as i18n from "@solid-primitives/i18n"
 
 import { en, type Dictionary } from "./en"
 import { ja } from "./ja"
+import { fr } from "./fr"
 
 /**
  * Which language the screens speak.
@@ -12,15 +13,16 @@ import { ja } from "./ja"
  * dictionary keeps every other honest.
  */
 
-export const LOCALES = ["en", "ja"] as const
+export const LOCALES = ["en", "ja", "fr"] as const
 
 export type Locale = (typeof LOCALES)[number]
 
-const DICTIONARIES: Readonly<Record<Locale, Dictionary>> = { en, ja }
+const DICTIONARIES: Readonly<Record<Locale, Dictionary>> = { en, ja, fr }
 
 export const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
   en: "English",
   ja: "日本語",
+  fr: "Français",
 }
 
 const REMEMBERED = "choai.locale"

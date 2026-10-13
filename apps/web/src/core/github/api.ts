@@ -32,6 +32,11 @@ export interface Fetched {
   readonly sha: string
 }
 
+export interface FetchedBinary {
+  readonly blob: Blob
+  readonly sha: string
+}
+
 /** What can go wrong that is worth telling apart. */
 export type Failure =
   | { readonly kind: "offline"; readonly detail: string }
@@ -76,6 +81,21 @@ const failureOf = async (response: Response): Promise<Failure> => {
  * bytes rather than straight to a string: a journal in Japanese is multi-byte,
  * and `atob` alone would hand back one character per byte.
  */
+export const fetchBinary = async (token: string, where: Where): Promise<Result<FetchedBinary, Failure>> => {
+  const answer = await call(url(where), { headers: headers(token) })
+  if (!answer.ok) return answer
+  const response = answer.value
+  if (!response.ok) return Err(await failureOf(response))
+  const body = (await response.json()) as { content?: string; sha?: string }
+  if (typeof body.content !== "string" || typeof body.sha !== "string") {
+    return Err({ kind: "refused", status: response.status, detail: "not a file" })
+  }
+  const bytes = bytesOf(body.content)
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return Ok({ blob: new Blob([copy.buffer]), sha: body.sha })
+}
+
 export const fetchFile = async (token: string, where: Where): Promise<Result<Fetched, Failure>> => {
   const answer = await call(url(where), { headers: headers(token) })
   if (!answer.ok) return answer
@@ -173,6 +193,19 @@ export interface CommitDetail extends Commit {
 
 const repositoryUrl = (where: Repository): string =>
   `${ROOT}/repos/${encodeURIComponent(where.owner)}/${encodeURIComponent(where.repo)}`
+
+/** Every file in a repository tree, without its .git directory. */
+export const repositoryFiles = async (
+  token: string,
+  where: Repository,
+  branch: string,
+): Promise<Result<readonly string[], Failure>> => {
+  const read = await readJson(token, `${repositoryUrl(where)}/git/trees/${encodeURIComponent(branch)}?recursive=1`)
+  if (!read.ok) return read
+  const tree = (read.value as { tree?: readonly { path?: unknown; type?: unknown }[] }).tree
+  if (!Array.isArray(tree)) return Err(notWhatWasAsked("no tree came back"))
+  return Ok(tree.flatMap((item) => (item.type === "blob" && typeof item.path === "string" ? [item.path] : [])))
+}
 
 /** A GET whose answer is JSON, with every way it can fail made a case. */
 const readJson = async (token: string, input: string): Promise<Result<unknown, Failure>> => {
@@ -286,11 +319,12 @@ export const commitDetail = async (
   })
 }
 
-const decode = (base64: string): string => {
+const bytesOf = (base64: string): Uint8Array => {
   const binary = atob(base64.replace(/\n/g, ""))
-  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
-  return new TextDecoder().decode(bytes)
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
+
+const decode = (base64: string): string => new TextDecoder().decode(bytesOf(base64))
 
 const encode = (text: string): string => {
   const bytes = new TextEncoder().encode(text)

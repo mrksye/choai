@@ -11,13 +11,10 @@
  *
  * So it is decided rather than assumed. A byte-order mark says outright what it
  * is. Failing that, UTF-8 is tried strictly — invalid sequences throw rather
- * than becoming U+FFFD — and only text that is not valid UTF-8 is read as
- * Shift_JIS. Anything that is pure ASCII is both, and comes out the same either
- * way.
- *
- * The order matters: almost no Shift_JIS is accidentally valid UTF-8, but plenty
- * of UTF-8 is decodable as Shift_JIS, into nonsense. Trying UTF-8 first is what
- * keeps that from happening.
+ * than becoming U+FFFD. Legacy files are then compared as Shift_JIS and
+ * Windows-1252: Japanese text tends to contain kana, while French and other
+ * European exports tend to contain accented Latin letters. Both are common in
+ * bank exports, and neither encoding identifies itself reliably.
  */
 
 const UTF16LE = [0xff, 0xfe]
@@ -43,8 +40,24 @@ export const textOf = (bytes: ArrayBuffer): string => {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(seen)
   } catch {
-    return new TextDecoder("shift_jis").decode(seen)
+    return bestLegacyDecode(seen)
   }
+}
+
+const bestLegacyDecode = (bytes: Uint8Array): string => {
+  const candidates = ["shift_jis", "windows-1252"].map((encoding) => {
+    const text = new TextDecoder(encoding).decode(bytes)
+    return { text, score: scoreLegacy(text, encoding) }
+  })
+  return candidates.reduce((best, candidate) => (candidate.score > best.score ? candidate : best)).text
+}
+
+const scoreLegacy = (text: string, encoding: string): number => {
+  const replacements = (text.match(/\uFFFD/g) ?? []).length
+  const controls = (text.match(/[\u0080-\u009F]/g) ?? []).length
+  const kana = (text.match(/[\u3040-\u30FF]/g) ?? []).length
+  const accents = (text.match(/[À-ÿ]/g) ?? []).length
+  return -replacements * 20 - controls * 4 + (encoding === "shift_jis" ? kana * 4 : accents * 4)
 }
 
 export const readText = async (file: File): Promise<string> => textOf(await file.arrayBuffer())

@@ -1,5 +1,6 @@
-import { For, Index, Show, type JSX } from "solid-js"
+import { For, Index, Show, createResource, type JSX } from "solid-js"
 
+import { ask } from "~/core/hledger/client"
 import { declaredCommodity, journal } from "~/core/journal/store"
 import { getOrUndefined } from "~/core/lib/monad"
 import { Button } from "~/core/components/ui/button"
@@ -11,6 +12,7 @@ import { edition } from "~/edition"
 import type { OfferedTag } from "~/edition/types"
 import type { DefaultCommodity } from "~/core/hledger/wire"
 import { ghostOf } from "./commodity"
+import { composeCompletions, tagNamesFor, valuesForName } from "./completions"
 import { draftToJournal, type Tag } from "./draft"
 import { EXAMPLE_FIGURE, amountExample } from "./hint"
 import {
@@ -27,7 +29,6 @@ import {
   save,
   saving,
   savingTrouble,
-  suggestFromPayee,
   writable,
 } from "./store"
 
@@ -41,6 +42,21 @@ import {
  */
 export function ComposePanel(): JSX.Element {
   const accounts = (): readonly string[] => getOrUndefined(journal())?.summary.accounts ?? []
+  const [suggestions] = createResource(
+    () => getOrUndefined(journal()),
+    async (open) => {
+      const [completions, entries] = await Promise.all([
+        ask({ kind: "completions" }),
+        ask({ kind: "entries", query: "", limit: Math.max(open.summary.transactions, 1), offset: 0 }),
+      ])
+      return composeCompletions(
+        completions.ok ? completions.value : undefined,
+        entries.ok ? entries.value.items : [],
+      )
+    },
+  )
+  const payees = (): readonly string[] => suggestions()?.payees ?? []
+  const knownTags = (): readonly Tag[] => suggestions()?.tags ?? []
 
   /**
    * The example in the empty box.
@@ -71,9 +87,9 @@ export function ComposePanel(): JSX.Element {
           type="text"
           class="h-8"
           placeholder={t("compose.payeeHint")}
+          list="known-payees"
           value={draft().payee}
           onInput={(event) => editDraft({ payee: event.currentTarget.value })}
-          onBlur={(event) => void suggestFromPayee(event.currentTarget.value)}
         />
       </Labelled>
 
@@ -90,6 +106,7 @@ export function ComposePanel(): JSX.Element {
       <Tags
         tags={draft().tags}
         offered={offeredOn("entry")}
+        on="entry"
         onAdd={addTag}
         onEdit={editTag}
         onRemove={removeTag}
@@ -99,10 +116,20 @@ export function ComposePanel(): JSX.Element {
       <datalist id="known-accounts">
         <For each={accounts()}>{(account) => <option value={account} />}</For>
       </datalist>
-      <For each={OFFERED.filter((tag) => tag.values.length > 0)}>
-        {(tag) => (
-          <datalist id={valuesListOf(tag.name)}>
-            <For each={tag.values}>{(one) => <option value={one.value}>{one.label?.() ?? one.value}</option>}</For>
+      <datalist id="known-payees">
+        <For each={payees()}>{(payee) => <option value={payee} />}</For>
+      </datalist>
+      <For each={["entry", "posting"] as const}>
+        {(on) => (
+          <datalist id={namesListOf(on)}>
+            <For each={tagNamesFor(offeredOn(on), knownTags())}>{(name) => <option value={name} />}</For>
+          </datalist>
+        )}
+      </For>
+      <For each={tagNamesFor(OFFERED, knownTags())}>
+        {(name) => (
+          <datalist id={valuesListOf(name)}>
+            <For each={valuesForName(name, OFFERED, knownTags())}>{(value) => <option value={value} />}</For>
           </datalist>
         )}
       </For>
@@ -143,6 +170,7 @@ export function ComposePanel(): JSX.Element {
               <Tags
                 tags={posting().tags}
                 offered={offeredOn("posting")}
+                on="posting"
                 onAdd={(name) => addPostingTag(index, name)}
                 onEdit={(at, change) => editPostingTag(index, at, change)}
                 onRemove={(at) => removePostingTag(index, at)}
@@ -187,12 +215,12 @@ const OFFERED: readonly OfferedTag[] = edition.tags ?? []
 
 const offeredOn = (on: OfferedTag["on"]): readonly OfferedTag[] => OFFERED.filter((tag) => tag.on === on)
 
-/** One list per offered name, shared by every box that tag is written in. */
+/** One list per name, shared by every box that tag is written in. */
 const valuesListOf = (name: string): string => `offered-tag-values-${name}`
+const namesListOf = (on: OfferedTag["on"]): string => `offered-${on}-tag-names`
 
-/** The values offered for whatever name a box's tag has, if it has one that is offered. */
 const valuesFor = (name: string): string | undefined =>
-  OFFERED.some((tag) => tag.name === name.trim() && tag.values.length > 0) ? valuesListOf(name.trim()) : undefined
+  name.trim() === "" ? undefined : valuesListOf(name.trim())
 
 /**
  * Any number of name-and-value pairs, with any names.
@@ -207,6 +235,7 @@ const valuesFor = (name: string): string | undefined =>
 function Tags(props: {
   tags: readonly Tag[]
   offered: readonly OfferedTag[]
+  on: OfferedTag["on"]
   label: string
   indented?: boolean
   onAdd: (name: string) => void
@@ -229,6 +258,7 @@ function Tags(props: {
                 type="text"
                 class="h-7 text-xs"
                 placeholder={t("compose.tagName")}
+                list={namesListOf(props.on)}
                 value={tag().name}
                 onInput={(event) => props.onEdit(index, { name: event.currentTarget.value })}
               />

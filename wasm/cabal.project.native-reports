@@ -1,0 +1,4 @@
+packages:
+  vendor/hledger/hledger-lib
+  hledger-reports
+  hledger-reports-test

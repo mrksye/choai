@@ -30,7 +30,7 @@ import { ComposePanel } from "~/core/compose/ComposePanel"
 import { EntryEditor } from "~/core/compose/EntryEditor"
 import { editing, stopEditingEntry } from "~/core/compose/editing"
 import { LAYER_OF, dock, dockedAs, seatDock, type InTheDock } from "~/core/dock"
-import { JOURNAL, atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
+import { JOURNAL, appPath, atTheList, atTheWork, dockedIn, readFragment, showsTheWork, withLayer } from "~/core/address/address"
 import { useMoves } from "~/core/address/moves"
 import { narrow, overHalf, viewportWidth } from "~/core/lib/narrow"
 import { actionFor } from "~/core/lib/shortcuts"
@@ -184,7 +184,7 @@ export function Layout(props: ParentProps) {
       const view = railOf(current())
       moves.move(
         (at) => ({ path: view, search: searchFor(chosen), fragment: atTheWork(atTheList(at.fragment)) }),
-        { replace: view === location.pathname && !listed() },
+        { replace: view === appPath(location.pathname) && !listed() },
       )
       return
     }
@@ -210,7 +210,7 @@ export function Layout(props: ParentProps) {
    * but what the view being left wrote into it itself.
    */
   const select = async (href: string): Promise<void> => {
-    if (location.pathname === href) {
+    if (appPath(location.pathname) === href) {
       snapped() ? moves.toTheWork() : setPanelOpen((open) => !open)
       return
     }
@@ -305,7 +305,7 @@ export function Layout(props: ParentProps) {
     const empty =
       (showing === "editing" && editing() === undefined) ||
       (showing === "reviewing" && underReview() === undefined) ||
-      (showing === "ledger" && !ledgerHasAPlace(location.pathname))
+      (showing === "ledger" && !ledgerHasAPlace(appPath(location.pathname)))
     if (empty) dock.close()
   })
 
@@ -409,7 +409,7 @@ export function Layout(props: ParentProps) {
       moves.move((at) => ({ path: JOURNAL, search: searchFor(asked), fragment: atTheWork(atTheList(at.fragment)) }))
       return
     }
-    if (!ledgerHasAPlace(location.pathname)) return
+    if (!ledgerHasAPlace(appPath(location.pathname))) return
     const read = await readQuery(asked)
     if (read.ok && focusOf(read.value) !== undefined) dock.show("ledger")
   }
@@ -417,7 +417,7 @@ export function Layout(props: ParentProps) {
   /** Whether the journal's own text is what is on screen. */
 
   /** The view being shown, which is what the explorer beside it belongs to. */
-  const current = (): View => viewAt(location.pathname)
+  const current = (): View => viewAt(appPath(location.pathname))
 
   /**
    * The heading a rail button sits under, where it says it has one.
@@ -463,11 +463,11 @@ export function Layout(props: ParentProps) {
                     and on a phone there is only room for one of them. */}
                 <BookSwitcher
                   onAdd={() => moves.move((at) => ({ ...at, path: ADD, fragment: atTheWork(atTheList(at.fragment)) }))}
-                  onSwitched={() => {
+                  onSwitched={(kind) => {
                     // The query belonged to the books being put down; an account
                     // it names may not exist in the ones being picked up.
                     setQuery("")
-                    moves.toTheJournal()
+                    if (kind === "book") moves.toTheJournal()
                   }}
                 />
               </>
@@ -612,7 +612,7 @@ export function Layout(props: ParentProps) {
             <Show when={dock.showing() === "composing"}>
               <ComposePanel />
             </Show>
-            <Show when={dock.showing() === "ledger" && ledgerHasAPlace(location.pathname)}>
+            <Show when={dock.showing() === "ledger" && ledgerHasAPlace(appPath(location.pathname))}>
               <AccountLedger historical={statementAt(location.hash).historical} />
             </Show>
           </AuxPanel>

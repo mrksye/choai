@@ -26,6 +26,7 @@ import { locale, t, type Locale } from "~/core/i18n"
 const DOCS: Readonly<Record<Locale, string>> = {
   en: "https://choai.dev/",
   ja: "https://choai.dev/ja/",
+  fr: "https://choai.dev/fr/",
 }
 
 export function ShortcutsHelp(): JSX.Element {

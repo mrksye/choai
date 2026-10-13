@@ -39,7 +39,12 @@ export default function Journal(): JSX.Element {
         Loading: () => <p class="text-sm text-muted-foreground">{t("journal.reading")}</p>,
         Err: (trouble) => <TroubleNote trouble={trouble} />,
         Ok: (found) => (
-          <div class={`flex flex-col gap-4 ${WIDTH}`}>
+          <div class={`report-printable flex flex-col gap-4 ${WIDTH}`}>
+            <div class="flex justify-end">
+              <Button variant="outline" size="sm" class="report-print-action" onClick={() => window.print()}>
+                {t("journal.print")}
+              </Button>
+            </div>
             <Days entries={found.items} />
 
             <div class="flex items-center justify-between text-sm text-muted-foreground">

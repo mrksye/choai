@@ -26,7 +26,12 @@ export default defineConfig({
   testDir: "./e2e",
   ...(EDITION === "jp" ? { testMatch: [JAPAN_ONLY] } : { testIgnore: [JAPAN_ONLY] }),
   fullyParallel: false,
-  use: { baseURL: "http://localhost:8396" },
+  use: {
+    baseURL: "http://localhost:8396",
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH === undefined
+      ? {}
+      : { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } }),
+  },
   webServer: {
     command: "CHOAI_TEST=1 bun run dev",
     url: "http://localhost:8396",

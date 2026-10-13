@@ -42,6 +42,16 @@ screens ask. Nothing is uploaded anywhere by the app.
   it is kept, so text that will not parse never replaces text that does.
 - **Keep**: the files stay on the device, one record per path, and the journal
   left open comes back on the next visit.
+- **Local folder**: on browsers supporting File System Access, opening a folder
+  links its original files. Save in the app, then use **Save to original folder**
+  in the source explorer. **Reload from folder** reads external edits when the
+  browser copy is clean. The link survives visits; permission may be requested
+  again. Conflicts are refused, not merged. **Discard changes and reload from
+  disk** replaces the browser copy after confirmation and hledger validation;
+  it never writes to disk. Writes are explicit and per file,
+  not atomic across the folder; successfully written files are tracked for retry.
+  Modified text is written as UTF-8. Ordinary file imports and unsupported
+  browsers keep the copy-and-export workflow. These disk actions are UI-only.
 - **Take away**: the share sheet on a phone, a download elsewhere.
 - **Import**: photographs of receipts, read into entries. The text is read off
   the picture in the browser, each row is sorted by Jev — a model that answers
